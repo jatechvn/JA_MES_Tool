@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Test Record Tool
-Version      : v2.0.0
+Version      : v2.3.0
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -13,11 +13,15 @@ Description  : High-performance desktop application developed in Dart/Flutter
 
 Key Features:
 - Automated SN Queueing & Parallel Test Record Fetching.
+- Automatic SN Queue Refetch upon Saving Settings.
 - Smart CSV Batch Import (auto-skips header rows like "SN") & Full CSV Export.
 - Chrome DevTools Protocol (CDP) Network Interception for 100% accurate Token,
   UUID, Operation-ID & Cookie extraction.
-- Automatic background Token validation every 3 minutes.
+- Smart 2-Step Auto Sync Wizard (Open Browser -> Sync Credentials).
+- Collapsible Advanced Settings panel for clean & easy navigation.
+- Solid Opaque UI Dialogs preventing text overlap and see-through glitches.
+- Automatic background Token validation every 3 minutes with status badge.
 - HTTP Header Sanitization (fixes \r\n Carriage Return & quote errors).
 - Daily Log Management & 7-day automatic cleanup.
-- Multi-language UI (English, Vietnamese, Chinese) with Glassmorphic design.
+- Multi-language UI (English, Vietnamese, Chinese) with Dark/Light Mode.
 ========================================================================
