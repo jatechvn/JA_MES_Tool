@@ -53,9 +53,26 @@ logs/
 config.json
 *.log
 
+# Ignore docs folder contents, EXCEPT docs/screenshots/
+docs/*
+!docs/
+!docs/screenshots/
+!docs/screenshots/*
+
 # Dart/Flutter exclusion patterns
 .flutter-plugins
 build/
 windows/flutter/ephemeral/
 linux/flutter/ephemeral/
 macos/Flutter/ephemeral/
+
+# Local IDE / OS files
+
+# Personal config - uncomment if config has password/token/key
+# config.ini
+# config.json
+
+# License that should absolutely not be committed
+license.key
+
+# Dart/Flutter exclusion patterns
