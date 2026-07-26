@@ -65,14 +65,3 @@ build/
 windows/flutter/ephemeral/
 linux/flutter/ephemeral/
 macos/Flutter/ephemeral/
-
-# Local IDE / OS files
-
-# Personal config - uncomment if config has password/token/key
-# config.ini
-# config.json
-
-# License that should absolutely not be committed
-license.key
-
-# Dart/Flutter exclusion patterns
