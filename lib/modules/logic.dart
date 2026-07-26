@@ -145,6 +145,15 @@ class AppLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refetchAllSns() async {
+    _results.clear();
+    _errors.clear();
+    _loadingStatus.clear();
+    _isBatchLoading = false;
+    notifyListeners();
+    await _fetchPendingSns();
+  }
+
   Future<void> updateSettings({
     required String token,
     required String lang,
@@ -158,7 +167,11 @@ class AppLogic extends ChangeNotifier {
     _uuid = uuid;
     _cookie = cookie;
     await ConfigService.saveConfig(_exportConfigMap());
+    _validateNow();
     notifyListeners();
+    if (_snList.isNotEmpty) {
+      refetchAllSns();
+    }
   }
 
   Future<void> addSns(String input) async {

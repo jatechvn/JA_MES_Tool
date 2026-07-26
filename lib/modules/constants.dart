@@ -1,6 +1,6 @@
 const String appId = 'com.jatech.mes_tool';
 const String appName = 'JA MES Test Record';
-const String appVersion = '2.0.0';
+const String appVersion = '2.3.0';
 
 const String defaultOrgCode = 'CABG_VN';
 const String defaultOperationId = '1826874274766209025';

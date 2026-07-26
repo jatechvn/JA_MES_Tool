@@ -1,4 +1,4 @@
-# 🤖 JA MES Test Record Tool (v2.0.0) - Tiếng Việt
+# 🤖 JA MES Test Record Tool v2.3.0 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,11 +6,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Dart-3.12+-blue.svg?style=flat-square&logo=dart" alt="Dart">
-  <img src="https://img.shields.io/badge/Flutter-3.x-blue.svg?style=flat-square&logo=flutter" alt="Flutter">
-  <img src="https://img.shields.io/badge/Platform-Windows-0078D6.svg?style=flat-square&logo=windows" alt="Windows">
-  <img src="https://img.shields.io/badge/Version-v2.0.0-green.svg?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/phien_ban-2.3.0-blue.svg" alt="Phiên bản 2.3.0">
+  <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
+  <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
 
 <p align="center">
@@ -25,44 +23,54 @@
 
 **JA MES Test Record Tool** là phần mềm chuyên dụng được thiết kế nhằm tối ưu hóa quy trình kiểm tra số Serial Number (SN), trích xuất lịch sử trạm test và xuất báo cáo từ nền tảng API **Foxconn CloudMES**.
 
-Phần mềm hỗ trợ hàng đợi tra cứu song song với giao diện Desktop Glassmorphic hiện đại, trực quan và dễ sử dụng.
+Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc, tự động đồng bộ Token qua trình duyệt (CDP Interception) và giao diện phẳng Solid hiện đại.
 
 ---
 
-## 💡 Tính năng nổi bật (v2.0.0)
+## 💡 Tính năng nổi bật (v2.3.0)
 
-- **⚡ Hàng đợi tra cứu SN song song**: Xử lý tra cứu danh sách SN nhanh chóng theo cơ chế bất đồng bộ.
-- **📄 Nhập & Xuất file CSV thông minh**:
-  - Tự động bỏ qua các dòng tiêu đề/bảng (ví dụ các dòng chứa chữ `"SN"`).
-  - Tải file mẫu CSV chỉ với 1 click và xuất báo cáo kết quả chi tiết.
-- **🌐 Đồng bộ Token tự động qua Chrome CDP (Network Interception)**:
-  - Tự động mở Chrome/Edge với cổng debugging động (`--remote-debugging-port=0`).
-  - Sử dụng Chrome DevTools Protocol (`Network.enable`) để bắt trực tiếp gói tin API từ trình duyệt.
-  - Lấy chính xác 100% các thông số **Token**, **UUID**, **Operation-ID**, và **Cookie** thực tế.
-- **🔄 Tự động kiểm tra tính khả dụng của Token**:
-  - Bộ đếm thời gian tự động xác thực kết nối cứ sau mỗi 3 phút.
-  - Đèn báo trạng thái trực quan ngay trên thanh tiêu đề (Xanh = Hoạt động tốt, Đỏ = Hết hạn Token/Lỗi).
-  - Công cụ test kết nối thủ công trong phần Settings.
-- **🛠️ Bộ lọc & Làm sạch dữ liệu Header**:
-  - Tự động cắt bỏ ký tự xuống dòng ẩn (`\r\n`), khoảng trắng và dấu ngoặc kép (`"..."`) để tránh lỗi `FormatException`.
-- **📋 Quản lý Nhật ký hệ thống (Logs)**:
-  - Ghi vết mọi hoạt động và lỗi phát sinh vào thư mục `logs/` theo ngày (`mes_log_YYYY-MM-DD.txt`).
-  - Tự động xóa các file log cũ quá 7 ngày mỗi khi khởi động ứng dụng.
-- **🎨 Giao diện Đa ngôn ngữ & Trong suốt**:
-  - Hỗ trợ đổi giao diện Light/Dark Mode trong suốt (Glassmorphic).
-  - Chuyển đổi nhanh 3 ngôn ngữ (**Tiếng Việt**, **Tiếng Anh**, **Tiếng Trung**).
+- ⚡ **Tự động Cảnh báo Popup Token Hết Hạn trên Startup**: Phát hiện Token hết hạn ngay khi mở app và tự động bật Cửa sổ Popup đồng bộ 2 bước.
+- 🌐 **Tương thích Đa trình duyệt Chrome & Microsoft Edge**: Tích hợp bộ cờ cách ly luồng chống treo/đứng hình cửa sổ Đăng nhập Edge (`--disable-features=msEdgeStartupBoost...`).
+- 🛡️ **Huy hiệu Xác thực Kết nối Mới (🛡️)**: Biểu tượng khiên xác thực `Icons.verified_outlined` trực quan ở chân trang Cài đặt.
+- 🔄 **Tự động Tra cứu lại Hàng đợi khi Lưu**: Tự động xóa các lỗi hết hạn Token cũ (401) và tra cứu lại toàn bộ danh sách SN trong hàng đợi khi bấm Save.
+- ⚡ **Hàng đợi tra cứu SN song song**: Xử lý tra cứu danh sách SN nhanh chóng theo cơ chế bất đồng bộ.
+- 📄 **Nhập & Xuất file CSV thông minh**: Tự động bỏ qua các dòng tiêu đề (chứa chữ `"SN"`) và xuất báo cáo CSV chi tiết.
+- 🌐 **Đồng bộ Token tự động qua CDP**: Lấy chính xác 100% các thông số **Token**, **UUID**, **Operation-ID**, và **Cookie** thực tế từ lưu lượng mạng trình duyệt.
+- 🛠️ **Bộ lọc & Làm sạch dữ liệu Header**: Tự động cắt bỏ ký tự xuống dòng ẩn (`\r\n`), khoảng trắng và dấu ngoặc kép thừa.
+- 📋 **Quản lý Nhật ký hệ thống (Logs)**: Ghi vết theo ngày và tự động xóa các file log cũ quá 7 ngày mỗi khi khởi động.
+- 🎨 **Giao diện Đa ngôn ngữ & Solid**: Hỗ trợ Light/Dark Mode và chuyển đổi 3 ngôn ngữ (**Tiếng Việt**, **Tiếng Anh**, **Tiếng Trung**).
 
 ---
 
 ## 📸 Hình ảnh Giao diện Ứng dụng
 
 <p align="center">
-  <img src="../docs/screenshots/2026-07-26_154851.png" alt="Màn hình chính JA MES Tool" width="850">
+  <img src="../docs/screenshots/2026-07-26_231301.png" alt="Giao diện Cài đặt với Huy hiệu Xác thực kết nối mới & Thẻ đồng bộ 2 bước" width="850">
   <br><br>
-  <img src="../docs/screenshots/2026-07-26_154910.png" alt="Chi tiết kết quả tra cứu SN" width="850">
-  <br><br>
-  <img src="../docs/screenshots/2026-07-26_154945.png" alt="Hộp thoại Cài đặt & Hướng dẫn sử dụng" width="850">
+  <img src="../docs/screenshots/2026-07-26_231317.png" alt="Cửa sổ Popup Cảnh báo Token Hết Hạn tự động trên Startup" width="850">
 </p>
+
+---
+
+## 🖥️ Hướng dẫn sử dụng chi tiết
+
+### 1. Thêm danh sách SN
+* **Thêm đơn lẻ**: Nhập SN vào ô ở cột bên trái rồi ấn **Enter** hoặc bấm nút **[+]**.
+* **Nhập theo lô (CSV)**: Bấm nút **[Tải Mẫu]** để lấy file mẫu. Điền SN vào file rồi bấm **[Nhập (Import)]**. Dòng tiêu đề chứa chữ `"SN"` sẽ tự động bị bỏ qua.
+
+### 2. Tự động lấy Token từ Trình duyệt (Quy trình 2 bước CDP)
+1. Mở **Cài đặt ⚙️** (hoặc thông qua Cửa sổ Popup cảnh báo Token hết hạn tự động khi vừa khởi động).
+2. **Bước 1**: Nhấn nút **[1. Mở trình duyệt]** để mở Chrome hoặc Microsoft Edge.
+3. Đăng nhập tài khoản MES của bạn trên trang web.
+4. **Bước 2**: Nhấn nút **[2. Lấy Token]**. Phần mềm sẽ dùng cơ chế CDP Network Interception để bắt chính xác 100% **Token**, **UUID**, **Operation-ID** và **Cookie**.
+5. Nhấn **Lưu** để tự động dọn dẹp màn hình lỗi cũ và tra cứu lại toàn bộ danh sách SN trong hàng đợi.
+
+### 3. Kiểm tra kết nối
+* Đèn báo trạng thái bên cạnh tiêu đề **"Cài đặt"**:
+  - 🟢 **Đã kết nối**: Token hợp lệ và kết nối tới máy chủ MES thành công.
+  - 🟡 **Kiểm tra**: Token hết hạn hoặc chưa được cấp quyền (401).
+* Token được tự động kiểm tra lại cứ mỗi **3 phút**.
+* Nhấn **Icon Huy hiệu Xác thực (🛡️)** trong Cài đặt để kiểm tra kết nối thủ công.
 
 ---
 
@@ -74,26 +82,26 @@ ja_mes_tool/
 │   ├── main.dart                  # Điểm khởi chạy ứng dụng & Provider
 │   └── modules/
 │       ├── api_client.dart        # MES API Client & Hàm làm sạch Header (_cleanHeader)
-│       ├── browser_helper.dart    # Xử lý Chrome CDP & Network Interception
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định
+│       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.3.0)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │       ├── logic.dart             # Quản lý trạng thái & Timer kiểm tra ngầm
 │       ├── translations.dart     # Từ điển đa ngôn ngữ (EN, VN, CN)
 │       └── ui/
-│           ├── main_window.dart   # Màn hình chính & Các hộp thoại
+│           ├── main_window.dart   # Màn hình chính & Các hộp thoại 2 bước
 │           ├── styles.dart        # Định nghĩa theme Dark
 │           └── styles_win10.dart  # Định nghĩa theme Light
 │
 ├── docs/
-│   └── screenshots/               # Thư mục chứa ảnh giao diện (Được đẩy lên Git)
-│       └── .gitkeep
+│   └── screenshots/               # Thư mục chứa ảnh giao diện
+│       ├── 2026-07-26_231301.png  # Giao diện Cài đặt & Icon Huy hiệu Xác thực
+│       └── 2026-07-26_231317.png  # Popup Cảnh báo Token Hết Hạn tự động
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.0.0+2)
-├── git_push.bat                   # Script tự động push code lên Git
+├── pubspec.yaml                   # File cấu hình Flutter (v2.3.0+1)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
-└── LICENSE                        # Giấy phép MIT
+└── LICENSE                        # Giấy phép bản quyền
 ```
 
 ---
@@ -105,42 +113,9 @@ ja_mes_tool/
 * **Flutter SDK 3.x** & **Dart 3.12+**
 * Đã cài đặt trình duyệt **Google Chrome** hoặc **Microsoft Edge**.
 
-### Chạy thử nghiệm (Local Run)
-```cmd
-flutter pub get
-flutter run -d windows
-```
-
 ### Biên dịch ra file thực thi (.exe)
 ```cmd
 flutter build windows
 ```
 File `.exe` hoàn chỉnh sẽ nằm tại:
 `build\windows\x64\runner\Release\ja_mes_tool.exe`
-
----
-
-## 🖥️ Hướng dẫn sử dụng chi tiết
-
-### 1. Thêm danh sách SN
-* **Thêm đơn lẻ**: Nhập SN vào ô ô bên trái rồi ấn **Enter** hoặc bấm nút **[+]**.
-* **Nhập theo lô (CSV)**: Bấm nút **[Tải Mẫu]** để lấy file mẫu. Điền SN vào file rồi bấm **[Nhập (Import)]**. Dòng tiêu đề như `"SN"` sẽ tự động bị bỏ qua.
-
-### 2. Tự động lấy Token từ Trình duyệt (CDP)
-1. Mở **Cài đặt ⚙️**.
-2. Nhấn nút **[Mở Trình Duyệt Đăng Nhập]** để mở Chrome/Edge.
-3. Đăng nhập tài khoản MES của bạn trên trang web.
-4. Nhấn nút **[Lấy Token Từ Trình Duyệt]**. Phần mềm sẽ tự động reload trang và bắt chính xác 100% **Token**, **UUID**, **Operation-ID** và **Cookie** từ gói tin API thật.
-5. Hoặc nhấn **[Dán Header từ F12/Postman]** để dán trực tiếp đoạn Header thô.
-
-### 3. Kiểm tra kết nối
-* Biểu tượng màu bên cạnh dòng **"Chi tiết Kết quả"**:
-  - 🟢 **Xanh**: Kết nối hoạt động tốt.
-  - 🔴 **Đỏ**: Token hết hạn hoặc sai cấu hình (401).
-* Ứng dụng tự động kiểm tra lại Token cứ **3 phút** một lần.
-
----
-
-## 📜 Giấy phép
-
-Dự án được phân phối theo giấy phép **MIT License**. Xem file [LICENSE](../LICENSE) để biết thêm chi tiết.
