@@ -23,20 +23,20 @@ class ConfigService {
           'sns': snList,
           'lang': data['lang']?.toString() ?? 'en',
           'operationId': data['operationId']?.toString() ?? defaultOperationId,
-          'uuid': data['uuid']?.toString() ?? 'e1d5e78c-bf60-4aba-9b5f-a94b15cb63d4',
-          'cookie': data['cookie']?.toString() ?? 'cultureName=zh-CHS; ClousMES_AccountInfo=eyJjb3BlQ29kZSI6IkZfVk4iLCJsb2dpblR5cGUiOjEsInVzZXJuYW1lIjoiVjE4MDExNzkiLCJwYXNzd29yZCI6IkZveGNvbm4yMDI2MDUiLCJpc1JlbWVtYmVyIjp0cnVlLCJsb2dpbk1ldGhvZCI6IlNTTyJ9',
+          'uuid': data['uuid']?.toString() ?? defaultUuid,
+          'cookie': data['cookie']?.toString() ?? '',
         };
       }
     } catch (e) {
       _logger.warning('Failed to load config: $e');
     }
     return {
-      'token': '', 
+      'token': '',
       'sns': <String>[],
       'lang': 'en',
       'operationId': defaultOperationId,
-      'uuid': 'e1d5e78c-bf60-4aba-9b5f-a94b15cb63d4',
-      'cookie': 'cultureName=zh-CHS; ClousMES_AccountInfo=eyJjb3BlQ29kZSI6IkZfVk4iLCJsb2dpblR5cGUiOjEsInVzZXJuYW1lIjoiVjE4MDExNzkiLCJwYXNzd29yZCI6IkZveGNvbm4yMDI2MDUiLCJpc1JlbWVtYmVyIjp0cnVlLCJsb2dpbk1ldGhvZCI6IlNTTyJ9',
+      'uuid': defaultUuid,
+      'cookie': '',
     };
   }
 

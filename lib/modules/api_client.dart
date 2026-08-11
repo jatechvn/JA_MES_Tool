@@ -75,6 +75,115 @@ class TestRecord {
   }
 }
 
+class SnProcessRecord {
+  final int id;
+  final String productSn;
+  final String customerSn;
+  final String lineStation;
+  final String currentProcessCode;
+  final String currentProcessName;
+  final String operateDt;
+  final String result;
+  final String woNo;
+  final String productNo;
+  final String productVersion;
+  final String lineName;
+  final String operatorName;
+  final String eqpId;
+  final String errorCode;
+  final String testResultMsg;
+
+  SnProcessRecord({
+    required this.id,
+    required this.productSn,
+    required this.customerSn,
+    required this.lineStation,
+    required this.currentProcessCode,
+    required this.currentProcessName,
+    required this.operateDt,
+    required this.result,
+    required this.woNo,
+    required this.productNo,
+    required this.productVersion,
+    required this.lineName,
+    required this.operatorName,
+    required this.eqpId,
+    required this.errorCode,
+    required this.testResultMsg,
+  });
+
+  factory SnProcessRecord.fromJson(Map<String, dynamic> json) {
+    return SnProcessRecord(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      productSn: json['productSn']?.toString() ?? '',
+      customerSn: json['customerSn']?.toString() ?? '',
+      lineStation: json['lineStation']?.toString() ?? '',
+      currentProcessCode: json['currentProcessCode']?.toString() ?? '',
+      currentProcessName: json['currentProcessName']?.toString() ?? '',
+      operateDt: json['operateDt']?.toString() ?? '',
+      result: json['result']?.toString() ?? '',
+      woNo: json['woNo']?.toString() ?? '',
+      productNo: json['productNo']?.toString() ?? '',
+      productVersion: json['productVersion']?.toString() ?? '',
+      lineName: json['lineName']?.toString() ?? '',
+      operatorName: json['operator']?.toString() ?? '',
+      eqpId: json['eqpId']?.toString() ?? '',
+      errorCode: json['errorCode']?.toString() ?? '',
+      testResultMsg: json['testResultMsg']?.toString() ?? '',
+    );
+  }
+}
+
+class WipComponentRecord {
+  final int wipProductComponentId;
+  final String materialNo;
+  final String materialCategory;
+  final String mfgName;
+  final String mfgPn;
+  final String dateCode;
+  final String scannedCsn;
+  final String pkgId;
+  final String stationCode;
+  final String processCode;
+  final String installedQty;
+  final String creator;
+  final String createdDt;
+
+  WipComponentRecord({
+    required this.wipProductComponentId,
+    required this.materialNo,
+    required this.materialCategory,
+    required this.mfgName,
+    required this.mfgPn,
+    required this.dateCode,
+    required this.scannedCsn,
+    required this.pkgId,
+    required this.stationCode,
+    required this.processCode,
+    required this.installedQty,
+    required this.creator,
+    required this.createdDt,
+  });
+
+  factory WipComponentRecord.fromJson(Map<String, dynamic> json) {
+    return WipComponentRecord(
+      wipProductComponentId: int.tryParse(json['wipProductComponentId']?.toString() ?? '') ?? 0,
+      materialNo: json['materialNo']?.toString() ?? '',
+      materialCategory: json['materialCategory']?.toString() ?? '',
+      mfgName: json['mfgName']?.toString() ?? '',
+      mfgPn: json['mfgPn']?.toString() ?? '',
+      dateCode: json['dateCode']?.toString() ?? '',
+      scannedCsn: json['scannedCsn']?.toString() ?? '',
+      pkgId: json['pkgId']?.toString() ?? '',
+      stationCode: json['stationCode']?.toString() ?? '',
+      processCode: json['processCode']?.toString() ?? '',
+      installedQty: json['installedQty']?.toString() ?? '',
+      creator: json['creator']?.toString() ?? '',
+      createdDt: json['createdDt']?.toString() ?? '',
+    );
+  }
+}
+
 class ApiClient {
   static Future<List<TestRecord>> fetchTestRecords({
     required String sn, 
@@ -139,6 +248,136 @@ class ApiClient {
     }
 
     return recordsList.map((e) => TestRecord.fromJson(e)).toList();
+  }
+
+  static Future<List<SnProcessRecord>> fetchSnProcessHistory({
+    required String sn,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+  }) async {
+    final cleanToken = _cleanHeader(token).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanLang = _cleanHeader(lang);
+    final cleanOpId = _cleanHeader(operationId);
+    final cleanUuid = _cleanHeader(uuid);
+    final cleanCookie = _cleanHeader(cookie);
+
+    final uri = Uri.parse(
+        'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/querySnProcessDetailPageList');
+
+    final headers = {
+      'Host': 'vncmes.ces.myfiinet.com',
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Authorization': 'bearer $cleanToken',
+      'factoryid': '13',
+      'lang': cleanLang,
+      'operation-id': cleanOpId,
+      'org-code': defaultOrgCode,
+      'timezone': '+07:00',
+      'uuid': cleanUuid,
+      'Cookie': cleanCookie.isNotEmpty ? cleanCookie : 'CloudMES-token=$cleanToken',
+    };
+
+    _logger.info('Fetching process history for SN: $sn');
+
+    final response = await http.post(uri, headers: headers, body: json.encode({'sn': sn, 'orgCode': defaultOrgCode}));
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception('Token expired or unauthorized (401). Please update the token.');
+      }
+      throw Exception('Server error: ${response.statusCode}');
+    }
+
+    final data = json.decode(response.body);
+
+    final code = data['code'];
+    final msg = data['msg'] ?? data['message'] ?? '';
+
+    if (code != 200 && code != 0 && code.toString() != '200' && code.toString() != '0') {
+      if (code.toString() == '401' || msg.toString().contains('401')) {
+        throw Exception('Token expired or unauthorized (401). Please update the token.');
+      }
+      throw Exception('API Error [$code]: $msg');
+    }
+
+    final responseData = data['data'];
+    List<dynamic> recordsList = [];
+    if (responseData is Map) {
+      recordsList = responseData['list'] ?? [];
+    } else if (responseData is List) {
+      recordsList = responseData;
+    }
+
+    return recordsList.map((e) => SnProcessRecord.fromJson(e)).toList();
+  }
+
+  static Future<List<WipComponentRecord>> fetchWipComponents({
+    required String sn,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+  }) async {
+    final cleanToken = _cleanHeader(token).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanLang = _cleanHeader(lang);
+    final cleanOpId = _cleanHeader(operationId);
+    final cleanUuid = _cleanHeader(uuid);
+    final cleanCookie = _cleanHeader(cookie);
+
+    final uri = Uri.parse(
+        'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/pageWipProductComponentLists');
+
+    final headers = {
+      'Host': 'vncmes.ces.myfiinet.com',
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Authorization': 'bearer $cleanToken',
+      'factoryid': '13',
+      'lang': cleanLang,
+      'operation-id': cleanOpId,
+      'org-code': defaultOrgCode,
+      'timezone': '+07:00',
+      'uuid': cleanUuid,
+      'Cookie': cleanCookie.isNotEmpty ? cleanCookie : 'CloudMES-token=$cleanToken',
+    };
+
+    _logger.info('Fetching WIP components for SN: $sn');
+
+    final response = await http.post(uri,
+        headers: headers,
+        body: json.encode({'pageIndex': 1, 'pageSize': 100, 'sn': sn, 'orgCode': defaultOrgCode}));
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception('Token expired or unauthorized (401). Please update the token.');
+      }
+      throw Exception('Server error: ${response.statusCode}');
+    }
+
+    final data = json.decode(response.body);
+
+    final code = data['code'];
+    final msg = data['msg'] ?? data['message'] ?? '';
+
+    if (code != 200 && code != 0 && code.toString() != '200' && code.toString() != '0') {
+      if (code.toString() == '401' || msg.toString().contains('401')) {
+        throw Exception('Token expired or unauthorized (401). Please update the token.');
+      }
+      throw Exception('API Error [$code]: $msg');
+    }
+
+    final responseData = data['data'];
+    List<dynamic> recordsList = [];
+    if (responseData is Map) {
+      recordsList = responseData['list'] ?? [];
+    } else if (responseData is List) {
+      recordsList = responseData;
+    }
+
+    return recordsList.map((e) => WipComponentRecord.fromJson(e)).toList();
   }
 
   static Future<String?> verifyConnection({
