@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import 'modules/constants.dart';
 import 'modules/logic.dart';
 import 'modules/ui/styles.dart';
@@ -8,6 +9,11 @@ import 'modules/ui/main_window.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Only used for maximize/resize state (isMaximized + WindowListener) — never
+  // set titleBarStyle/backgroundColor via WindowOptions here, that resets the
+  // native glass composition set up in windows/runner/theme_win10.cpp &
+  // theme_win11.cpp (see flutter-windows-themer skill notes).
+  await windowManager.ensureInitialized();
   await LoggerService.init();
   runApp(
     MultiProvider(

@@ -53,18 +53,33 @@ class BrowserHelper {
       }
 
       if (execPath != null) {
-        await Process.start(execPath, [
+        final isEdge = execPath.toLowerCase().contains('msedge');
+        final args = [
           '--remote-debugging-port=0',
           '--user-data-dir=$userDataDir',
           '--no-first-run',
           '--no-default-browser-check',
-          mesUrl
-        ]);
-        _logger.info('Launched browser with dynamic CDP port and profile $userDataDir: $execPath');
+          '--disable-background-networking',
+          '--disable-component-update',
+          '--disable-default-apps',
+          '--disable-popup-blocking',
+        ];
+        
+        if (isEdge) {
+          args.addAll([
+            '--disable-features=msEdgeStartupBoost,msUnderside,msEdgeSidebar,msHubs,WebAuthentication',
+            '--no-service-autorun',
+          ]);
+        }
+
+        args.add(mesUrl);
+
+        await Process.start(execPath, args);
+        _logger.info('Launched browser (${isEdge ? "Edge" : "Chrome"}) with dynamic CDP port and profile $userDataDir: $execPath');
         return true;
       } else {
         // Fallback: launch default browser using cmd start
-        await Process.run('cmd', ['/c', 'start', 'chrome', '--remote-debugging-port=$cdpPort', '--user-data-dir=$userDataDir', mesUrl]);
+        await Process.run('cmd', ['/c', 'start', 'msedge', '--remote-debugging-port=$cdpPort', '--user-data-dir=$userDataDir', mesUrl]);
         return true;
       }
     } catch (e, stack) {
@@ -170,7 +185,8 @@ class BrowserHelper {
 
                 // Complete once we have at least token and uuid
                 if (capturedToken != null && capturedUuid != null && !completer.isCompleted) {
-                  _logger.info('Successfully captured credentials from network: token=${capturedToken!.substring(0, 20)}..., uuid=$capturedUuid, opId=$capturedOperationId');
+                  final tokenPreview = capturedToken!.length > 20 ? capturedToken!.substring(0, 20) : capturedToken!;
+                  _logger.info('Successfully captured credentials from network: token=$tokenPreview..., uuid=$capturedUuid, opId=$capturedOperationId');
                   completer.complete(ExtractedCredentials(
                     token: capturedToken,
                     operationId: capturedOperationId,

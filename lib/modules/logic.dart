@@ -8,7 +8,34 @@ import 'constants.dart';
 
 final _logger = Logger('AppLogic');
 
+enum ViewMode { testRecord, barcodeHistory, wipComponents }
+
 class AppLogic extends ChangeNotifier {
+  ViewMode _viewMode = ViewMode.testRecord;
+  ViewMode get viewMode => _viewMode;
+
+  Map<String, List<SnProcessRecord>> _processResults = {};
+  Map<String, List<SnProcessRecord>> get processResults => _processResults;
+
+  Map<String, bool> _processLoadingStatus = {};
+  Map<String, bool> get processLoadingStatus => _processLoadingStatus;
+
+  Map<String, String> _processErrors = {};
+  Map<String, String> get processErrors => _processErrors;
+
+  bool _isProcessBatchLoading = false;
+
+  Map<String, List<WipComponentRecord>> _wipResults = {};
+  Map<String, List<WipComponentRecord>> get wipResults => _wipResults;
+
+  Map<String, bool> _wipLoadingStatus = {};
+  Map<String, bool> get wipLoadingStatus => _wipLoadingStatus;
+
+  Map<String, String> _wipErrors = {};
+  Map<String, String> get wipErrors => _wipErrors;
+
+  bool _isWipBatchLoading = false;
+
   String _token = '';
   String get token => _token;
 
@@ -18,10 +45,10 @@ class AppLogic extends ChangeNotifier {
   String _operationId = defaultOperationId;
   String get operationId => _operationId;
 
-  String _uuid = 'e1d5e78c-bf60-4aba-9b5f-a94b15cb63d4';
+  String _uuid = defaultUuid;
   String get uuid => _uuid;
 
-  String _cookie = 'cultureName=zh-CHS; ClousMES_AccountInfo=eyJjb3BlQ29kZSI6IkZfVk4iLCJsb2dpblR5cGUiOjEsInVzZXJuYW1lIjoiVjE4MDExNzkiLCJwYXNzd29yZCI6IkZveGNvbm4yMDI2MDUiLCJpc1JlbWVtYmVyIjp0cnVlLCJsb2dpbk1ldGhvZCI6IlNTTyJ9';
+  String _cookie = '';
   String get cookie => _cookie;
 
   List<String> _snList = [];
@@ -109,6 +136,22 @@ class AppLogic extends ChangeNotifier {
   void selectSn(String sn) {
     _selectedSn = sn;
     notifyListeners();
+    if (_viewMode == ViewMode.barcodeHistory) {
+      _fetchPendingProcessHistory();
+    } else if (_viewMode == ViewMode.wipComponents) {
+      _fetchPendingWipComponents();
+    }
+  }
+
+  void setViewMode(ViewMode mode) {
+    if (_viewMode == mode) return;
+    _viewMode = mode;
+    notifyListeners();
+    if (mode == ViewMode.barcodeHistory) {
+      _fetchPendingProcessHistory();
+    } else if (mode == ViewMode.wipComponents) {
+      _fetchPendingWipComponents();
+    }
   }
 
   void removeSn(String sn) {
@@ -116,18 +159,30 @@ class AppLogic extends ChangeNotifier {
     _results.remove(sn);
     _loadingStatus.remove(sn);
     _errors.remove(sn);
+    _processResults.remove(sn);
+    _processLoadingStatus.remove(sn);
+    _processErrors.remove(sn);
+    _wipResults.remove(sn);
+    _wipLoadingStatus.remove(sn);
+    _wipErrors.remove(sn);
     if (_selectedSn == sn) {
       _selectedSn = _snList.isNotEmpty ? _snList.first : '';
     }
     ConfigService.saveConfig(_exportConfigMap());
     notifyListeners();
   }
-  
+
   void clearAllSns() {
     _snList.clear();
     _results.clear();
     _loadingStatus.clear();
     _errors.clear();
+    _processResults.clear();
+    _processLoadingStatus.clear();
+    _processErrors.clear();
+    _wipResults.clear();
+    _wipLoadingStatus.clear();
+    _wipErrors.clear();
     _selectedSn = '';
     ConfigService.saveConfig(_exportConfigMap());
     notifyListeners();
@@ -145,6 +200,28 @@ class AppLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refetchAllSns() async {
+    _results.clear();
+    _errors.clear();
+    _loadingStatus.clear();
+    _isBatchLoading = false;
+    _processResults.clear();
+    _processErrors.clear();
+    _processLoadingStatus.clear();
+    _isProcessBatchLoading = false;
+    _wipResults.clear();
+    _wipErrors.clear();
+    _wipLoadingStatus.clear();
+    _isWipBatchLoading = false;
+    notifyListeners();
+    await _fetchPendingSns();
+    if (_viewMode == ViewMode.barcodeHistory) {
+      await _fetchPendingProcessHistory();
+    } else if (_viewMode == ViewMode.wipComponents) {
+      await _fetchPendingWipComponents();
+    }
+  }
+
   Future<void> updateSettings({
     required String token,
     required String lang,
@@ -158,7 +235,11 @@ class AppLogic extends ChangeNotifier {
     _uuid = uuid;
     _cookie = cookie;
     await ConfigService.saveConfig(_exportConfigMap());
+    _validateNow();
     notifyListeners();
+    if (_snList.isNotEmpty) {
+      refetchAllSns();
+    }
   }
 
   Future<void> addSns(String input) async {
@@ -178,6 +259,11 @@ class AppLogic extends ChangeNotifier {
       if (_selectedSn.isEmpty) _selectedSn = _snList.last;
       notifyListeners();
       _fetchPendingSns();
+      if (_viewMode == ViewMode.barcodeHistory) {
+        _fetchPendingProcessHistory();
+      } else if (_viewMode == ViewMode.wipComponents) {
+        _fetchPendingWipComponents();
+      }
     }
   }
 
@@ -205,7 +291,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         return path;
       }
     } catch (e) {
-      _logger.severe('Failed to pick file: \$e');
+      _logger.severe('Failed to pick file: $e');
     }
     return null;
   }
@@ -228,9 +314,9 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 
       final file = File(path.replaceAll('"', '').trim());
       await file.writeAsString('SN\nSN123456\nSN789012\n');
-      _globalError = 'Template downloaded successfully to \$path';
+      _globalError = 'Template downloaded successfully to $path';
     } catch (e) {
-      _globalError = 'Error downloading template: \$e';
+      _globalError = 'Error downloading template: $e';
     }
     notifyListeners();
   }
@@ -329,6 +415,82 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     notifyListeners();
   }
 
+  Future<void> _fetchPendingProcessHistory() async {
+    if (_isProcessBatchLoading) return;
+    _isProcessBatchLoading = true;
+    notifyListeners();
+
+    final currentList = List<String>.from(_snList);
+    for (var sn in currentList) {
+      if (!_processResults.containsKey(sn) && _processErrors[sn] == null) {
+        _processLoadingStatus[sn] = true;
+        notifyListeners();
+
+        try {
+          final records = await ApiClient.fetchSnProcessHistory(
+            sn: sn,
+            token: _token,
+            lang: _lang,
+            operationId: _operationId,
+            uuid: _uuid,
+            cookie: _cookie,
+          );
+          _processResults[sn] = records;
+          if (records.isEmpty) {
+            _processErrors[sn] = 'No records found';
+          }
+        } catch (e) {
+          _logger.severe('Failed to fetch process history for $sn: $e');
+          _processErrors[sn] = e.toString().replaceFirst('Exception: ', '');
+        } finally {
+          _processLoadingStatus[sn] = false;
+          notifyListeners();
+        }
+      }
+    }
+
+    _isProcessBatchLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> _fetchPendingWipComponents() async {
+    if (_isWipBatchLoading) return;
+    _isWipBatchLoading = true;
+    notifyListeners();
+
+    final currentList = List<String>.from(_snList);
+    for (var sn in currentList) {
+      if (!_wipResults.containsKey(sn) && _wipErrors[sn] == null) {
+        _wipLoadingStatus[sn] = true;
+        notifyListeners();
+
+        try {
+          final records = await ApiClient.fetchWipComponents(
+            sn: sn,
+            token: _token,
+            lang: _lang,
+            operationId: _operationId,
+            uuid: _uuid,
+            cookie: _cookie,
+          );
+          _wipResults[sn] = records;
+          if (records.isEmpty) {
+            _wipErrors[sn] = 'No records found';
+          }
+        } catch (e) {
+          _logger.severe('Failed to fetch WIP components for $sn: $e');
+          _wipErrors[sn] = e.toString().replaceFirst('Exception: ', '');
+        } finally {
+          _wipLoadingStatus[sn] = false;
+          notifyListeners();
+        }
+      }
+    }
+
+    _isWipBatchLoading = false;
+    notifyListeners();
+  }
+
   Future<String?> verifySettings(String t, String l, String o, String u, String c) async {
     return await ApiClient.verifyConnection(token: t, lang: l, operationId: o, uuid: u, cookie: c);
   }
@@ -343,7 +505,16 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   Future<void> refreshAll() async {
     _results.clear();
     _errors.clear();
+    _processResults.clear();
+    _processErrors.clear();
+    _wipResults.clear();
+    _wipErrors.clear();
     notifyListeners();
     await _fetchPendingSns();
+    if (_viewMode == ViewMode.barcodeHistory) {
+      await _fetchPendingProcessHistory();
+    } else if (_viewMode == ViewMode.wipComponents) {
+      await _fetchPendingWipComponents();
+    }
   }
 }

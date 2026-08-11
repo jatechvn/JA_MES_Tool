@@ -65,3 +65,10 @@ build/
 windows/flutter/ephemeral/
 linux/flutter/ephemeral/
 macos/Flutter/ephemeral/
+
+# Ignore local batch & release scripts (EXCEPT git_push.bat)
+*.bat
+!git_push.bat
+*.zip
+*.lnk
+
