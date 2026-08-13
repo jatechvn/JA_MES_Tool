@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart';
+import 'build_info.dart';
 
 class LoggerService {
   static Future<void> init() async {
@@ -34,8 +35,12 @@ class LoggerService {
     final logFile = File('${logDir.path}/mes_log_$dateStr.txt');
     
     Logger.root.onRecord.listen((record) async {
-      final msg = '${record.time}: [${record.level.name}] ${record.loggerName}: ${record.message}';
-      if (kDebugMode) {
+      // Full ISO 8601 (date + ms) when running via debug.bat (-debug) or a
+      // Flutter debug build; just HH:mm:ss for a normal release run, to keep
+      // release logs compact.
+      final timestamp = BuildInfo.isDebug ? record.time.toIso8601String() : record.time.toIso8601String().substring(11, 19);
+      final msg = '$timestamp: [${record.level.name}] ${record.loggerName}: ${record.message}';
+      if (BuildInfo.isDebug) {
         print(msg);
         if (record.error != null) print(record.error);
         if (record.stackTrace != null) print(record.stackTrace);

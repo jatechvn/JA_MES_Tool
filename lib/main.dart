@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
+import 'modules/build_info.dart';
 import 'modules/constants.dart';
 import 'modules/logic.dart';
 import 'modules/ui/styles.dart';
 import 'modules/logger_service.dart';
 import 'modules/ui/main_window.dart';
 
-void main() async {
+void main(List<String> args) async {
+  if (args.contains('-debug') || args.contains('--debug') || args.contains('-d')) {
+    BuildInfo.isCliDebug = true;
+  }
   WidgetsFlutterBinding.ensureInitialized();
   // Only used for maximize/resize state (isMaximized + WindowListener) — never
   // set titleBarStyle/backgroundColor via WindowOptions here, that resets the

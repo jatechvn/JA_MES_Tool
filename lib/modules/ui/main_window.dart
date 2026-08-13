@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import '../logic.dart';
 import '../api_client.dart';
+import '../build_info.dart';
 import '../constants.dart';
 import '../translations.dart';
 import '../browser_helper.dart';
@@ -260,6 +261,21 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         Tooltip(message: 'Connection Valid', child: Icon(Icons.check_circle, color: theme.passColor, size: 20))
                       else
                         Tooltip(message: logic.connectionError ?? 'Connection Error', child: Icon(Icons.error, color: theme.failColor, size: 20)),
+                      if (BuildInfo.isDebug) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                          ),
+                          child: Text(
+                            'DEBUG • v${BuildInfo.version} (${BuildInfo.debugTimestamp})',
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.amber),
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: 16),
                       Container(
                         padding: const EdgeInsets.all(3),
