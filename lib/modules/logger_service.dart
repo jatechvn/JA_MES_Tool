@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:flutter/foundation.dart';

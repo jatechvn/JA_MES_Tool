@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.5.1 - 中文说明
+# 🤖 JA MES Tool v2.5.2 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.5.1-blue.svg" alt="版本 2.5.1">
+  <img src="https://img.shields.io/badge/banben-2.5.2-blue.svg" alt="版本 2.5.2">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,14 +27,15 @@
 
 ---
 
-## 💡 主要功能 (v2.5.1)
+## 💡 主要功能 (v2.5.2)
 
 ### 📊 数据视图
 - 🗂️ **每个 SN 三种数据视图**：在 **测试记录** (Pass/Fail 结果)、**条码历史** (完整工序/工站流程) 与 **组件清单** (WIP BOM/物料追溯 — 制造商、料号、生产日期码、批次/包装号) 之间切换。
 - 🔗 **自动 SN 主档解析**：输入内部 SN 时，程序会在查询前通过 `snMaster/getSnMasterProcess` 自动解析为标准产品 SN — 标题栏显示为 `输入 SN → 解析后 SN`，按会话缓存并在解析失败时自动回退。
 - 🔍 **Excel 风格搜索筛选**：每个记录列表都有即时搜索框，输入时匹配任意字段。
 - ⬍ **点击排序**：排序按钮可选择字段并切换升序/降序，三种视图均支持。
-- 📋 **可选取并复制数据**：任意记录数值均可通过拖动选取或双击选中，并复制 (Ctrl+C)，如同电子表格。
+- 📋 **可选取并复制数据**：任意记录数值 — 包括侧边栏 SN 队列 — 均可通过拖动选取或双击选中，并复制 (Ctrl+C)，如同电子表格。
+- 🔄 **单个 SN 刷新与全部刷新**：队列中每个 SN 都有独立的刷新图标，可单独重新查询该 SN (三种视图 + SN 主档解析)；侧边栏顶部另有 "全部刷新" 按钮可重新查询整个队列 — 无需重启应用即可获取最新数据。
 - 🔢 **智能记录数量**："SN 记录" 会自动显示 `(N)` 数量，当只有 0 或 1 条记录时自动隐藏。
 
 ### 🎨 界面
@@ -117,7 +118,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord 与 WipComponentRecord
 │       ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │       ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│       ├── constants.dart         # 全局常量与默认配置 (v2.5.1)
+│       ├── constants.dart         # 全局常量与默认配置 (v2.5.2)
 │       ├── logger_service.dart    # 日志服务与 7 天自动清理
 │       ├── logic.dart             # 状态管理：SN 队列、三种记录列表、ViewMode、SN 解析缓存
 │       ├── translations.dart      # 多语言字典 (EN, VN, CN)
@@ -137,7 +138,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.5.1+4)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.5.2+5)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -177,6 +178,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.5.2]** — 侧边栏 SN 队列可选取并复制文字；新增单个 SN 刷新与全部刷新按钮，无需重启应用即可重新查询数据。
 - **[2.5.1]** — 修复列表级联进场动画在滚动时重复播放的问题；条码历史与组件清单标签页现与测试记录并行预加载，不再等到切换标签才加载。
 - **[2.5.0]** — 更名为 "JA MES Tool"、自动 SN 主档解析 (内部 SN → 标准 SN)、全应用 iOS 风格流畅过渡动画。
 - **[2.4.0]** — 新增条码历史与组件清单标签页、Excel 风格搜索/排序、可选取复制数据、Dynamic Island 悬停工具栏、移除硬编码凭据。

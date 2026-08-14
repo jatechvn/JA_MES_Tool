@@ -5,6 +5,14 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.2] - 2026-08-14
+
+### 🚀 Major Features & Enhancements
+- **📋 Selectable & Copyable SN Queue**: The SN list in the sidebar is now wrapped in a `SelectionArea`, so click-drag selects an SN's text for copying (Ctrl+C) — matching the existing selectable behavior in the record detail panel.
+- **🔄 Per-SN & Refresh-All Buttons**: Each SN in the queue now has its own refresh icon to re-fetch its Test Record, Barcode History, and Component List data (plus re-resolve its SN Master mapping) without removing/re-adding it. A new "Refresh All" button in the sidebar header re-fetches the entire queue — both replace the previous workaround of closing and reopening the app to force a refresh.
+
+---
+
 ## [2.5.1] - 2026-08-14
 
 ### 🐛 Bug Fixes
