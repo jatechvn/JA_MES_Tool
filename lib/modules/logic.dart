@@ -36,6 +36,15 @@ class AppLogic extends ChangeNotifier {
 
   bool _isWipBatchLoading = false;
 
+  // Maps the SN string the user typed (internal SN, customer SN, or product
+  // SN) to its resolved canonical product SN + master info. Test Record,
+  // Barcode History, and Component List all require the canonical SN, so
+  // this resolution runs once per typed SN before the first detail fetch.
+  Map<String, String> _resolvedSn = {};
+  Map<String, SnMasterInfo> _snMasterInfo = {};
+  Map<String, SnMasterInfo> get snMasterInfo => _snMasterInfo;
+  String? resolvedSnFor(String sn) => _resolvedSn[sn];
+
   String _token = '';
   String get token => _token;
 
@@ -87,11 +96,11 @@ class AppLogic extends ChangeNotifier {
     _operationId = config['operationId'] ?? defaultOperationId;
     _uuid = config['uuid'] ?? defaultUuid;
     _cookie = config['cookie'] ?? '';
-    
+
     if (config['sns'] != null) {
       _snList = List<String>.from(config['sns']);
     }
-    
+
     if (_token.isEmpty) {
       _token = defaultToken;
     }
@@ -99,19 +108,40 @@ class AppLogic extends ChangeNotifier {
       _selectedSn = _snList.first;
     }
     notifyListeners();
-    // Auto-fetch if there are SNs without results
-    _fetchPendingSns();
+    // Auto-fetch all 3 data views for any SNs without results, so switching
+    // tabs never has to wait — not just the currently active view.
+    _fetchAllPending();
     _startValidationTimer();
+  }
+
+  /// Kicks off the Test Record, Barcode History, and Component List fetches
+  /// for every SN concurrently, so all 3 tabs are ready before the user
+  /// clicks into them instead of loading lazily on tab switch.
+  Future<void> _fetchAllPending() {
+    return Future.wait([
+      _fetchPendingSns(),
+      _fetchPendingProcessHistory(),
+      _fetchPendingWipComponents(),
+    ]);
   }
 
   void _startValidationTimer() {
     _validationTimer?.cancel();
     _validateNow();
-    _validationTimer = Timer.periodic(const Duration(minutes: 3), (_) => _validateNow());
+    _validationTimer = Timer.periodic(
+      const Duration(minutes: 3),
+      (_) => _validateNow(),
+    );
   }
 
   Future<void> _validateNow() async {
-    final res = await verifySettings(_token, _lang, _operationId, _uuid, _cookie);
+    final res = await verifySettings(
+      _token,
+      _lang,
+      _operationId,
+      _uuid,
+      _cookie,
+    );
     if (res == null) {
       isConnectionValid = true;
       connectionError = null;
@@ -165,6 +195,8 @@ class AppLogic extends ChangeNotifier {
     _wipResults.remove(sn);
     _wipLoadingStatus.remove(sn);
     _wipErrors.remove(sn);
+    _resolvedSn.remove(sn);
+    _snMasterInfo.remove(sn);
     if (_selectedSn == sn) {
       _selectedSn = _snList.isNotEmpty ? _snList.first : '';
     }
@@ -183,6 +215,8 @@ class AppLogic extends ChangeNotifier {
     _wipResults.clear();
     _wipLoadingStatus.clear();
     _wipErrors.clear();
+    _resolvedSn.clear();
+    _snMasterInfo.clear();
     _selectedSn = '';
     ConfigService.saveConfig(_exportConfigMap());
     notifyListeners();
@@ -214,12 +248,7 @@ class AppLogic extends ChangeNotifier {
     _wipLoadingStatus.clear();
     _isWipBatchLoading = false;
     notifyListeners();
-    await _fetchPendingSns();
-    if (_viewMode == ViewMode.barcodeHistory) {
-      await _fetchPendingProcessHistory();
-    } else if (_viewMode == ViewMode.wipComponents) {
-      await _fetchPendingWipComponents();
-    }
+    await _fetchAllPending();
   }
 
   Future<void> updateSettings({
@@ -248,7 +277,9 @@ class AppLogic extends ChangeNotifier {
     for (var line in lines) {
       final sn = line.trim().toUpperCase();
       if (sn == 'SN') continue;
-      if (sn.isNotEmpty && RegExp(r'^[A-Z0-9_-]+$').hasMatch(sn) && !_snList.contains(sn)) {
+      if (sn.isNotEmpty &&
+          RegExp(r'^[A-Z0-9_-]+$').hasMatch(sn) &&
+          !_snList.contains(sn)) {
         _snList.add(sn);
         added = true;
       }
@@ -258,12 +289,7 @@ class AppLogic extends ChangeNotifier {
       await ConfigService.saveConfig(_exportConfigMap());
       if (_selectedSn.isEmpty) _selectedSn = _snList.last;
       notifyListeners();
-      _fetchPendingSns();
-      if (_viewMode == ViewMode.barcodeHistory) {
-        _fetchPendingProcessHistory();
-      } else if (_viewMode == ViewMode.wipComponents) {
-        _fetchPendingWipComponents();
-      }
+      _fetchAllPending();
     }
   }
 
@@ -285,7 +311,12 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 ''';
 
     try {
-      final result = await Process.run('powershell', ['-NoProfile', '-STA', '-Command', script]);
+      final result = await Process.run('powershell', [
+        '-NoProfile',
+        '-STA',
+        '-Command',
+        script,
+      ]);
       final path = result.stdout.toString().trim();
       if (path.isNotEmpty) {
         return path;
@@ -308,7 +339,12 @@ Add-Type -AssemblyName System.Windows.Forms
 \$f.InitialDirectory = [Environment]::GetFolderPath("Desktop")
 if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 ''';
-      final result = await Process.run('powershell', ['-NoProfile', '-STA', '-Command', script]);
+      final result = await Process.run('powershell', [
+        '-NoProfile',
+        '-STA',
+        '-Command',
+        script,
+      ]);
       final path = result.stdout.toString().trim();
       if (path.isEmpty) return; // User canceled
 
@@ -320,8 +356,6 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     }
     notifyListeners();
   }
-
-
 
   Future<void> importCsv() async {
     _globalError = '';
@@ -354,26 +388,57 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final file = File(path.replaceAll('"', '').trim());
       final buffer = StringBuffer();
       // Write Header
-      buffer.writeln('SN,Internal SN,Customer SN,Product No,Process Code,Line Station Code,Station ID,Error Code,Test Time,Result,Failure Reason,Fail Desc,Host Loc,Product Series,WO,EmpNo');
-      
+      buffer.writeln(
+        'SN,Internal SN,Customer SN,Product No,Process Code,Line Station Code,Station ID,Error Code,Test Time,Result,Failure Reason,Fail Desc,Host Loc,Product Series,WO,EmpNo',
+      );
+
       for (final sn in _snList) {
         final records = _results[sn];
         if (records != null && records.isNotEmpty) {
           for (final r in records) {
-            buffer.writeln('${r.sn},${r.internalSn},${r.customerSn},${r.productNo},${r.processCode},${r.lineStationCode},${r.stationId},${r.errCode},${r.testDate},${r.testResult},"${r.failureReason}","${r.failDesc}","${r.loc}",${r.productSeries},${r.woNo},${r.empNo}');
+            buffer.writeln(
+              '${r.sn},${r.internalSn},${r.customerSn},${r.productNo},${r.processCode},${r.lineStationCode},${r.stationId},${r.errCode},${r.testDate},${r.testResult},"${r.failureReason}","${r.failDesc}","${r.loc}",${r.productSeries},${r.woNo},${r.empNo}',
+            );
           }
         } else {
           final err = _errors[sn] ?? 'No records / Pending';
           buffer.writeln('$sn,,,,,,,,,,,"$err"');
         }
       }
-      
+
       await file.writeAsString(buffer.toString());
       _globalError = 'Exported successfully to $path';
     } catch (e) {
       _globalError = 'Error exporting CSV: $e';
     }
     notifyListeners();
+  }
+
+  /// Resolves a typed SN (internal SN, customer SN, or product SN) to its
+  /// canonical top-level product SN via the snMaster lookup, caching the
+  /// result per typed SN. Falls back to the raw input on failure so a
+  /// resolve error never blocks the existing fetch flow.
+  Future<String> _resolveCanonicalSn(String sn) async {
+    final cached = _resolvedSn[sn];
+    if (cached != null) return cached;
+    try {
+      final info = await ApiClient.resolveSnMaster(
+        sn: sn,
+        token: _token,
+        lang: _lang,
+        operationId: _operationId,
+        uuid: _uuid,
+        cookie: _cookie,
+      );
+      final canonical = info.sn.isNotEmpty ? info.sn : sn;
+      _resolvedSn[sn] = canonical;
+      _snMasterInfo[sn] = info;
+      return canonical;
+    } catch (e) {
+      _logger.warning('Failed to resolve SN master for $sn: $e');
+      _resolvedSn[sn] = sn;
+      return sn;
+    }
   }
 
   Future<void> _fetchPendingSns() async {
@@ -389,8 +454,9 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         notifyListeners();
 
         try {
+          final canonicalSn = await _resolveCanonicalSn(sn);
           final records = await ApiClient.fetchTestRecords(
-            sn: sn,
+            sn: canonicalSn,
             token: _token,
             lang: _lang,
             operationId: _operationId,
@@ -427,8 +493,9 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         notifyListeners();
 
         try {
+          final canonicalSn = await _resolveCanonicalSn(sn);
           final records = await ApiClient.fetchSnProcessHistory(
-            sn: sn,
+            sn: canonicalSn,
             token: _token,
             lang: _lang,
             operationId: _operationId,
@@ -465,8 +532,9 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         notifyListeners();
 
         try {
+          final canonicalSn = await _resolveCanonicalSn(sn);
           final records = await ApiClient.fetchWipComponents(
-            sn: sn,
+            sn: canonicalSn,
             token: _token,
             lang: _lang,
             operationId: _operationId,
@@ -491,8 +559,20 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     notifyListeners();
   }
 
-  Future<String?> verifySettings(String t, String l, String o, String u, String c) async {
-    return await ApiClient.verifyConnection(token: t, lang: l, operationId: o, uuid: u, cookie: c);
+  Future<String?> verifySettings(
+    String t,
+    String l,
+    String o,
+    String u,
+    String c,
+  ) async {
+    return await ApiClient.verifyConnection(
+      token: t,
+      lang: l,
+      operationId: o,
+      uuid: u,
+      cookie: c,
+    );
   }
 
   Future<void> fetchSnsData() async {
@@ -510,11 +590,6 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     _wipResults.clear();
     _wipErrors.clear();
     notifyListeners();
-    await _fetchPendingSns();
-    if (_viewMode == ViewMode.barcodeHistory) {
-      await _fetchPendingProcessHistory();
-    } else if (_viewMode == ViewMode.wipComponents) {
-      await _fetchPendingWipComponents();
-    }
+    await _fetchAllPending();
   }
 }

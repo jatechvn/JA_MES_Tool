@@ -1,4 +1,4 @@
-# 🤖 JA MES Test Record Tool v2.4.0 - 中文说明
+# 🤖 JA MES Tool v2.5.1 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.4.0-blue.svg" alt="版本 2.4.0">
+  <img src="https://img.shields.io/badge/banben-2.5.1-blue.svg" alt="版本 2.5.1">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -21,22 +21,24 @@
 
 ## 🌟 简介
 
-**JA MES Test Record Tool** 是一款专为优化 **Foxconn CloudMES** API 平台测试记录查询、工序历史提取、BOM 组件追溯和 SN 验证、测试报告导出而设计的专业工具。
+**JA MES Tool** 是一款专为优化 **Foxconn CloudMES** API 平台测试记录查询、工序历史提取、BOM 组件追溯和 SN 验证、测试报告导出而设计的专业工具。
 
 专为测试工程师和 QA 团队打造，支持每个 SN 三种数据视图的极速异步并行查询、浏览器 CDP 自动同步 Token 凭据，以及带 Excel 风格搜索与排序的现代化交互界面。
 
 ---
 
-## 💡 主要功能 (v2.4.0)
+## 💡 主要功能 (v2.5.1)
 
 ### 📊 数据视图
 - 🗂️ **每个 SN 三种数据视图**：在 **测试记录** (Pass/Fail 结果)、**条码历史** (完整工序/工站流程) 与 **组件清单** (WIP BOM/物料追溯 — 制造商、料号、生产日期码、批次/包装号) 之间切换。
+- 🔗 **自动 SN 主档解析**：输入内部 SN 时，程序会在查询前通过 `snMaster/getSnMasterProcess` 自动解析为标准产品 SN — 标题栏显示为 `输入 SN → 解析后 SN`，按会话缓存并在解析失败时自动回退。
 - 🔍 **Excel 风格搜索筛选**：每个记录列表都有即时搜索框，输入时匹配任意字段。
 - ⬍ **点击排序**：排序按钮可选择字段并切换升序/降序，三种视图均支持。
 - 📋 **可选取并复制数据**：任意记录数值均可通过拖动选取或双击选中，并复制 (Ctrl+C)，如同电子表格。
 - 🔢 **智能记录数量**："SN 记录" 会自动显示 `(N)` 数量，当只有 0 或 1 条记录时自动隐藏。
 
 ### 🎨 界面
+- ✨ **iOS 风格流畅过渡动画**：标签/SN 切换带有淡入滑动动画，记录列表以级联效果依次出现并支持弹性滚动，对话框采用缩放淡入淡出效果，侧边栏选中项与记录数量徽章带有平滑动画，明暗主题切换时背景色平滑渐变 — 全部基于统一的动画时长/曲线配置 (`lib/modules/ui/motion.dart`)。
 - 🏝️ **Dynamic Island 风格悬停工具栏**：3 个视图标签与模板/导入/导出/语言/主题按钮默认收起为图标，悬停时展开为文字标签 — 避免工具栏溢出。窗口最大化时所有按钮自动保持展开状态。
 - 🎨 **多语言与实心主题**：支持暗黑/亮色主题及 **英文**、**越南文**、**中文** 三语切换。
 
@@ -115,12 +117,13 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord 与 WipComponentRecord
 │       ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │       ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│       ├── constants.dart         # 全局常量与默认配置 (v2.4.0)
+│       ├── constants.dart         # 全局常量与默认配置 (v2.5.1)
 │       ├── logger_service.dart    # 日志服务与 7 天自动清理
-│       ├── logic.dart             # 状态管理：SN 队列、三种记录列表、ViewMode
+│       ├── logic.dart             # 状态管理：SN 队列、三种记录列表、ViewMode、SN 解析缓存
 │       ├── translations.dart      # 多语言字典 (EN, VN, CN)
 │       └── ui/
 │           ├── main_window.dart   # 标签页、搜索/排序、悬停图标、对话框 (WindowListener)
+│           ├── motion.dart        # 统一动画时长/曲线配置
 │           ├── styles.dart        # 主题调度器 (暗黑/亮色)
 │           ├── styles_win10.dart  # Windows 10 半透明主题
 │           └── styles_win11.dart  # Windows 11 亚克力主题
@@ -134,7 +137,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.4.0+2)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.5.1+4)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -174,8 +177,9 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.5.1]** — 修复列表级联进场动画在滚动时重复播放的问题；条码历史与组件清单标签页现与测试记录并行预加载，不再等到切换标签才加载。
+- **[2.5.0]** — 更名为 "JA MES Tool"、自动 SN 主档解析 (内部 SN → 标准 SN)、全应用 iOS 风格流畅过渡动画。
 - **[2.4.0]** — 新增条码历史与组件清单标签页、Excel 风格搜索/排序、可选取复制数据、Dynamic Island 悬停工具栏、移除硬编码凭据。
 - **[2.3.0]** — 启动时 Token 过期自动警告弹窗、Edge/Chrome 防卡死标志、连接验证徽章图标。
-- **[2.2.0]** — 保存设置时自动重新查询 SN 队列、即时连接验证。
 
 完整版本历史请见 [**CHANGELOG.md**](../CHANGELOG.md)。

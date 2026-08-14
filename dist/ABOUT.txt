@@ -1,8 +1,8 @@
 ========================================================================
                        PROJECT INFORMATION CARD
 ========================================================================
-Project Name : JA MES Test Record Tool
-Version      : v2.4.0
+Project Name : JA MES Tool
+Version      : v2.5.1
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -15,6 +15,13 @@ Description  : High-performance desktop application developed in Dart/Flutter
 Key Features:
 - Three data views per SN: Test Record, Barcode History (process routing),
   and Component List (WIP BOM / material traceability).
+- Automatic SN Master Resolution: typed internal SNs are auto-resolved to
+  the canonical product SN (snMaster/getSnMasterProcess) before fetching,
+  shown as "typed SN -> resolved SN" in the header.
+- iOS-style Smooth UI Transitions: fade+slide tab/SN switching, cascading
+  list-item entrance animation with bouncing scroll, scale+fade dialog
+  presentation, animated sidebar selection & record-count badge, and
+  crossfaded light/dark theme switching.
 - Excel-style Search Filter & Sort-by (click to toggle ascending/descending)
   on every record list.
 - Selectable & copyable record data via native text selection.

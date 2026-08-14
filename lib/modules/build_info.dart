@@ -13,7 +13,9 @@ class BuildInfo {
   static String _generateBuildTimestamp() {
     try {
       final exeFile = File(Platform.resolvedExecutable);
-      final appSoFile = File('${exeFile.parent.path}${Platform.pathSeparator}data${Platform.pathSeparator}app.so');
+      final appSoFile = File(
+        '${exeFile.parent.path}${Platform.pathSeparator}data${Platform.pathSeparator}app.so',
+      );
       final targetFile = appSoFile.existsSync() ? appSoFile : exeFile;
 
       if (targetFile.existsSync()) {

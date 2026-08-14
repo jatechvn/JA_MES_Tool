@@ -5,6 +5,28 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.1] - 2026-08-14
+
+### 🐛 Bug Fixes
+- **🖼️ Fixed stagger entrance animation replaying on scroll**: List items in Test Record, Barcode History, and Component List previously replayed their fade/slide-in entrance animation every time they scrolled back into view, because `ListView.builder` disposes and recreates offscreen items' `Element`s. Now each list tracks already-animated items by a stable content-derived key in a `Set<String>` owned by the longer-lived parent state, so each item animates in exactly once per session.
+- **⚡ All 3 tabs now preload concurrently**: Barcode History and Component List previously only fetched data lazily when the user switched into that tab. `logic.dart` now fires all 3 fetches (Test Record, Barcode History, Component List) together via `Future.wait` on init, SN add, and refresh, so switching tabs is instant instead of triggering a fresh load.
+
+---
+
+## [2.5.0] - 2026-08-14
+
+### 🚀 Major Features & Enhancements
+- **🏷️ App Renamed to "JA MES Tool"**: The sidebar title ("MES Queue") and the internal app name (window title / About dialog, formerly "JA MES Test Record") are now unified as **JA MES Tool** across all 3 languages.
+- **🔗 Automatic SN Master Resolution**: Typing an internal/alias SN (e.g. `SAFVN262983614B`) now auto-resolves it to the canonical product SN (e.g. `DHL290000V`) via `snMaster/getSnMasterProcess` before fetching Test Record, Barcode History, and Component List data — the "Records for SN" header shows `typed SN → resolved SN` whenever they differ. Resolved SNs are cached per-session to avoid redundant lookups, with automatic fallback to the typed SN if resolution fails.
+- **✨ iOS-style Smooth UI Transitions**: A full animation pass across the app, backed by a shared `Motion` timing/easing spec (`lib/modules/ui/motion.dart`):
+  - Fade + slide transition when switching tabs or selecting a different SN.
+  - Cascading fade/slide-in entrance for record list items, plus bouncing scroll physics on all 3 lists.
+  - Scale + fade presentation for dialogs (Settings, User Guide, Paste Raw Header, Token Expired warning) replacing Material's flat fade.
+  - Animated sidebar selection highlight and a "pop" scale animation on the record-count badge.
+  - Crossfaded background colors across sidebar, tab pill, sort button, and record cards on Light/Dark theme switch.
+
+---
+
 ## [2.4.0] - 2026-08-11
 
 ### 🚀 Major Features & Enhancements

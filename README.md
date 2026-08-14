@@ -1,4 +1,4 @@
-# 🤖 JA MES Test Record Tool v2.4.0
+# 🤖 JA MES Tool v2.5.1
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.4.0-blue.svg" alt="Version 2.4.0">
+  <img src="https://img.shields.io/badge/version-2.5.1-blue.svg" alt="Version 2.5.1">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -35,23 +35,25 @@
 <a id="introduction"></a>
 ## 🌟 Introduction
 
-**JA MES Test Record Tool** is a specialized desktop application engineered to streamline serial number (SN) verification, test/process history extraction, BOM component traceability, and result reporting from the **Foxconn CloudMES** API platform.
+**JA MES Tool** is a specialized desktop application engineered to streamline serial number (SN) verification, test/process history extraction, BOM component traceability, and result reporting from the **Foxconn CloudMES** API platform.
 
 Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN, automated token credential synchronization via browser CDP, and an intuitive modern interface with Excel-style search & sort.
 
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.4.0)
+## 💡 Key Features (v2.5.1)
 
 ### 📊 Data Views
 - 🗂️ **Three Views per SN**: Switch between **Test Record** (pass/fail results), **Barcode History** (full process/station routing), and **Component List** (WIP BOM / material traceability — manufacturer, part no, date code, package/lot ID) for every queried SN.
+- 🔗 **Automatic SN Master Resolution**: Typing an internal/alias SN auto-resolves it to the canonical product SN (`snMaster/getSnMasterProcess`) before fetching any of the 3 views — the header shows `typed SN → resolved SN` whenever they differ, cached per-session with automatic fallback if resolution fails.
 - 🔍 **Excel-style Search Filter**: A live search box on every record list matches against any visible field as you type.
 - ⬍ **Click-to-sort**: A sort-by button lets you pick a field and toggle ascending/descending, on all three views.
 - 📋 **Selectable & Copyable Data**: Every record value can be selected with a click-drag or double-click and copied (Ctrl+C), just like a spreadsheet.
 - 🔢 **Smart Record Counts**: "Records for SN" shows a `(N)` count automatically, hidden when there are 0 or 1 records.
 
 ### 🎨 Interface
+- ✨ **iOS-style Smooth Transitions**: Fade+slide animation when switching tabs or SN, cascading fade/slide-in entrance for record lists with bouncing scroll, scale+fade dialog presentation, animated sidebar selection & record-count badge, and crossfaded Light/Dark theme switching — all driven by a shared timing/easing spec (`lib/modules/ui/motion.dart`).
 - 🏝️ **Dynamic-Island Hover Toolbar**: The 3 view tabs and the Template/Import/Export/Language/Theme actions collapse into compact icon chips, expanding to full labels on hover — keeps the toolbar from overflowing. When the window is maximized, every chip stays fully expanded.
 - 🎨 **Glassmorphic Multi-Language UI**: Light & Dark themes with multi-language switching (**English**, **Vietnamese**, **Chinese**).
 
@@ -133,12 +135,13 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
 │       ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │       ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│       ├── constants.dart         # Global app constants & defaults (v2.4.0)
+│       ├── constants.dart         # Global app constants & defaults (v2.5.1)
 │       ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
-│       ├── logic.dart             # App state: SN queue, 3 record maps, ViewMode, auto validation
+│       ├── logic.dart             # App state: SN queue, 3 record maps, ViewMode, SN Master resolve cache
 │       ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
 │       └── ui/
 │           ├── main_window.dart   # Tabs, filter/sort, hover chips, dialogs (WindowListener)
+│           ├── motion.dart        # Shared iOS-style animation Duration/Curve spec
 │           ├── styles.dart        # Theme dispatcher (dark/light tokens)
 │           ├── styles_win10.dart  # Windows 10 translucent theme tokens
 │           └── styles_win11.dart  # Windows 11 acrylic theme tokens
@@ -152,7 +155,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.4.0+2)
+├── pubspec.yaml                   # Flutter package manifest (v2.5.1+4)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -206,9 +209,9 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.5.1]** — Fixed stagger list-entrance animation replaying on scroll; Barcode History & Component List tabs now preload concurrently with Test Record instead of loading lazily on tab switch.
+- **[2.5.0]** — Renamed to "JA MES Tool", automatic SN Master resolution (internal → canonical SN), full iOS-style smooth UI transition pass.
 - **[2.4.0]** — Barcode History & Component List tabs, Excel-style search/sort on all lists, selectable/copyable record data, Dynamic-Island hover toolbar, hardcoded-credential removal.
-- **[2.3.0]** — Automatic startup expired-token warning popup, Edge/Chrome anti-freeze flags, verified-connection badge icon.
-- **[2.2.0]** — Automatic SN queue refetch on Settings save, immediate connection validation.
 
 See [**CHANGELOG.md**](CHANGELOG.md) for the full version history.
 
