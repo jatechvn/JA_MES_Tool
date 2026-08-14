@@ -39,18 +39,15 @@ class ThemeProvider extends ChangeNotifier {
 
   // OS Specific transparent styles
   Color get scaffoldBackgroundColor => Colors.transparent;
-  
-  Color get mainBg => _isDark 
-      ? const Color(0xF0181818) 
-      : const Color(0xF0F8F9FA);
 
-  Color get sidebarBg => _isWin11 
-      ? getWin11SidebarBg(_isDark) 
-      : getWin10SidebarBg(_isDark);
-      
-  Color get cardBg => _isWin11 
-      ? getWin11CardBg(_isDark) 
-      : getWin10CardBg(_isDark);
+  Color get mainBg =>
+      _isDark ? const Color(0xF0181818) : const Color(0xF0F8F9FA);
+
+  Color get sidebarBg =>
+      _isWin11 ? getWin11SidebarBg(_isDark) : getWin10SidebarBg(_isDark);
+
+  Color get cardBg =>
+      _isWin11 ? getWin11CardBg(_isDark) : getWin10CardBg(_isDark);
 
   Color get passColor => Colors.green.shade600;
   Color get failColor => Colors.red.shade600;

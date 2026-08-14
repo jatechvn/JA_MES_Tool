@@ -20,3 +20,14 @@ Khi thực hiện bất kỳ thay đổi mã nguồn nào, Agent PHẢI tuân th
    - Không bao giờ được phép tự ý chạy lệnh `flutter clean` hay xóa các file quan trọng mà không có sự cho phép rõ ràng của người dùng.
 4. **Quản lý Thư viện:**
    - Trước khi đề xuất cài thêm package mới vào `pubspec.yaml`, phải đảm bảo package đó có null-safety và là bản ổn định (stable) mới nhất.
+5. **Hiệu ứng chuyển tiếp mượt mà (Smooth Transition Animations) & Hiệu năng:**
+   - Ưu tiên animation implicit có sẵn của Flutter (`AnimatedContainer`, `AnimatedSwitcher`, `AnimatedAlign`, `AnimatedCrossFade`, `ScaleTransition`/`FadeTransition` trong `showGeneralDialog`) thay vì tự viết `AnimationController` thủ công — chi phí thấp, tự động interrupt/reverse mượt, ít code hơn.
+   - Gom toàn bộ `Duration`/`Curve` dùng cho animation vào một file hằng số dùng chung (ví dụ `lib/modules/ui/motion.dart`) thay vì hard-code rải rác, để cảm giác chuyển động đồng nhất toàn app và dễ tinh chỉnh sau này.
+   - Với danh sách dài render qua `ListView.builder` có hiệu ứng entrance (stagger fade/slide-in): PHẢI keyed bằng định danh nội dung ổn định (không dùng index thô), và lưu trạng thái "đã chạy animation" ở một `Set` sống trong State của widget cha (không phải trong chính item) — vì `ListView.builder` dispose Element khi item cuộn ra ngoài `cacheExtent`, nếu không track ở tầng cha thì cuộn qua lại sẽ làm animation bị replay liên tục, gây nhấp nháy khó chịu.
+   - Chỉ bọc `AnimatedSwitcher`/`KeyedSubtree` đúng vùng thực sự cần transition (ví dụ nội dung tab/detail panel), không bọc animation lồng nhau nhiều lớp không cần thiết trên cùng một thay đổi state.
+   - **BẮT BUỘC verify bằng Flutter DevTools thật sau khi thêm animation mới, không chỉ verify bằng mắt/screenshot:**
+     1. Chạy `flutter run --profile -d windows` (hoặc platform tương ứng), lấy URL DevTools in ra ở console.
+     2. Mở DevTools → tab **Performance**, bấm **Clear all** để xoá dữ liệu cũ.
+     3. Thao tác trực tiếp với app để trigger đúng các animation vừa thêm (chuyển tab, cuộn list, mở/đóng dialog, đổi theme...).
+     4. Click vào frame cao nhất trên biểu đồ, đọc **Frame Analysis**: tổng thời gian UI (Build+Layout+Paint) + Raster phải < 16.67ms (ngân sách 60fps) và không có frame màu đỏ (jank) hoặc đỏ đậm (Shader Compilation).
+     5. Nếu Raster cao bất thường trong khi UI thấp → nghi ngờ animate màu nền/blur trên vùng lớn; vẫn chấp nhận được nếu còn trong ngân sách, nhưng phải đo lại mỗi khi thêm animation mới vào cùng khu vực đó.

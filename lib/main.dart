@@ -9,7 +9,9 @@ import 'modules/logger_service.dart';
 import 'modules/ui/main_window.dart';
 
 void main(List<String> args) async {
-  if (args.contains('-debug') || args.contains('--debug') || args.contains('-d')) {
+  if (args.contains('-debug') ||
+      args.contains('--debug') ||
+      args.contains('-d')) {
     BuildInfo.isCliDebug = true;
   }
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,13 +38,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
-    
+
     return MaterialApp(
       title: '$appName v$appVersion',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: theme.isDark ? Brightness.dark : Brightness.light,
-        scaffoldBackgroundColor: Colors.transparent, // Required for Aero/Acrylic
+        scaffoldBackgroundColor:
+            Colors.transparent, // Required for Aero/Acrylic
         // In a real app we'd load Outfit font here: fontFamily: 'Outfit'
       ),
       home: const MainWindow(),

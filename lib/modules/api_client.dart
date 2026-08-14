@@ -6,12 +6,12 @@ import 'constants.dart';
 final _logger = Logger('ApiClient');
 
 String _cleanHeader(String value) {
-    String clean = value.replaceAll('\r', '').replaceAll('\n', '').trim();
-    if (clean.startsWith('"') && clean.endsWith('"')) {
-      clean = clean.substring(1, clean.length - 1).trim();
-    }
-    return clean;
+  String clean = value.replaceAll('\r', '').replaceAll('\n', '').trim();
+  if (clean.startsWith('"') && clean.endsWith('"')) {
+    clean = clean.substring(1, clean.length - 1).trim();
   }
+  return clean;
+}
 
 class TestRecord {
   final String sn;
@@ -70,7 +70,10 @@ class TestRecord {
       testResult: json['result']?.toString() ?? '',
       woNo: json['woNo']?.toString() ?? '',
       empNo: json['empNo']?.toString() ?? '',
-      testDate: json['lastEditedDt']?.toString() ?? json['createdDt']?.toString() ?? '',
+      testDate:
+          json['lastEditedDt']?.toString() ??
+          json['createdDt']?.toString() ??
+          '',
     );
   }
 }
@@ -167,7 +170,8 @@ class WipComponentRecord {
 
   factory WipComponentRecord.fromJson(Map<String, dynamic> json) {
     return WipComponentRecord(
-      wipProductComponentId: int.tryParse(json['wipProductComponentId']?.toString() ?? '') ?? 0,
+      wipProductComponentId:
+          int.tryParse(json['wipProductComponentId']?.toString() ?? '') ?? 0,
       materialNo: json['materialNo']?.toString() ?? '',
       materialCategory: json['materialCategory']?.toString() ?? '',
       mfgName: json['mfgName']?.toString() ?? '',
@@ -184,25 +188,71 @@ class WipComponentRecord {
   }
 }
 
+/// Result of resolving an arbitrary scanned/typed SN (internal SN, customer
+/// SN, or product SN) to its canonical top-level product SN. Test Record,
+/// Barcode History, and Component List all require the canonical `sn` — they
+/// don't accept internal/customer SN aliases themselves, so this lookup must
+/// run first (mirrors what the MES web frontend does before those calls).
+class SnMasterInfo {
+  final String sn;
+  final String productNo;
+  final String productName;
+  final String productVersion;
+  final String woNo;
+  final String lineName;
+  final String currentProcessCode;
+  final String currentProcessName;
+  final String productStatus;
+
+  SnMasterInfo({
+    required this.sn,
+    required this.productNo,
+    required this.productName,
+    required this.productVersion,
+    required this.woNo,
+    required this.lineName,
+    required this.currentProcessCode,
+    required this.currentProcessName,
+    required this.productStatus,
+  });
+
+  factory SnMasterInfo.fromJson(Map<String, dynamic> json) {
+    return SnMasterInfo(
+      sn: json['sn']?.toString() ?? '',
+      productNo: json['productNo']?.toString() ?? '',
+      productName: json['productName']?.toString() ?? '',
+      productVersion: json['productVersion']?.toString() ?? '',
+      woNo: json['woNo']?.toString() ?? '',
+      lineName: json['lineName']?.toString() ?? '',
+      currentProcessCode: json['currentProcessCode']?.toString() ?? '',
+      currentProcessName: json['currentProcessName']?.toString() ?? '',
+      productStatus: json['productStatus']?.toString() ?? '',
+    );
+  }
+}
+
 class ApiClient {
   static Future<List<TestRecord>> fetchTestRecords({
-    required String sn, 
+    required String sn,
     required String token,
     required String lang,
     required String operationId,
     required String uuid,
     required String cookie,
   }) async {
-    final cleanToken = _cleanHeader(token).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanToken = _cleanHeader(
+      token,
+    ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
     final cleanLang = _cleanHeader(lang);
     final cleanOpId = _cleanHeader(operationId);
     final cleanUuid = _cleanHeader(uuid);
     final cleanCookie = _cleanHeader(cookie);
-    
+
     final uri = Uri.parse(
-        'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/equipmentRecord/pageTestRecordLists'
-        '?pageIndex=1&pageSize=100&productNo=&testStartDate=&processCode=&woNo=&sn=$sn'
-        '&stationId=&testTime=&productSeries=&orgCode=$defaultOrgCode');
+      'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/equipmentRecord/pageTestRecordLists'
+      '?pageIndex=1&pageSize=100&productNo=&testStartDate=&processCode=&woNo=&sn=$sn'
+      '&stationId=&testTime=&productSeries=&orgCode=$defaultOrgCode',
+    );
 
     final headers = {
       'Host': 'vncmes.ces.myfiinet.com',
@@ -213,28 +263,37 @@ class ApiClient {
       'org-code': defaultOrgCode,
       'timezone': '+07:00',
       'uuid': cleanUuid,
-      'Cookie': cleanCookie.isNotEmpty ? cleanCookie : 'CloudMES-token=$cleanToken',
+      'Cookie': cleanCookie.isNotEmpty
+          ? cleanCookie
+          : 'CloudMES-token=$cleanToken',
     };
 
     _logger.info('Fetching records for SN: $sn');
-    
+
     final response = await http.get(uri, headers: headers);
-    
+
     if (response.statusCode != 200) {
       if (response.statusCode == 401) {
-        throw Exception('Token expired or unauthorized (401). Please update the token.');
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
       }
       throw Exception('Server error: ${response.statusCode}');
     }
 
     final data = json.decode(response.body);
-    
+
     final code = data['code'];
     final msg = data['msg'] ?? data['message'] ?? '';
-    
-    if (code != 200 && code != 0 && code.toString() != '200' && code.toString() != '0') {
+
+    if (code != 200 &&
+        code != 0 &&
+        code.toString() != '200' &&
+        code.toString() != '0') {
       if (code.toString() == '401' || msg.toString().contains('401')) {
-        throw Exception('Token expired or unauthorized (401). Please update the token.');
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
       }
       throw Exception('API Error [$code]: $msg');
     }
@@ -242,7 +301,11 @@ class ApiClient {
     final responseData = data['data'];
     List<dynamic> recordsList = [];
     if (responseData is Map) {
-      recordsList = responseData['list'] ?? responseData['records'] ?? responseData['rows'] ?? [];
+      recordsList =
+          responseData['list'] ??
+          responseData['records'] ??
+          responseData['rows'] ??
+          [];
     } else if (responseData is List) {
       recordsList = responseData;
     }
@@ -258,14 +321,17 @@ class ApiClient {
     required String uuid,
     required String cookie,
   }) async {
-    final cleanToken = _cleanHeader(token).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanToken = _cleanHeader(
+      token,
+    ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
     final cleanLang = _cleanHeader(lang);
     final cleanOpId = _cleanHeader(operationId);
     final cleanUuid = _cleanHeader(uuid);
     final cleanCookie = _cleanHeader(cookie);
 
     final uri = Uri.parse(
-        'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/querySnProcessDetailPageList');
+      'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/querySnProcessDetailPageList',
+    );
 
     final headers = {
       'Host': 'vncmes.ces.myfiinet.com',
@@ -277,16 +343,24 @@ class ApiClient {
       'org-code': defaultOrgCode,
       'timezone': '+07:00',
       'uuid': cleanUuid,
-      'Cookie': cleanCookie.isNotEmpty ? cleanCookie : 'CloudMES-token=$cleanToken',
+      'Cookie': cleanCookie.isNotEmpty
+          ? cleanCookie
+          : 'CloudMES-token=$cleanToken',
     };
 
     _logger.info('Fetching process history for SN: $sn');
 
-    final response = await http.post(uri, headers: headers, body: json.encode({'sn': sn, 'orgCode': defaultOrgCode}));
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: json.encode({'sn': sn, 'orgCode': defaultOrgCode}),
+    );
 
     if (response.statusCode != 200) {
       if (response.statusCode == 401) {
-        throw Exception('Token expired or unauthorized (401). Please update the token.');
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
       }
       throw Exception('Server error: ${response.statusCode}');
     }
@@ -296,9 +370,14 @@ class ApiClient {
     final code = data['code'];
     final msg = data['msg'] ?? data['message'] ?? '';
 
-    if (code != 200 && code != 0 && code.toString() != '200' && code.toString() != '0') {
+    if (code != 200 &&
+        code != 0 &&
+        code.toString() != '200' &&
+        code.toString() != '0') {
       if (code.toString() == '401' || msg.toString().contains('401')) {
-        throw Exception('Token expired or unauthorized (401). Please update the token.');
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
       }
       throw Exception('API Error [$code]: $msg');
     }
@@ -322,14 +401,17 @@ class ApiClient {
     required String uuid,
     required String cookie,
   }) async {
-    final cleanToken = _cleanHeader(token).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanToken = _cleanHeader(
+      token,
+    ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
     final cleanLang = _cleanHeader(lang);
     final cleanOpId = _cleanHeader(operationId);
     final cleanUuid = _cleanHeader(uuid);
     final cleanCookie = _cleanHeader(cookie);
 
     final uri = Uri.parse(
-        'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/pageWipProductComponentLists');
+      'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/pageWipProductComponentLists',
+    );
 
     final headers = {
       'Host': 'vncmes.ces.myfiinet.com',
@@ -341,18 +423,29 @@ class ApiClient {
       'org-code': defaultOrgCode,
       'timezone': '+07:00',
       'uuid': cleanUuid,
-      'Cookie': cleanCookie.isNotEmpty ? cleanCookie : 'CloudMES-token=$cleanToken',
+      'Cookie': cleanCookie.isNotEmpty
+          ? cleanCookie
+          : 'CloudMES-token=$cleanToken',
     };
 
     _logger.info('Fetching WIP components for SN: $sn');
 
-    final response = await http.post(uri,
-        headers: headers,
-        body: json.encode({'pageIndex': 1, 'pageSize': 100, 'sn': sn, 'orgCode': defaultOrgCode}));
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: json.encode({
+        'pageIndex': 1,
+        'pageSize': 100,
+        'sn': sn,
+        'orgCode': defaultOrgCode,
+      }),
+    );
 
     if (response.statusCode != 200) {
       if (response.statusCode == 401) {
-        throw Exception('Token expired or unauthorized (401). Please update the token.');
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
       }
       throw Exception('Server error: ${response.statusCode}');
     }
@@ -362,9 +455,14 @@ class ApiClient {
     final code = data['code'];
     final msg = data['msg'] ?? data['message'] ?? '';
 
-    if (code != 200 && code != 0 && code.toString() != '200' && code.toString() != '0') {
+    if (code != 200 &&
+        code != 0 &&
+        code.toString() != '200' &&
+        code.toString() != '0') {
       if (code.toString() == '401' || msg.toString().contains('401')) {
-        throw Exception('Token expired or unauthorized (401). Please update the token.');
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
       }
       throw Exception('API Error [$code]: $msg');
     }
@@ -380,6 +478,83 @@ class ApiClient {
     return recordsList.map((e) => WipComponentRecord.fromJson(e)).toList();
   }
 
+  static Future<SnMasterInfo> resolveSnMaster({
+    required String sn,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+  }) async {
+    final cleanToken = _cleanHeader(
+      token,
+    ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanLang = _cleanHeader(lang);
+    final cleanOpId = _cleanHeader(operationId);
+    final cleanUuid = _cleanHeader(uuid);
+    final cleanCookie = _cleanHeader(cookie);
+
+    final uri = Uri.parse(
+      'https://vncmes.ces.myfiinet.com/api/cloudmes-mes/snMaster/getSnMasterProcess',
+    );
+
+    final headers = {
+      'Host': 'vncmes.ces.myfiinet.com',
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Authorization': 'bearer $cleanToken',
+      'factoryid': '13',
+      'lang': cleanLang,
+      'operation-id': cleanOpId,
+      'org-code': defaultOrgCode,
+      'timezone': '+07:00',
+      'uuid': cleanUuid,
+      'Cookie': cleanCookie.isNotEmpty
+          ? cleanCookie
+          : 'CloudMES-token=$cleanToken',
+    };
+
+    _logger.info('Resolving SN master for: $sn');
+
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: json.encode({'sn': sn, 'orgCode': defaultOrgCode}),
+    );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
+      }
+      throw Exception('Server error: ${response.statusCode}');
+    }
+
+    final data = json.decode(response.body);
+
+    final code = data['code'];
+    final msg = data['msg'] ?? data['message'] ?? '';
+
+    if (code != 200 &&
+        code != 0 &&
+        code.toString() != '200' &&
+        code.toString() != '0') {
+      if (code.toString() == '401' || msg.toString().contains('401')) {
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
+      }
+      throw Exception('API Error [$code]: $msg');
+    }
+
+    final snData = data['data'];
+    if (snData is! Map || snData.isEmpty) {
+      throw Exception('SN not found');
+    }
+
+    return SnMasterInfo.fromJson(Map<String, dynamic>.from(snData));
+  }
+
   static Future<String?> verifyConnection({
     required String token,
     required String lang,
@@ -388,14 +563,17 @@ class ApiClient {
     required String cookie,
   }) async {
     try {
-      final cleanToken = _cleanHeader(token).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+      final cleanToken = _cleanHeader(
+        token,
+      ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
       final cleanLang = _cleanHeader(lang);
       final cleanOpId = _cleanHeader(operationId);
       final cleanUuid = _cleanHeader(uuid);
       final cleanCookie = _cleanHeader(cookie);
       final uri = Uri.parse(
-          'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/equipmentRecord/pageTestRecordLists'
-          '?pageIndex=1&pageSize=1&sn=TEST_CONNECTION_SN&orgCode=$defaultOrgCode');
+        'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/equipmentRecord/pageTestRecordLists'
+        '?pageIndex=1&pageSize=1&sn=TEST_CONNECTION_SN&orgCode=$defaultOrgCode',
+      );
 
       final headers = {
         'Host': 'vncmes.ces.myfiinet.com',
@@ -406,20 +584,22 @@ class ApiClient {
         'org-code': defaultOrgCode,
         'timezone': '+07:00',
         'uuid': cleanUuid,
-        'Cookie': cleanCookie.isNotEmpty ? cleanCookie : 'CloudMES-token=$cleanToken',
+        'Cookie': cleanCookie.isNotEmpty
+            ? cleanCookie
+            : 'CloudMES-token=$cleanToken',
       };
 
       final response = await http.get(uri, headers: headers);
       if (response.statusCode == 401) {
         return '401 Unauthorized';
       }
-      
+
       final data = json.decode(response.body);
       final code = data['code']?.toString();
       if (code == '401' || (data['msg']?.toString().contains('401') ?? false)) {
         return '401 Unauthorized';
       }
-      
+
       return null;
     } catch (e, stack) {
       _logger.severe('Verify connection failed', e, stack);

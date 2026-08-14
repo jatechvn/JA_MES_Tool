@@ -23,7 +23,8 @@ class ExtractedCredentials {
 }
 
 class BrowserHelper {
-  static const String mesUrl = 'https://vncmes.ces.myfiinet.com/#/zh-CN/ims/mes/report/test-record';
+  static const String mesUrl =
+      'https://vncmes.ces.myfiinet.com/#/zh-CN/ims/mes/report/test-record';
   static const int cdpPort = 9222;
 
   /// Launches Chrome or Edge with Remote Debugging enabled on port 9222.
@@ -31,7 +32,7 @@ class BrowserHelper {
     try {
       // Find Chrome or Edge executable on Windows
       String? execPath;
-      
+
       final candidatePaths = [
         r'C:\Program Files\Google\Chrome\Application\chrome.exe',
         r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
@@ -46,7 +47,8 @@ class BrowserHelper {
         }
       }
 
-      final userDataDir = '${Directory.systemTemp.path}\\ja_mes_browser_profile';
+      final userDataDir =
+          '${Directory.systemTemp.path}\\ja_mes_browser_profile';
       final dir = Directory(userDataDir);
       if (!dir.existsSync()) {
         dir.createSync(recursive: true);
@@ -64,7 +66,7 @@ class BrowserHelper {
           '--disable-default-apps',
           '--disable-popup-blocking',
         ];
-        
+
         if (isEdge) {
           args.addAll([
             '--disable-features=msEdgeStartupBoost,msUnderside,msEdgeSidebar,msHubs,WebAuthentication',
@@ -75,11 +77,20 @@ class BrowserHelper {
         args.add(mesUrl);
 
         await Process.start(execPath, args);
-        _logger.info('Launched browser (${isEdge ? "Edge" : "Chrome"}) with dynamic CDP port and profile $userDataDir: $execPath');
+        _logger.info(
+          'Launched browser (${isEdge ? "Edge" : "Chrome"}) with dynamic CDP port and profile $userDataDir: $execPath',
+        );
         return true;
       } else {
         // Fallback: launch default browser using cmd start
-        await Process.run('cmd', ['/c', 'start', 'msedge', '--remote-debugging-port=$cdpPort', '--user-data-dir=$userDataDir', mesUrl]);
+        await Process.run('cmd', [
+          '/c',
+          'start',
+          'msedge',
+          '--remote-debugging-port=$cdpPort',
+          '--user-data-dir=$userDataDir',
+          mesUrl,
+        ]);
         return true;
       }
     } catch (e, stack) {
@@ -94,7 +105,9 @@ class BrowserHelper {
   static Future<ExtractedCredentials?> fetchCredentialsFromBrowser() async {
     try {
       int port = cdpPort;
-      final activePortFile = File('${Directory.systemTemp.path}\\ja_mes_browser_profile\\DevToolsActivePort');
+      final activePortFile = File(
+        '${Directory.systemTemp.path}\\ja_mes_browser_profile\\DevToolsActivePort',
+      );
       if (activePortFile.existsSync()) {
         final lines = activePortFile.readAsLinesSync();
         if (lines.isNotEmpty) {
@@ -103,9 +116,13 @@ class BrowserHelper {
       }
       _logger.info('Attempting CDP connection on port $port');
 
-      final response = await http.get(Uri.parse('http://127.0.0.1:$port/json')).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('http://127.0.0.1:$port/json'))
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) {
-        _logger.warning('CDP endpoint responded with status ${response.statusCode}');
+        _logger.warning(
+          'CDP endpoint responded with status ${response.statusCode}',
+        );
         return null;
       }
 
@@ -115,7 +132,9 @@ class BrowserHelper {
       for (var t in targets) {
         if (t is Map<String, dynamic>) {
           final url = t['url']?.toString() ?? '';
-          if (url.contains('vncmes.ces.myfiinet.com') || url.contains('test-record') || url.contains('cloudmes')) {
+          if (url.contains('vncmes.ces.myfiinet.com') ||
+              url.contains('test-record') ||
+              url.contains('cloudmes')) {
             mesTarget = t;
             break;
           }
@@ -123,7 +142,10 @@ class BrowserHelper {
       }
 
       // If no specific MES tab, pick the first page target
-      mesTarget ??= targets.firstWhere((t) => t['type'] == 'page', orElse: () => null);
+      mesTarget ??= targets.firstWhere(
+        (t) => t['type'] == 'page',
+        orElse: () => null,
+      );
 
       if (mesTarget == null || mesTarget['webSocketDebuggerUrl'] == null) {
         _logger.warning('No webSocketDebuggerUrl found in CDP targets');
@@ -132,7 +154,9 @@ class BrowserHelper {
 
       final wsUrl = mesTarget['webSocketDebuggerUrl'].toString();
       _logger.info('Connecting to CDP WebSocket: $wsUrl');
-      final socket = await WebSocket.connect(wsUrl).timeout(const Duration(seconds: 4));
+      final socket = await WebSocket.connect(
+        wsUrl,
+      ).timeout(const Duration(seconds: 4));
 
       final completer = Completer<ExtractedCredentials?>();
 
@@ -142,92 +166,116 @@ class BrowserHelper {
       String? capturedCookie;
       bool networkEnabled = false;
 
-      socket.listen((data) {
-        try {
-          final map = json.decode(data.toString());
+      socket.listen(
+        (data) {
+          try {
+            final map = json.decode(data.toString());
 
-          // Handle Network.enable response
-          if (map['id'] == 1 && !networkEnabled) {
-            networkEnabled = true;
-            _logger.info('Network domain enabled, reloading page to capture API requests...');
-            // Reload the page to trigger API calls
-            socket.add(json.encode({
-              'id': 2,
-              'method': 'Page.reload',
-              'params': {}
-            }));
-          }
+            // Handle Network.enable response
+            if (map['id'] == 1 && !networkEnabled) {
+              networkEnabled = true;
+              _logger.info(
+                'Network domain enabled, reloading page to capture API requests...',
+              );
+              // Reload the page to trigger API calls
+              socket.add(
+                json.encode({'id': 2, 'method': 'Page.reload', 'params': {}}),
+              );
+            }
 
-          // Handle Network.requestWillBeSent events
-          if (map['method'] == 'Network.requestWillBeSent') {
-            final request = map['params']?['request'];
-            if (request != null) {
-              final url = request['url']?.toString() ?? '';
-              // Only capture headers from API requests to the MES server
-              if (url.contains('vncmes.ces.myfiinet.com') && url.contains('/api/')) {
-                final headers = Map<String, dynamic>.from(request['headers'] ?? {});
-                _logger.info('Intercepted API request to: $url');
-                _logger.info('Intercepted headers keys: ${headers.keys.toList()}');
+            // Handle Network.requestWillBeSent events
+            if (map['method'] == 'Network.requestWillBeSent') {
+              final request = map['params']?['request'];
+              if (request != null) {
+                final url = request['url']?.toString() ?? '';
+                // Only capture headers from API requests to the MES server
+                if (url.contains('vncmes.ces.myfiinet.com') &&
+                    url.contains('/api/')) {
+                  final headers = Map<String, dynamic>.from(
+                    request['headers'] ?? {},
+                  );
+                  _logger.info('Intercepted API request to: $url');
+                  _logger.info(
+                    'Intercepted headers keys: ${headers.keys.toList()}',
+                  );
 
-                for (var key in headers.keys) {
-                  final lk = key.toLowerCase();
-                  final val = headers[key]?.toString() ?? '';
-                  if (lk == 'authorization' && val.isNotEmpty) {
-                    capturedToken = val.replaceFirst(RegExp(r'^bearer\s+', caseSensitive: false), '').trim();
-                  } else if (lk == 'uuid' && val.isNotEmpty) {
-                    capturedUuid = val.trim();
-                  } else if (lk == 'operation-id' && val.isNotEmpty) {
-                    capturedOperationId = val.trim();
-                  } else if (lk == 'cookie' && val.isNotEmpty) {
-                    capturedCookie = val.trim();
+                  for (var key in headers.keys) {
+                    final lk = key.toLowerCase();
+                    final val = headers[key]?.toString() ?? '';
+                    if (lk == 'authorization' && val.isNotEmpty) {
+                      capturedToken = val
+                          .replaceFirst(
+                            RegExp(r'^bearer\s+', caseSensitive: false),
+                            '',
+                          )
+                          .trim();
+                    } else if (lk == 'uuid' && val.isNotEmpty) {
+                      capturedUuid = val.trim();
+                    } else if (lk == 'operation-id' && val.isNotEmpty) {
+                      capturedOperationId = val.trim();
+                    } else if (lk == 'cookie' && val.isNotEmpty) {
+                      capturedCookie = val.trim();
+                    }
                   }
-                }
 
-                // Complete once we have at least token and uuid
-                if (capturedToken != null && capturedUuid != null && !completer.isCompleted) {
-                  final tokenPreview = capturedToken!.length > 20 ? capturedToken!.substring(0, 20) : capturedToken!;
-                  _logger.info('Successfully captured credentials from network: token=$tokenPreview..., uuid=$capturedUuid, opId=$capturedOperationId');
-                  completer.complete(ExtractedCredentials(
-                    token: capturedToken,
-                    operationId: capturedOperationId,
-                    uuid: capturedUuid,
-                    cookie: capturedCookie,
-                  ));
-                  socket.close();
+                  // Complete once we have at least token and uuid
+                  if (capturedToken != null &&
+                      capturedUuid != null &&
+                      !completer.isCompleted) {
+                    final tokenPreview = capturedToken!.length > 20
+                        ? capturedToken!.substring(0, 20)
+                        : capturedToken!;
+                    _logger.info(
+                      'Successfully captured credentials from network: token=$tokenPreview..., uuid=$capturedUuid, opId=$capturedOperationId',
+                    );
+                    completer.complete(
+                      ExtractedCredentials(
+                        token: capturedToken,
+                        operationId: capturedOperationId,
+                        uuid: capturedUuid,
+                        cookie: capturedCookie,
+                      ),
+                    );
+                    socket.close();
+                  }
                 }
               }
             }
+          } catch (e) {
+            _logger.warning('Error processing CDP message: $e');
           }
-        } catch (e) {
-          _logger.warning('Error processing CDP message: $e');
-        }
-      }, onError: (err) {
-        _logger.warning('CDP WebSocket error: $err');
-        if (!completer.isCompleted) completer.complete(null);
-        socket.close();
-      });
+        },
+        onError: (err) {
+          _logger.warning('CDP WebSocket error: $err');
+          if (!completer.isCompleted) completer.complete(null);
+          socket.close();
+        },
+      );
 
       // Step 1: Enable Network domain to intercept requests
-      socket.add(json.encode({
-        'id': 1,
-        'method': 'Network.enable',
-        'params': {}
-      }));
+      socket.add(
+        json.encode({'id': 1, 'method': 'Network.enable', 'params': {}}),
+      );
 
-      return await completer.future.timeout(const Duration(seconds: 15), onTimeout: () {
-        _logger.warning('Timeout waiting for API request interception. Captured so far: token=${capturedToken != null}, uuid=${capturedUuid != null}, opId=${capturedOperationId != null}');
-        socket.close();
-        // Return partial results if we have any
-        if (capturedToken != null) {
-          return ExtractedCredentials(
-            token: capturedToken,
-            operationId: capturedOperationId,
-            uuid: capturedUuid,
-            cookie: capturedCookie,
+      return await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          _logger.warning(
+            'Timeout waiting for API request interception. Captured so far: token=${capturedToken != null}, uuid=${capturedUuid != null}, opId=${capturedOperationId != null}',
           );
-        }
-        return null;
-      });
+          socket.close();
+          // Return partial results if we have any
+          if (capturedToken != null) {
+            return ExtractedCredentials(
+              token: capturedToken,
+              operationId: capturedOperationId,
+              uuid: capturedUuid,
+              cookie: capturedCookie,
+            );
+          }
+          return null;
+        },
+      );
     } catch (e, stack) {
       _logger.warning('Could not fetch credentials via CDP', e, stack);
       return null;
@@ -246,13 +294,17 @@ class BrowserHelper {
     final lines = rawText.split('\n');
     for (var line in lines) {
       final trimmed = line.trim();
-      
+
       // Authorization header
-      if (RegExp(r'^(authorization|token):', caseSensitive: false).hasMatch(trimmed)) {
+      if (RegExp(
+        r'^(authorization|token):',
+        caseSensitive: false,
+      ).hasMatch(trimmed)) {
         final val = trimmed.split(RegExp(r':\s*')).skip(1).join(':').trim();
-        token = val.replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+        token = val
+            .replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '')
+            .trim();
       }
-      
       // Cookie header
       else if (RegExp(r'^cookie:', caseSensitive: false).hasMatch(trimmed)) {
         cookie = trimmed.split(RegExp(r':\s*')).skip(1).join(':').trim();
@@ -264,17 +316,17 @@ class BrowserHelper {
           }
         }
       }
-      
       // operation-id header
-      else if (RegExp(r'^operation-id:', caseSensitive: false).hasMatch(trimmed)) {
+      else if (RegExp(
+        r'^operation-id:',
+        caseSensitive: false,
+      ).hasMatch(trimmed)) {
         operationId = trimmed.split(RegExp(r':\s*')).skip(1).join(':').trim();
       }
-      
       // uuid header
       else if (RegExp(r'^uuid:', caseSensitive: false).hasMatch(trimmed)) {
         uuid = trimmed.split(RegExp(r':\s*')).skip(1).join(':').trim();
       }
-      
       // lang header
       else if (RegExp(r'^lang:', caseSensitive: false).hasMatch(trimmed)) {
         lang = trimmed.split(RegExp(r':\s*')).skip(1).join(':').trim();
