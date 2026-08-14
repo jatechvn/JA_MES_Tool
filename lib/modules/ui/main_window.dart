@@ -757,8 +757,26 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: theme.borderTheme),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Icon(Icons.settings_suggest_rounded, color: Colors.blue.shade600, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    Translations.get('settings', logic.lang),
+                    style: TextStyle(color: theme.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const Spacer(),
+                  // Connection Health Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (logic.isConnectionValid ?? false) ? Colors.green.withOpacity(0.12) : Colors.amber.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: (logic.isConnectionValid ?? false) ? Colors.green.withOpacity(0.3) : Colors.amber.withOpacity(0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
