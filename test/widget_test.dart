@@ -1,30 +1,32 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:ja_mes_tool/main.dart';
+import 'package:ja_mes_tool/modules/constants.dart';
+import 'package:ja_mes_tool/modules/translations.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('App Info & Constants Tests', () {
+    test('appVersion is defined and follows semantic versioning', () {
+      expect(appVersion, equals('2.5.2'));
+      expect(appName, equals('JA MES Tool'));
+    });
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  group('Translations Tests', () {
+    test('returns correct translation for key across supported languages', () {
+      expect(Translations.get('settings', 'en'), equals('Settings'));
+      expect(Translations.get('settings', 'vn'), equals('Cài đặt'));
+      expect(Translations.get('settings', 'cn'), equals('设置'));
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('returns key or fallback when key is not found', () {
+      expect(Translations.get('non_existing_key', 'en'), equals('non_existing_key'));
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('tab titles exist in all languages', () {
+      for (final lang in ['en', 'vn', 'cn']) {
+        expect(Translations.get('tab_test_record', lang), isNotEmpty);
+        expect(Translations.get('tab_barcode_history', lang), isNotEmpty);
+        expect(Translations.get('tab_wip_components', lang), isNotEmpty);
+      }
+    });
   });
 }

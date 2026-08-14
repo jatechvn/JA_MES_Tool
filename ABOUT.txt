@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.5.1
+Version      : v2.5.2
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -24,7 +24,10 @@ Key Features:
   crossfaded light/dark theme switching.
 - Excel-style Search Filter & Sort-by (click to toggle ascending/descending)
   on every record list.
-- Selectable & copyable record data via native text selection.
+- Selectable & copyable record data via native text selection, including the
+  SN queue sidebar.
+- Per-SN and Refresh-All buttons to re-fetch data on demand without
+  restarting the app.
 - Dynamic-Island-style hover-expand toolbar: compact icons by default,
   full labels on hover or when the window is maximized.
 - Automated SN Queueing & Parallel Test Record Fetching.

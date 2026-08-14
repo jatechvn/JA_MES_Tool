@@ -11,7 +11,7 @@ import 'styles.dart';
 import 'motion.dart';
 
 class MainWindow extends StatefulWidget {
-  const MainWindow({Key? key}) : super(key: key);
+  const MainWindow({super.key});
 
   @override
   State<MainWindow> createState() => _MainWindowState();
@@ -153,6 +153,17 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         ),
                         IconButton(
                           icon: Icon(
+                            Icons.refresh,
+                            color: theme.textPrimary,
+                            size: 20,
+                          ),
+                          onPressed: logic.snList.isEmpty
+                              ? null
+                              : () => logic.refetchAllSns(),
+                          tooltip: Translations.get('refresh_all', logic.lang),
+                        ),
+                        IconButton(
+                          icon: Icon(
                             Icons.delete_sweep,
                             color: theme.failColor,
                             size: 20,
@@ -228,113 +239,126 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             style: TextStyle(color: theme.textSecondary),
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: logic.snList.length,
-                          itemBuilder: (context, index) {
-                            final sn = logic.snList[index];
-                            final isSelected = sn == logic.selectedSn;
-                            final isLoading = logic.loadingStatus[sn] == true;
-                            final hasError = logic.errors[sn] != null;
-                            final recordCount = logic.results[sn]?.length ?? 0;
+                      : SelectionArea(
+                          child: ListView.builder(
+                            itemCount: logic.snList.length,
+                            itemBuilder: (context, index) {
+                              final sn = logic.snList[index];
+                              final isSelected = sn == logic.selectedSn;
+                              final isLoading = logic.loadingStatus[sn] == true;
+                              final hasError = logic.errors[sn] != null;
+                              final recordCount =
+                                  logic.results[sn]?.length ?? 0;
 
-                            return InkWell(
-                              onTap: () => logic.selectSn(sn),
-                              child: AnimatedContainer(
-                                duration: Motion.fast,
-                                curve: Motion.curveOut,
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Colors.blue.withOpacity(0.3)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
+                              return InkWell(
+                                onTap: () => logic.selectSn(sn),
+                                child: AnimatedContainer(
+                                  duration: Motion.fast,
+                                  curve: Motion.curveOut,
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
                                     color: isSelected
-                                        ? Colors.blue
+                                        ? Colors.blue.withValues(alpha: 0.3)
                                         : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Colors.blue
+                                          : Colors.transparent,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          sn,
+                                          style: TextStyle(
+                                            color: hasError
+                                                ? theme.failColor
+                                                : theme.textPrimary,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isLoading)
+                                        const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      else if (hasError)
+                                        const Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                          size: 16,
+                                        )
+                                      else if (logic.results.containsKey(sn))
+                                        AnimatedSwitcher(
+                                          duration: Motion.fast,
+                                          switchInCurve: Motion.curveOut,
+                                          switchOutCurve: Motion.curveIn,
+                                          transitionBuilder:
+                                              (child, animation) =>
+                                                  ScaleTransition(
+                                                    scale: animation,
+                                                    child: child,
+                                                  ),
+                                          child: Container(
+                                            key: ValueKey(recordCount),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: recordCount > 0
+                                                  ? theme.passColor
+                                                  : Colors.grey,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              recordCount.toString(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      const SizedBox(width: 4),
+                                      if (!isLoading)
+                                        InkWell(
+                                          onTap: () => logic.refreshSn(sn),
+                                          child: Icon(
+                                            Icons.refresh,
+                                            color: theme.textSecondary,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      const SizedBox(width: 4),
+                                      InkWell(
+                                        onTap: () => logic.removeSn(sn),
+                                        child: Icon(
+                                          Icons.close,
+                                          color: theme.textSecondary,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        sn,
-                                        style: TextStyle(
-                                          color: hasError
-                                              ? theme.failColor
-                                              : theme.textPrimary,
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isLoading)
-                                      const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    else if (hasError)
-                                      const Icon(
-                                        Icons.error,
-                                        color: Colors.red,
-                                        size: 16,
-                                      )
-                                    else if (logic.results.containsKey(sn))
-                                      AnimatedSwitcher(
-                                        duration: Motion.fast,
-                                        switchInCurve: Motion.curveOut,
-                                        switchOutCurve: Motion.curveIn,
-                                        transitionBuilder: (child, animation) =>
-                                            ScaleTransition(
-                                              scale: animation,
-                                              child: child,
-                                            ),
-                                        child: Container(
-                                          key: ValueKey(recordCount),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: recordCount > 0
-                                                ? theme.passColor
-                                                : Colors.grey,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            recordCount.toString(),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    const SizedBox(width: 4),
-                                    InkWell(
-                                      onTap: () => logic.removeSn(sn),
-                                      child: Icon(
-                                        Icons.close,
-                                        color: theme.textSecondary,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                 ),
               ],
@@ -402,10 +426,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.2),
+                            color: Colors.amber.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Colors.amber.withOpacity(0.5),
+                              color: Colors.amber.withValues(alpha: 0.5),
                             ),
                           ),
                           child: Text(
@@ -449,7 +473,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   : theme.textSecondary,
                               hoverBackground: theme.isDark
                                   ? Colors.white12
-                                  : Colors.black.withOpacity(0.06),
+                                  : Colors.black.withValues(alpha: 0.06),
                               keepExpanded:
                                   logic.viewMode == ViewMode.testRecord ||
                                   _isMaximized,
@@ -472,7 +496,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   : theme.textSecondary,
                               hoverBackground: theme.isDark
                                   ? Colors.white12
-                                  : Colors.black.withOpacity(0.06),
+                                  : Colors.black.withValues(alpha: 0.06),
                               keepExpanded:
                                   logic.viewMode == ViewMode.barcodeHistory ||
                                   _isMaximized,
@@ -495,7 +519,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   : theme.textSecondary,
                               hoverBackground: theme.isDark
                                   ? Colors.white12
-                                  : Colors.black.withOpacity(0.06),
+                                  : Colors.black.withValues(alpha: 0.06),
                               keepExpanded:
                                   logic.viewMode == ViewMode.wipComponents ||
                                   _isMaximized,
@@ -582,12 +606,12 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: logic.globalError.contains('successfully')
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.red.withOpacity(0.1),
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.red.withValues(alpha: 0.1),
                         border: Border.all(
                           color: logic.globalError.contains('successfully')
                               ? Colors.green
-                              : Colors.red.withOpacity(0.3),
+                              : Colors.red.withValues(alpha: 0.3),
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -674,8 +698,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
-          border: Border.all(color: Colors.red.withOpacity(0.3)),
+          color: Colors.red.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -903,8 +927,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
-          border: Border.all(color: Colors.red.withOpacity(0.3)),
+          color: Colors.red.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -1112,8 +1136,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
-          border: Border.all(color: Colors.red.withOpacity(0.3)),
+          color: Colors.red.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -1681,10 +1705,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: theme.isDark
-                    ? Colors.blue.withOpacity(0.2)
-                    : Colors.blue.withOpacity(0.1),
+                    ? Colors.blue.withValues(alpha: 0.2)
+                    : Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
               ),
               child: Text(
                 value,
@@ -1761,7 +1785,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: TextStyle(
-                  color: theme.textSecondary.withOpacity(0.5),
+                  color: theme.textSecondary.withValues(alpha: 0.5),
                   fontSize: 12,
                 ),
                 filled: true,
@@ -1780,7 +1804,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   borderSide: BorderSide(
                     color: theme.isDark
                         ? Colors.white10
-                        : Colors.black.withOpacity(0.05),
+                        : Colors.black.withValues(alpha: 0.05),
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1818,7 +1842,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.12),
+                      color: Colors.blue.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -1845,13 +1869,13 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     ),
                     decoration: BoxDecoration(
                       color: (logic.isConnectionValid ?? false)
-                          ? Colors.green.withOpacity(0.12)
-                          : Colors.amber.withOpacity(0.12),
+                          ? Colors.green.withValues(alpha: 0.12)
+                          : Colors.amber.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: (logic.isConnectionValid ?? false)
-                            ? Colors.green.withOpacity(0.3)
-                            : Colors.amber.withOpacity(0.4),
+                            ? Colors.green.withValues(alpha: 0.3)
+                            : Colors.amber.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Row(
@@ -1913,7 +1937,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                           ),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.2),
+                            color: Colors.blue.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Column(
@@ -2037,20 +2061,27 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                               () => isFetchingCdp = false,
                                             );
 
+                                            if (!context.mounted) return;
                                             if (creds != null) {
                                               if (creds.token != null &&
-                                                  creds.token!.isNotEmpty)
+                                                  creds.token!.isNotEmpty) {
                                                 tokenCtrl.text = creds.token!;
+                                              }
                                               if (creds.operationId != null &&
-                                                  creds.operationId!.isNotEmpty)
+                                                  creds
+                                                      .operationId!
+                                                      .isNotEmpty) {
                                                 operationIdCtrl.text =
                                                     creds.operationId!;
+                                              }
                                               if (creds.uuid != null &&
-                                                  creds.uuid!.isNotEmpty)
+                                                  creds.uuid!.isNotEmpty) {
                                                 uuidCtrl.text = creds.uuid!;
+                                              }
                                               if (creds.cookie != null &&
-                                                  creds.cookie!.isNotEmpty)
+                                                  creds.cookie!.isNotEmpty) {
                                                 cookieCtrl.text = creds.cookie!;
+                                              }
 
                                               ScaffoldMessenger.of(
                                                 context,
@@ -2116,7 +2147,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     ? Colors.blue.shade600
                                     : (theme.isDark
                                           ? Colors.white10
-                                          : Colors.black.withOpacity(0.08)),
+                                          : Colors.black.withValues(
+                                              alpha: 0.08,
+                                            )),
                               ),
                             ),
                             child: Row(
@@ -2179,7 +2212,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                               border: Border.all(
                                 color: theme.isDark
                                     ? Colors.white10
-                                    : Colors.black.withOpacity(0.06),
+                                    : Colors.black.withValues(alpha: 0.06),
                               ),
                             ),
                             child: Column(
@@ -2204,8 +2237,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                         vertical: 10,
                                       ),
                                       side: BorderSide(
-                                        color: Colors.blue.shade600.withOpacity(
-                                          0.4,
+                                        color: Colors.blue.shade600.withValues(
+                                          alpha: 0.4,
                                         ),
                                       ),
                                       foregroundColor: Colors.blue.shade600,
@@ -2256,7 +2289,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                                     'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
                                                 hintStyle: TextStyle(
                                                   color: theme.textSecondary
-                                                      .withOpacity(0.6),
+                                                      .withValues(alpha: 0.6),
                                                 ),
                                                 filled: true,
                                                 fillColor: theme.sidebarBg,
@@ -2285,24 +2318,29 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                                       pasteCtrl.text,
                                                     );
                                                 if (creds.token != null &&
-                                                    creds.token!.isNotEmpty)
+                                                    creds.token!.isNotEmpty) {
                                                   tokenCtrl.text = creds.token!;
+                                                }
                                                 if (creds.lang != null &&
-                                                    creds.lang!.isNotEmpty)
+                                                    creds.lang!.isNotEmpty) {
                                                   langCtrl.text = creds.lang!;
+                                                }
                                                 if (creds.operationId != null &&
                                                     creds
                                                         .operationId!
-                                                        .isNotEmpty)
+                                                        .isNotEmpty) {
                                                   operationIdCtrl.text =
                                                       creds.operationId!;
+                                                }
                                                 if (creds.uuid != null &&
-                                                    creds.uuid!.isNotEmpty)
+                                                    creds.uuid!.isNotEmpty) {
                                                   uuidCtrl.text = creds.uuid!;
+                                                }
                                                 if (creds.cookie != null &&
-                                                    creds.cookie!.isNotEmpty)
+                                                    creds.cookie!.isNotEmpty) {
                                                   cookieCtrl.text =
                                                       creds.cookie!;
+                                                }
 
                                                 Navigator.pop(ctx);
                                                 ScaffoldMessenger.of(
@@ -2436,6 +2474,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                 cookieCtrl.text,
                               );
                               setDialogState(() => isVerifying = false);
+                              if (!context.mounted) return;
                               if (res == null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -2681,12 +2720,12 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: theme.isDark
-                            ? Colors.blue.withOpacity(0.08)
-                            : Colors.blue.shade50.withOpacity(0.5),
+                            ? Colors.blue.withValues(alpha: 0.08)
+                            : Colors.blue.shade50.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: theme.isDark
-                              ? Colors.blue.withOpacity(0.2)
+                              ? Colors.blue.withValues(alpha: 0.2)
                               : Colors.blue.shade200,
                           width: 1,
                         ),

@@ -14,24 +14,24 @@ class AppLogic extends ChangeNotifier {
   ViewMode _viewMode = ViewMode.testRecord;
   ViewMode get viewMode => _viewMode;
 
-  Map<String, List<SnProcessRecord>> _processResults = {};
+  final Map<String, List<SnProcessRecord>> _processResults = {};
   Map<String, List<SnProcessRecord>> get processResults => _processResults;
 
-  Map<String, bool> _processLoadingStatus = {};
+  final Map<String, bool> _processLoadingStatus = {};
   Map<String, bool> get processLoadingStatus => _processLoadingStatus;
 
-  Map<String, String> _processErrors = {};
+  final Map<String, String> _processErrors = {};
   Map<String, String> get processErrors => _processErrors;
 
   bool _isProcessBatchLoading = false;
 
-  Map<String, List<WipComponentRecord>> _wipResults = {};
+  final Map<String, List<WipComponentRecord>> _wipResults = {};
   Map<String, List<WipComponentRecord>> get wipResults => _wipResults;
 
-  Map<String, bool> _wipLoadingStatus = {};
+  final Map<String, bool> _wipLoadingStatus = {};
   Map<String, bool> get wipLoadingStatus => _wipLoadingStatus;
 
-  Map<String, String> _wipErrors = {};
+  final Map<String, String> _wipErrors = {};
   Map<String, String> get wipErrors => _wipErrors;
 
   bool _isWipBatchLoading = false;
@@ -40,8 +40,8 @@ class AppLogic extends ChangeNotifier {
   // SN) to its resolved canonical product SN + master info. Test Record,
   // Barcode History, and Component List all require the canonical SN, so
   // this resolution runs once per typed SN before the first detail fetch.
-  Map<String, String> _resolvedSn = {};
-  Map<String, SnMasterInfo> _snMasterInfo = {};
+  final Map<String, String> _resolvedSn = {};
+  final Map<String, SnMasterInfo> _snMasterInfo = {};
   Map<String, SnMasterInfo> get snMasterInfo => _snMasterInfo;
   String? resolvedSnFor(String sn) => _resolvedSn[sn];
 
@@ -63,13 +63,13 @@ class AppLogic extends ChangeNotifier {
   List<String> _snList = [];
   List<String> get snList => _snList;
 
-  Map<String, List<TestRecord>> _results = {};
+  final Map<String, List<TestRecord>> _results = {};
   Map<String, List<TestRecord>> get results => _results;
 
-  Map<String, bool> _loadingStatus = {};
+  final Map<String, bool> _loadingStatus = {};
   Map<String, bool> get loadingStatus => _loadingStatus;
 
-  Map<String, String> _errors = {};
+  final Map<String, String> _errors = {};
   Map<String, String> get errors => _errors;
 
   String _selectedSn = '';
@@ -202,6 +202,25 @@ class AppLogic extends ChangeNotifier {
     }
     ConfigService.saveConfig(_exportConfigMap());
     notifyListeners();
+  }
+
+  /// Clears cached data for a single SN (all 3 views + its resolved-SN
+  /// cache) and re-fetches it, without needing to remove/re-add the SN or
+  /// restart the app.
+  Future<void> refreshSn(String sn) async {
+    _results.remove(sn);
+    _errors.remove(sn);
+    _loadingStatus.remove(sn);
+    _processResults.remove(sn);
+    _processErrors.remove(sn);
+    _processLoadingStatus.remove(sn);
+    _wipResults.remove(sn);
+    _wipErrors.remove(sn);
+    _wipLoadingStatus.remove(sn);
+    _resolvedSn.remove(sn);
+    _snMasterInfo.remove(sn);
+    notifyListeners();
+    await _fetchAllPending();
   }
 
   void clearAllSns() {
