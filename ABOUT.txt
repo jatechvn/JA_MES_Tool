@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.5.2
+Version      : v2.5.3
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -23,7 +23,8 @@ Key Features:
   presentation, animated sidebar selection & record-count badge, and
   crossfaded light/dark theme switching.
 - Excel-style Search Filter & Sort-by (click to toggle ascending/descending)
-  on every record list.
+  on every record list, with a per-field icon and an accent-colored selected
+  pill matching the rest of the app's design language.
 - Selectable & copyable record data via native text selection, including the
   SN queue sidebar.
 - Per-SN and Refresh-All buttons to re-fetch data on demand without
