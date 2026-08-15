@@ -5,6 +5,14 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.3] - 2026-08-15
+
+### 🐛 Bug Fixes
+- **🎨 Sort dropdown no longer clashes with the app's design system**: The Sort menu (`PopupMenuButton`) previously fell back to Flutter Material 3's default `surfaceTint`, giving it a purple tint that didn't match the app's own color palette. It now explicitly uses `theme.cardBg` with `surfaceTintColor: Colors.transparent` and a border matching the rest of the app's cards.
+- **✨ Sort menu items redesigned for visual consistency**: Every sort field now has a leading icon (calendar, station, result, etc. — 10 fields across the 3 tabs), and the active field is highlighted with a rounded, accent-colored pill — the same "selected" visual language already used by the view-mode tab pills and the sidebar's selected SN row, instead of a bare arrow icon on a plain row.
+
+---
+
 ## [2.5.2] - 2026-08-14
 
 ### 🚀 Major Features & Enhancements

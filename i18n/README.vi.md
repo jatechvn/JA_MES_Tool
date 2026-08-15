@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.5.2 - Tiếng Việt
+# 🤖 JA MES Tool v2.5.3 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.5.2-blue.svg" alt="Phiên bản 2.5.2">
+  <img src="https://img.shields.io/badge/phien_ban-2.5.3-blue.svg" alt="Phiên bản 2.5.3">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,13 +27,13 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.5.2)
+## 💡 Tính năng nổi bật (v2.5.3)
 
 ### 📊 Chế độ xem dữ liệu
 - 🗂️ **3 chế độ xem theo SN**: Chuyển đổi giữa **Kết quả Test** (Pass/Fail), **Lịch sử Barcode** (toàn bộ lộ trình công đoạn/trạm), và **Danh sách Linh kiện** (truy vết BOM/vật tư — nhà sản xuất, mã hãng, mã ngày SX, mã lô/gói) cho mỗi SN.
 - 🔗 **Tự động phân giải SN chính tắc**: Nhập SN nội bộ sẽ tự động quy đổi sang SN sản phẩm chính tắc (`snMaster/getSnMasterProcess`) trước khi tra cứu cả 3 chế độ xem — tiêu đề hiển thị `SN nhập → SN chính tắc` khi 2 giá trị khác nhau, có cache theo phiên và tự động fallback nếu phân giải lỗi.
 - 🔍 **Tìm kiếm kiểu Excel**: Ô tìm kiếm trực tiếp trên mỗi danh sách, khớp mọi trường dữ liệu khi bạn gõ.
-- ⬍ **Sắp xếp theo trường**: Nút Sắp xếp cho phép chọn trường và đảo chiều tăng/giảm, áp dụng cho cả 3 chế độ xem.
+- ⬍ **Sắp xếp theo trường**: Nút Sắp xếp cho phép chọn trường và đảo chiều tăng/giảm, áp dụng cho cả 3 chế độ xem — mỗi trường có icon riêng, trường đang chọn hiển thị dạng pill bo góc màu nhấn, khớp phong cách chọn lựa của tab/sidebar.
 - 📋 **Chọn & Copy dữ liệu**: Mọi giá trị bản ghi — kể cả danh sách SN ở sidebar — đều có thể bôi đen (kéo chuột hoặc double-click) và copy (Ctrl+C) như bảng tính.
 - 🔄 **Làm mới riêng từng SN & Làm mới tất cả**: Mỗi SN trong hàng đợi có icon làm mới riêng để tra cứu lại đúng SN đó (cả 3 chế độ xem + phân giải SN chính tắc), cộng thêm nút "Làm mới tất cả" ở đầu sidebar để tra cứu lại toàn bộ hàng đợi — không cần tắt mở lại app.
 - 🔢 **Số lượng bản ghi thông minh**: "Bản ghi của SN" tự động hiện số lượng `(N)`, ẩn đi khi chỉ có 0 hoặc 1 bản ghi.
@@ -118,7 +118,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
 │       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.5.2)
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.5.3)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, 3 danh sách dữ liệu, ViewMode, cache phân giải SN
 │       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -138,7 +138,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.5.2+5)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.5.3+6)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -181,9 +181,9 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.5.3]** — Thiết kế lại dropdown Sắp xếp cho khớp design system của app: bỏ tông tím mặc định của Material 3, thêm icon từng trường, item đang chọn hiển thị pill bo góc màu nhấn khớp style tab/sidebar.
 - **[2.5.2]** — Chọn & copy được text danh sách SN ở sidebar; nút làm mới riêng từng SN và làm mới tất cả để tra cứu lại dữ liệu không cần khởi động lại app.
 - **[2.5.1]** — Sửa lỗi hiệu ứng cascade danh sách bị lặp lại khi cuộn; 2 tab Lịch sử Barcode & Danh sách Linh kiện giờ được tải song song cùng Kết quả Test thay vì tải lười khi chuyển tab.
-- **[2.5.0]** — Đổi tên thành "JA MES Tool", tự động phân giải SN chính tắc (SN nội bộ → SN chính tắc), toàn bộ giao diện có hiệu ứng chuyển tiếp mượt mà kiểu iOS.
 - **[2.4.0]** — Thêm tab Lịch sử Barcode & Danh sách Linh kiện, tìm kiếm/sắp xếp kiểu Excel, chọn/copy dữ liệu, thanh công cụ hover kiểu Dynamic Island, gỡ bỏ thông tin đăng nhập hardcode.
 - **[2.3.0]** — Popup cảnh báo Token hết hạn tự động khi khởi động, bộ cờ chống treo Edge/Chrome, icon huy hiệu xác thực kết nối.
 

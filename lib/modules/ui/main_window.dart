@@ -734,12 +734,25 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           resolvedSn: logic.resolvedSnFor(sn),
           listState: _testRecordListState,
           sortOptions: [
-            _SortOption('test_date', Translations.get('test_date', logic.lang)),
-            _SortOption('station', Translations.get('station', logic.lang)),
-            _SortOption('result', Translations.get('result', logic.lang)),
+            _SortOption(
+              'test_date',
+              Translations.get('test_date', logic.lang),
+              icon: Icons.event_rounded,
+            ),
+            _SortOption(
+              'station',
+              Translations.get('station', logic.lang),
+              icon: Icons.dns_rounded,
+            ),
+            _SortOption(
+              'result',
+              Translations.get('result', logic.lang),
+              icon: Icons.fact_check_rounded,
+            ),
             _SortOption(
               'product_no',
               Translations.get('product_no', logic.lang),
+              icon: Icons.inventory_2_rounded,
             ),
           ],
         ),
@@ -966,15 +979,22 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             _SortOption(
               'process_time',
               Translations.get('process_time', logic.lang),
+              icon: Icons.schedule_rounded,
             ),
             _SortOption(
               'process_name',
               Translations.get('process_name', logic.lang),
+              icon: Icons.list_alt_rounded,
             ),
-            _SortOption('result', Translations.get('result', logic.lang)),
+            _SortOption(
+              'result',
+              Translations.get('result', logic.lang),
+              icon: Icons.fact_check_rounded,
+            ),
             _SortOption(
               'line_station',
               Translations.get('line_station_code', logic.lang),
+              icon: Icons.alt_route_rounded,
             ),
           ],
         ),
@@ -1172,18 +1192,22 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             _SortOption(
               'process_time',
               Translations.get('process_time', logic.lang),
+              icon: Icons.schedule_rounded,
             ),
             _SortOption(
               'material_no',
               Translations.get('material_no', logic.lang),
+              icon: Icons.tag_rounded,
             ),
             _SortOption(
               'material_category',
               Translations.get('material_category', logic.lang),
+              icon: Icons.category_rounded,
             ),
             _SortOption(
               'manufacturer',
               Translations.get('manufacturer', logic.lang),
+              icon: Icons.factory_rounded,
             ),
           ],
         ),
@@ -1605,6 +1629,13 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     return PopupMenuButton<String>(
       tooltip: Translations.get('sort', lang),
       offset: const Offset(0, 38),
+      color: theme.cardBg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: theme.isDark ? Colors.white24 : Colors.black12),
+      ),
       onSelected: (key) {
         setState(() {
           if (key.isEmpty) {
@@ -1620,28 +1651,26 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       itemBuilder: (context) => [
         PopupMenuItem<String>(
           value: '',
-          child: Text(Translations.get('default', lang)),
+          padding: EdgeInsets.zero,
+          height: 38,
+          child: _buildSortMenuRow(
+            theme: theme,
+            icon: Icons.sort_rounded,
+            label: Translations.get('default', lang),
+            selected: listState.sortField == null,
+          ),
         ),
         ...options.map(
           (o) => PopupMenuItem<String>(
             value: o.key,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 16,
-                  child: listState.sortField == o.key
-                      ? Icon(
-                          listState.sortAsc
-                              ? Icons.arrow_upward_rounded
-                              : Icons.arrow_downward_rounded,
-                          size: 14,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 6),
-                Text(o.label),
-              ],
+            padding: EdgeInsets.zero,
+            height: 38,
+            child: _buildSortMenuRow(
+              theme: theme,
+              icon: o.icon,
+              label: o.label,
+              selected: listState.sortField == o.key,
+              sortAsc: listState.sortAsc,
             ),
           ),
         ),
@@ -1681,6 +1710,54 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// A single row inside the sort dropdown, styled to match the rest of the
+  /// app's selectable-chip language (rounded blue-tinted highlight when
+  /// active, e.g. the sidebar's selected SN row or the view-mode tab pills)
+  /// instead of Flutter's plain default PopupMenuItem look.
+  Widget _buildSortMenuRow({
+    required ThemeProvider theme,
+    required IconData icon,
+    required String label,
+    required bool selected,
+    bool? sortAsc,
+  }) {
+    final accent = theme.isDark ? Colors.blue.shade300 : Colors.blue.shade700;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: selected ? accent.withOpacity(0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: selected ? accent : theme.textSecondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: selected ? accent : theme.textPrimary,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+          if (selected && sortAsc != null) ...[
+            const SizedBox(width: 8),
+            Icon(
+              sortAsc
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
+              size: 14,
+              color: accent,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -2976,7 +3053,12 @@ class _ListViewState {
 class _SortOption {
   final String key;
   final String label;
-  const _SortOption(this.key, this.label);
+  final IconData icon;
+  const _SortOption(
+    this.key,
+    this.label, {
+    this.icon = Icons.short_text_rounded,
+  });
 }
 
 /// Cascades list items in on first appearance (iOS table-view style):
