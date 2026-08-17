@@ -5,6 +5,13 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2026-08-17
+
+### 🐛 Bug Fixes
+- **🛡️ Verify Connection feedback is now actually visible**: The verify-connection icon in Settings previously reported success/failure via `ScaffoldMessenger.showSnackBar`, which anchors to the main window's `Scaffold` and rendered *behind* the Settings dialog's modal barrier — invisible while the dialog was open. The icon itself now animates (spinner → green check / red cross → auto-reverts after 3s) via `AnimatedSwitcher`, and its tooltip carries the specific result message, so feedback is reliable regardless of dialog z-order.
+
+---
+
 ## [2.6.0] - 2026-08-17
 
 ### 🚀 Major Features & Enhancements

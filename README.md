@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.0
+# 🤖 JA MES Tool v2.6.1
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.6.0-blue.svg" alt="Version 2.6.0">
+  <img src="https://img.shields.io/badge/version-2.6.1-blue.svg" alt="Version 2.6.1">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,7 +42,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.6.0)
+## 💡 Key Features (v2.6.1)
 
 ### 📊 Data Views
 - 🗂️ **Three Views per SN**: Switch between **Test Record** (pass/fail results), **Barcode History** (full process/station routing), and **Component List** (WIP BOM / material traceability — manufacturer, part no, date code, package/lot ID) for every queried SN.
@@ -137,7 +137,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
 │       ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │       ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│       ├── constants.dart         # Global app constants & defaults (v2.6.0)
+│       ├── constants.dart         # Global app constants & defaults (v2.6.1)
 │       ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │       ├── logic.dart             # App state: SN queue, 3 record maps, ViewMode, SN Master resolve cache
 │       ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
@@ -164,7 +164,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.6.0+7)
+├── pubspec.yaml                   # Flutter package manifest (v2.6.1+8)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -218,9 +218,9 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.6.1]** — Fixed Verify Connection feedback being invisible behind the Settings dialog's modal barrier; the icon now animates a check/cross result directly instead of relying on a hidden SnackBar.
 - **[2.6.0]** — Adjustable Glassmorphism Advanced Settings (4 live-preview blur/opacity sliders), Sort dropdown rebuilt with real `BackdropFilter` blur, Settings dialog live-preview, and a built-in legibility floor to prevent text-overlap glitches.
 - **[2.5.3]** — Sort dropdown redesigned to match the app's own design system: no more default Material 3 purple tint, per-field icons, and an accent-colored selected pill consistent with tab/sidebar selection.
-- **[2.5.2]** — Selectable & copyable SN queue sidebar; per-SN and Refresh-All buttons to re-fetch data on demand without restarting the app.
 
 See [**CHANGELOG.md**](CHANGELOG.md) for the full version history.
 
