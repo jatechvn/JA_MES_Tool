@@ -60,6 +60,26 @@ class AppLogic extends ChangeNotifier {
   String _cookie = '';
   String get cookie => _cookie;
 
+  // Glassmorphism controls, matching the JA_Compare reference app's
+  // Advanced Settings layout (Main background blur/opacity + Dialog
+  // blur/opacity). bgBlur/bgOpacity are persisted for parity but not yet
+  // wired to any visual surface — same as in JA_Compare itself, whose main
+  // window doesn't consume them either. dialogBlur/dialogOpacity drive the
+  // Sort dropdown's glass panel; modal dialogs themselves stay solid opaque
+  // (see CHANGELOG v2.1.0: transparency there previously caused see-through
+  // overlapping text glitches).
+  double _bgBlur = 10.0;
+  double get bgBlur => _bgBlur;
+
+  double _bgOpacity = 0.6;
+  double get bgOpacity => _bgOpacity;
+
+  double _dialogBlur = 12.0;
+  double get dialogBlur => _dialogBlur;
+
+  double _dialogOpacity = 0.75;
+  double get dialogOpacity => _dialogOpacity;
+
   List<String> _snList = [];
   List<String> get snList => _snList;
 
@@ -89,6 +109,11 @@ class AppLogic extends ChangeNotifier {
     _init();
   }
 
+  double _parseDouble(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    return fallback;
+  }
+
   Future<void> _init() async {
     final config = await ConfigService.loadConfig();
     _token = config['token'] ?? '';
@@ -96,6 +121,10 @@ class AppLogic extends ChangeNotifier {
     _operationId = config['operationId'] ?? defaultOperationId;
     _uuid = config['uuid'] ?? defaultUuid;
     _cookie = config['cookie'] ?? '';
+    _bgBlur = _parseDouble(config['bgBlur'], 10.0);
+    _bgOpacity = _parseDouble(config['bgOpacity'], 0.6);
+    _dialogBlur = _parseDouble(config['dialogBlur'], 12.0);
+    _dialogOpacity = _parseDouble(config['dialogOpacity'], 0.75);
 
     if (config['sns'] != null) {
       _snList = List<String>.from(config['sns']);
@@ -160,6 +189,10 @@ class AppLogic extends ChangeNotifier {
       'operationId': _operationId,
       'uuid': _uuid,
       'cookie': _cookie,
+      'bgBlur': _bgBlur,
+      'bgOpacity': _bgOpacity,
+      'dialogBlur': _dialogBlur,
+      'dialogOpacity': _dialogOpacity,
     };
   }
 
@@ -276,12 +309,20 @@ class AppLogic extends ChangeNotifier {
     required String operationId,
     required String uuid,
     required String cookie,
+    double? bgBlur,
+    double? bgOpacity,
+    double? dialogBlur,
+    double? dialogOpacity,
   }) async {
     _token = token;
     _lang = lang;
     _operationId = operationId;
     _uuid = uuid;
     _cookie = cookie;
+    if (bgBlur != null) _bgBlur = bgBlur;
+    if (bgOpacity != null) _bgOpacity = bgOpacity;
+    if (dialogBlur != null) _dialogBlur = dialogBlur;
+    if (dialogOpacity != null) _dialogOpacity = dialogOpacity;
     await ConfigService.saveConfig(_exportConfigMap());
     _validateNow();
     notifyListeners();

@@ -25,6 +25,10 @@ class ConfigService {
           'operationId': data['operationId']?.toString() ?? defaultOperationId,
           'uuid': data['uuid']?.toString() ?? defaultUuid,
           'cookie': data['cookie']?.toString() ?? '',
+          'bgBlur': data['bgBlur'],
+          'bgOpacity': data['bgOpacity'],
+          'dialogBlur': data['dialogBlur'],
+          'dialogOpacity': data['dialogOpacity'],
         };
       }
     } catch (e) {
@@ -37,6 +41,10 @@ class ConfigService {
       'operationId': defaultOperationId,
       'uuid': defaultUuid,
       'cookie': '',
+      'bgBlur': null,
+      'bgOpacity': null,
+      'dialogBlur': null,
+      'dialogOpacity': null,
     };
   }
 

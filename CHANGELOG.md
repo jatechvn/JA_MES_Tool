@@ -5,6 +5,19 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-08-17
+
+### 🚀 Major Features & Enhancements
+- **🎨 Glassmorphism Advanced Settings**: A new collapsible "Customize blur & transparency" panel in Settings → Advanced, with 4 live-preview sliders — **Main background blur/opacity** and **Dialog blur/opacity** — matching the JA_Compare reference app's layout. All 4 values persist to `config.json` and reset via the existing "Default" button.
+- **✨ Sort dropdown now uses real glass blur**: Replaced the `PopupMenuButton`-based Sort menu with a custom `OverlayEntry` popup using an actual `BackdropFilter`, driven by the new Dialog blur/opacity settings — the dropdown now visibly blurs the content behind it instead of using a flat tinted background. Automatically closes when switching tabs or SN to prevent stale state.
+- **🔍 Settings dialog live-preview**: Adjusting the Dialog blur/opacity sliders now re-blurs the Settings window itself in real time (previously only affected the Sort dropdown), matching the reference app's behavior.
+- **🖼️ Result Details panel background**: The main content panel now shares the same translucent tone as the sidebar (previously fully transparent), giving Dark theme a subtly more cohesive look without losing the native Acrylic blur-through.
+
+### 🐛 Bug Fixes / Safety
+- **🛡️ Legibility floor on all glass surfaces**: Whenever opacity is set below 100%, blur is automatically floored at 6px regardless of the slider position — prevents the "see-through overlapping text" glitch that the app's dialogs were previously made fully opaque to avoid (see `[2.1.0]`).
+
+---
+
 ## [2.5.3] - 2026-08-15
 
 ### 🐛 Bug Fixes
