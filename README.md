@@ -148,6 +148,13 @@ ja_mes_tool/
 │           ├── styles_win10.dart  # Windows 10 translucent theme tokens
 │           └── styles_win11.dart  # Windows 11 acrylic theme tokens
 │
+├── windows/
+│   └── runner/                    # Native Win32 runner (mostly Flutter-generated boilerplate)
+│       ├── win32_window.cpp       # Window creation; detects OS dark-mode & routes to theme_win10/win11
+│       ├── theme_win10.cpp        # Acrylic blur-behind via undocumented SetWindowCompositionAttribute
+│       ├── theme_win11.cpp        # Native Mica/Acrylic backdrop via DWMWA_SYSTEMBACKDROP_TYPE
+│       └── resources/app_icon.ico # App icon (taskbar & title bar)
+│
 ├── docs/
 │   └── screenshots/                # UI Screenshots (tracked by Git)
 │       ├── 2026-08-11_133916.jpg   # Test Record view — filter/sort/count

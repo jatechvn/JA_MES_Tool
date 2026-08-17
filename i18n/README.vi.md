@@ -130,6 +130,13 @@ ja_mes_tool/
 │           ├── styles_win10.dart  # Theme trong suốt cho Windows 10
 │           └── styles_win11.dart  # Theme acrylic cho Windows 11
 │
+├── windows/
+│   └── runner/                    # Native Win32 runner (đa phần do Flutter tự sinh)
+│       ├── win32_window.cpp       # Tạo cửa sổ; phát hiện Dark Mode của OS & điều hướng sang theme_win10/win11
+│       ├── theme_win10.cpp        # Hiệu ứng Acrylic blur qua API SetWindowCompositionAttribute không tài liệu hóa
+│       ├── theme_win11.cpp        # Nền Mica/Acrylic gốc qua DWMWA_SYSTEMBACKDROP_TYPE
+│       └── resources/app_icon.ico # Icon ứng dụng (taskbar & title bar)
+│
 ├── docs/
 │   └── screenshots/                 # Thư mục chứa ảnh giao diện
 │       ├── 2026-08-11_133916.jpg    # Kết quả Test — tìm kiếm/sắp xếp/số lượng
