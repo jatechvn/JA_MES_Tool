@@ -2026,6 +2026,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
     bool isExpanded = false;
     bool isVerifying = false;
+    // null = idle, true = last verify succeeded, false = last verify failed.
+    // Drives the verify-connection icon's check/cross animation; auto-reverts
+    // to null a few seconds after a result lands (see onPressed below).
+    bool? verifyOk;
+    String verifyTooltip = Translations.get('verify_connection', logic.lang);
     bool isFetchingCdp = false;
     bool isGlassExpanded = true;
     double bgBlur = logic.bgBlur;
@@ -2923,66 +2928,97 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        IconButton(
-                          icon: isVerifying
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                        Tooltip(
+                          message: verifyTooltip,
+                          child: IconButton(
+                            icon: AnimatedSwitcher(
+                              duration: Motion.normal,
+                              transitionBuilder: (child, anim) =>
+                                  ScaleTransition(
+                                    scale: anim,
+                                    child: FadeTransition(
+                                      opacity: anim,
+                                      child: child,
+                                    ),
                                   ),
-                                )
-                              : Icon(
-                                  Icons.verified_outlined,
-                                  size: 18,
-                                  color: Colors.blue.shade600,
-                                ),
-                          tooltip: Translations.get(
-                            'verify_connection',
-                            logic.lang,
-                          ),
-                          onPressed: isVerifying
-                              ? null
-                              : () async {
-                                  setDialogState(() => isVerifying = true);
-                                  final res = await logic.verifySettings(
-                                    tokenCtrl.text,
-                                    langCtrl.text,
-                                    operationIdCtrl.text,
-                                    uuidCtrl.text,
-                                    cookieCtrl.text,
-                                  );
-                                  setDialogState(() => isVerifying = false);
-                                  if (!context.mounted) return;
-                                  if (res == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          Translations.get(
-                                            'connection_valid',
+                              child: isVerifying
+                                  ? const SizedBox(
+                                      key: ValueKey('verifying'),
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : verifyOk == true
+                                  ? Icon(
+                                      Icons.check_circle,
+                                      key: const ValueKey('ok'),
+                                      size: 18,
+                                      color: theme.passColor,
+                                    )
+                                  : verifyOk == false
+                                  ? Icon(
+                                      Icons.cancel,
+                                      key: const ValueKey('fail'),
+                                      size: 18,
+                                      color: theme.failColor,
+                                    )
+                                  : Icon(
+                                      Icons.verified_outlined,
+                                      key: const ValueKey('idle'),
+                                      size: 18,
+                                      color: Colors.blue.shade600,
+                                    ),
+                            ),
+                            onPressed: isVerifying
+                                ? null
+                                : () async {
+                                    setDialogState(() {
+                                      isVerifying = true;
+                                      verifyOk = null;
+                                    });
+                                    final res = await logic.verifySettings(
+                                      tokenCtrl.text,
+                                      langCtrl.text,
+                                      operationIdCtrl.text,
+                                      uuidCtrl.text,
+                                      cookieCtrl.text,
+                                    );
+                                    if (!context.mounted) return;
+                                    setDialogState(() {
+                                      isVerifying = false;
+                                      verifyOk = res == null;
+                                      verifyTooltip = res == null
+                                          ? Translations.get(
+                                              'connection_valid',
+                                              logic.lang,
+                                            )
+                                          : 'Invalid: $res';
+                                    });
+                                    // Auto-revert the icon back to idle a few
+                                    // seconds after the result lands, since
+                                    // ScaffoldMessenger SnackBars anchor to
+                                    // the main window's Scaffold and render
+                                    // BEHIND this dialog's modal barrier —
+                                    // invisible to the user. The icon itself
+                                    // (plus its tooltip) is the only reliably
+                                    // visible feedback while this dialog is open.
+                                    Future.delayed(
+                                      const Duration(seconds: 3),
+                                      () {
+                                        if (!context.mounted) return;
+                                        setDialogState(() {
+                                          verifyOk = null;
+                                          verifyTooltip = Translations.get(
+                                            'verify_connection',
                                             logic.lang,
-                                          ),
-                                          style: TextStyle(
-                                            color: theme.passColor,
-                                          ),
-                                        ),
-                                        duration: const Duration(seconds: 2),
-                                      ),
+                                          );
+                                        });
+                                      },
                                     );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Invalid: $res',
-                                          style: TextStyle(
-                                            color: theme.failColor,
-                                          ),
-                                        ),
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
-                                  }
-                                },
+                                  },
+                          ),
                         ),
                         TextButton(
                           onPressed: () {
