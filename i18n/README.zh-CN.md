@@ -130,6 +130,13 @@ ja_mes_tool/
 │           ├── styles_win10.dart  # Windows 10 半透明主题
 │           └── styles_win11.dart  # Windows 11 亚克力主题
 │
+├── windows/
+│   └── runner/                    # 原生 Win32 运行器 (大部分由 Flutter 自动生成)
+│       ├── win32_window.cpp       # 创建窗口；检测系统暗黑模式并路由至 theme_win10/win11
+│       ├── theme_win10.cpp        # 通过未文档化的 SetWindowCompositionAttribute API 实现 Acrylic 模糊背景
+│       ├── theme_win11.cpp        # 通过 DWMWA_SYSTEMBACKDROP_TYPE 实现原生 Mica/Acrylic 背景
+│       └── resources/app_icon.ico # 应用图标 (任务栏与标题栏)
+│
 ├── docs/
 │   └── screenshots/                 # 应用界面截图
 │       ├── 2026-08-11_133916.jpg    # 测试记录 — 搜索/排序/数量
