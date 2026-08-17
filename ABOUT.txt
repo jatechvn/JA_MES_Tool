@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.5.3
+Version      : v2.6.0
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -38,7 +38,10 @@ Key Features:
   UUID, Operation-ID & Cookie extraction.
 - Smart 2-Step Auto Sync Wizard (Open Browser -> Sync Credentials).
 - Collapsible Advanced Settings panel for clean & easy navigation.
-- Solid Opaque UI Dialogs preventing text overlap and see-through glitches.
+- Glassmorphism Advanced Settings: live-preview blur/opacity sliders for the
+  main background and dialogs, with a built-in legibility floor preventing
+  text overlap and see-through glitches.
+- Frosted-glass Sort dropdown with real BackdropFilter blur.
 - Automatic background Token validation every 3 minutes with status badge.
 - HTTP Header Sanitization (fixes \r\n Carriage Return & quote errors).
 - Daily Log Management & 7-day automatic cleanup.

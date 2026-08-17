@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -57,6 +58,17 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   final _ListViewState _barcodeListState = _ListViewState();
   final _ListViewState _wipListState = _ListViewState();
 
+  // Tracks the glass Sort dropdown's OverlayEntry so it can be closed on
+  // selection, outside tap, tab/SN switch, or widget dispose. Anchor position
+  // is computed fresh at open-time from the button's own RenderBox (see
+  // _openSortOverlay) — no shared Key/LayerLink is involved.
+  OverlayEntry? _sortOverlayEntry;
+  // Last '${viewMode}_${selectedSn}' seen in build(), used to detect a tab or
+  // SN change and close a stale, still-open Sort dropdown — otherwise its
+  // onSelect closure keeps pointing at the _ListViewState of the tab the
+  // user just left, silently re-sorting content that's no longer visible.
+  String? _lastSortViewKey;
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +84,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   @override
   void dispose() {
     windowManager.removeListener(this);
+    _sortOverlayEntry?.remove();
     _testRecordListState.filterCtrl.dispose();
     _barcodeListState.filterCtrl.dispose();
     _wipListState.filterCtrl.dispose();
@@ -102,6 +115,18 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
     final logic = context.watch<AppLogic>();
+
+    // The Sort dropdown lives in the root Overlay, decoupled from the
+    // AnimatedSwitcher that owns the tab/SN view — closing it here (rather
+    // than at every tab-pill/SN-row onTap) guarantees it can never be left
+    // open and bound to a _ListViewState that's no longer the visible tab.
+    final sortViewKey = '${logic.viewMode}_${logic.selectedSn}';
+    if (_lastSortViewKey != null &&
+        _lastSortViewKey != sortViewKey &&
+        _sortOverlayEntry != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _closeSortOverlay());
+    }
+    _lastSortViewKey = sortViewKey;
 
     if (logic.isConnectionValid == false && !_hasCheckedInitialToken) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -367,8 +392,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
           // Main Content
           Expanded(
-            child: Container(
-              color: Colors.transparent,
+            child: AnimatedContainer(
+              duration: Motion.normal,
+              curve: Motion.curveInOut,
+              color: theme.sidebarBg,
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1626,89 +1653,246 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         ? Translations.get('sort', lang)
         : options.firstWhere((o) => o.key == listState.sortField).label;
 
-    return PopupMenuButton<String>(
-      tooltip: Translations.get('sort', lang),
-      offset: const Offset(0, 38),
-      color: theme.cardBg,
-      surfaceTintColor: Colors.transparent,
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: theme.isDark ? Colors.white24 : Colors.black12),
-      ),
-      onSelected: (key) {
-        setState(() {
-          if (key.isEmpty) {
-            listState.sortField = null;
-          } else if (listState.sortField == key) {
-            listState.sortAsc = !listState.sortAsc;
-          } else {
-            listState.sortField = key;
-            listState.sortAsc = true;
-          }
-        });
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          value: '',
-          padding: EdgeInsets.zero,
-          height: 38,
-          child: _buildSortMenuRow(
-            theme: theme,
-            icon: Icons.sort_rounded,
-            label: Translations.get('default', lang),
-            selected: listState.sortField == null,
-          ),
-        ),
-        ...options.map(
-          (o) => PopupMenuItem<String>(
-            value: o.key,
-            padding: EdgeInsets.zero,
-            height: 38,
-            child: _buildSortMenuRow(
-              theme: theme,
-              icon: o.icon,
-              label: o.label,
-              selected: listState.sortField == o.key,
-              sortAsc: listState.sortAsc,
-            ),
-          ),
-        ),
-      ],
-      child: AnimatedContainer(
-        duration: Motion.normal,
-        curve: Motion.curveInOut,
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: theme.cardBg,
+    void selectKey(String key) {
+      setState(() {
+        if (key.isEmpty) {
+          listState.sortField = null;
+        } else if (listState.sortField == key) {
+          listState.sortAsc = !listState.sortAsc;
+        } else {
+          listState.sortField = key;
+          listState.sortAsc = true;
+        }
+      });
+      _closeSortOverlay();
+    }
+
+    // Builder gives this exact instance of the button its own BuildContext,
+    // so its position can be measured at tap-time via RenderBox. This avoids
+    // any shared Key/LayerLink, which would collide (Flutter throws) when
+    // AnimatedSwitcher briefly mounts the outgoing and incoming tab/SN view
+    // together during a crossfade — both would otherwise render a Sort
+    // button for the same _ListViewState at the same time.
+    return Builder(
+      builder: (buttonContext) {
+        return InkWell(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: theme.isDark ? Colors.white24 : Colors.black12,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              listState.sortField == null
-                  ? Icons.sort_rounded
-                  : (listState.sortAsc
-                        ? Icons.arrow_upward_rounded
-                        : Icons.arrow_downward_rounded),
-              size: 16,
-              color: theme.textPrimary,
+          onTap: () {
+            if (_sortOverlayEntry != null) {
+              _closeSortOverlay();
+              return;
+            }
+            final renderBox = buttonContext.findRenderObject() as RenderBox?;
+            if (renderBox == null || !renderBox.attached) return;
+            _openSortOverlay(
+              anchorContext: buttonContext,
+              anchorTopLeft: renderBox.localToGlobal(Offset.zero),
+              anchorSize: renderBox.size,
+              theme: theme,
+              lang: lang,
+              listState: listState,
+              options: options,
+              onSelect: selectKey,
+            );
+          },
+          child: Tooltip(
+            message: Translations.get('sort', lang),
+            child: AnimatedContainer(
+              duration: Motion.normal,
+              curve: Motion.curveInOut,
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: theme.cardBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.isDark ? Colors.white24 : Colors.black12,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    listState.sortField == null
+                        ? Icons.sort_rounded
+                        : (listState.sortAsc
+                              ? Icons.arrow_upward_rounded
+                              : Icons.arrow_downward_rounded),
+                    size: 16,
+                    color: theme.textPrimary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    currentLabel,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: theme.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 4),
-            Text(
-              currentLabel,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: theme.textPrimary,
-                fontWeight: FontWeight.w600,
+          ),
+        );
+      },
+    );
+  }
+
+  void _closeSortOverlay() {
+    _sortOverlayEntry?.remove();
+    _sortOverlayEntry = null;
+  }
+
+  /// Custom anchored dropdown for the Sort button, built on a plain
+  /// OverlayEntry instead of PopupMenuButton, because the standard
+  /// PopupMenuButton route has no hook to inject a BackdropFilter behind its
+  /// content. Position is computed once at open-time from the button's
+  /// RenderBox (right-aligned to the button so it never overflows the
+  /// window edge) rather than followed live via CompositedTransformFollower,
+  /// since the latter requires a LayerLink unique to one mounted widget at a
+  /// time — a constraint AnimatedSwitcher's transient dual-mount during a
+  /// crossfade would violate.
+  ///
+  /// The blur/opacity here follow the user's "Popup Blur/Opacity" Advanced
+  /// Settings (logic.dialogBlur/dialogOpacity). This app's modal dialogs are
+  /// deliberately kept solid-opaque (see CHANGELOG v2.1.0: glass dialogs
+  /// previously caused see-through overlapping text), so only this
+  /// lightweight anchored dropdown uses the setting for now.
+  void _openSortOverlay({
+    required BuildContext anchorContext,
+    required Offset anchorTopLeft,
+    required Size anchorSize,
+    required ThemeProvider theme,
+    required String lang,
+    required _ListViewState listState,
+    required List<_SortOption> options,
+    required void Function(String key) onSelect,
+  }) {
+    _closeSortOverlay();
+    final logic = context.read<AppLogic>();
+    // Floor the blur whenever the panel isn't fully solid — an unblurred,
+    // translucent panel over the live scrolling record list is exactly the
+    // "see-through overlapping text" glitch CHANGELOG v2.1.0 deliberately
+    // eliminated from dialogs; the two Advanced Settings sliders are
+    // independent, so this has to be enforced here rather than in the UI.
+    final rawBlur = logic.dialogBlur;
+    final opacity = logic.dialogOpacity;
+    final effectiveBlur = opacity < 1.0 && rawBlur < 6.0 ? 6.0 : rawBlur;
+    final borderColor = theme.isDark ? Colors.white24 : Colors.black12;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final top = anchorTopLeft.dy + anchorSize.height + 4;
+    final right = screenWidth - (anchorTopLeft.dx + anchorSize.width);
+
+    final menuContent = _buildSortMenuList(
+      theme: theme,
+      lang: lang,
+      listState: listState,
+      options: options,
+      onSelect: onSelect,
+    );
+
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (overlayContext) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeSortOverlay,
+              ),
+            ),
+            Positioned(
+              top: top,
+              right: right,
+              // The blur sigma and container alpha are animated as their own
+              // native parameters (not by wrapping the finished BackdropFilter
+              // in an outer Opacity/Transform), since animating opacity/scale
+              // directly around a live BackdropFilter is a known source of
+              // stale/ghosted backdrop sampling mid-transition — plausibly
+              // the very defect CHANGELOG v2.1.0 hit with the old glass
+              // dialogs. Only the inner content fades/scales, safely after
+              // the backdrop sampling has already happened for this frame.
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: Motion.normal,
+                curve: Motion.curveOut,
+                builder: (context, v, child) => ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(
+                      sigmaX: effectiveBlur * v,
+                      sigmaY: effectiveBlur * v,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.cardBg.withValues(alpha: opacity * v),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: borderColor.withValues(alpha: v),
+                        ),
+                      ),
+                      child: Opacity(
+                        opacity: v,
+                        child: Transform.scale(
+                          scale: 0.96 + (0.04 * v),
+                          alignment: Alignment.topRight,
+                          child: child,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                child: menuContent,
               ),
             ),
           ],
+        );
+      },
+    );
+    Overlay.of(anchorContext).insert(entry);
+    _sortOverlayEntry = entry;
+  }
+
+  /// The Sort dropdown's row list (Default + each field), sized to its
+  /// content and wrapped for InkWell ink support — extracted so the
+  /// animated glass shell in _openSortOverlay doesn't nest past the
+  /// project's 4-level widget guideline.
+  Widget _buildSortMenuList({
+    required ThemeProvider theme,
+    required String lang,
+    required _ListViewState listState,
+    required List<_SortOption> options,
+    required void Function(String key) onSelect,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: IntrinsicWidth(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 180),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSortMenuRow(
+                theme: theme,
+                icon: Icons.sort_rounded,
+                label: Translations.get('default', lang),
+                selected: listState.sortField == null,
+                onTap: () => onSelect(''),
+              ),
+              ...options.map(
+                (o) => _buildSortMenuRow(
+                  theme: theme,
+                  icon: o.icon,
+                  label: o.label,
+                  selected: listState.sortField == o.key,
+                  sortAsc: listState.sortAsc,
+                  onTap: () => onSelect(o.key),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1723,41 +1907,50 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     required IconData icon,
     required String label,
     required bool selected,
+    required VoidCallback onTap,
     bool? sortAsc,
   }) {
     final accent = theme.isDark ? Colors.blue.shade300 : Colors.blue.shade700;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? accent.withOpacity(0.12) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: selected ? accent : theme.textSecondary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: selected ? accent : theme.textPrimary,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? accent : theme.textSecondary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: selected ? accent : theme.textPrimary,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ),
-          ),
-          if (selected && sortAsc != null) ...[
-            const SizedBox(width: 8),
-            Icon(
-              sortAsc
-                  ? Icons.arrow_upward_rounded
-                  : Icons.arrow_downward_rounded,
-              size: 14,
-              color: accent,
-            ),
+            if (selected && sortAsc != null) ...[
+              const SizedBox(width: 8),
+              Icon(
+                sortAsc
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                size: 14,
+                color: accent,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -1834,6 +2027,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     bool isExpanded = false;
     bool isVerifying = false;
     bool isFetchingCdp = false;
+    bool isGlassExpanded = true;
+    double bgBlur = logic.bgBlur;
+    double bgOpacity = logic.bgOpacity;
+    double dialogBlur = logic.dialogBlur;
+    double dialogOpacity = logic.dialogOpacity;
 
     Widget buildField(
       String label,
@@ -1899,828 +2097,1048 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       );
     }
 
+    // One row inside the "Customize blur & transparency" section: a
+    // label + live value on top, a Slider below — mirrors the JA_Compare
+    // reference app's Advanced Settings layout (Main background blur/
+    // opacity, Dialog blur/opacity).
+    Widget buildGlassSlider({
+      required String label,
+      required double value,
+      required double min,
+      required double max,
+      bool isPercent = false,
+      required ValueChanged<double> onChanged,
+    }) {
+      final display = isPercent
+          ? '${(value * 100).round()}%'
+          : '${value.toStringAsFixed(0)}px';
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(color: theme.textPrimary, fontSize: 12),
+                  ),
+                ),
+                Text(
+                  display,
+                  style: TextStyle(color: theme.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              ),
+              child: Slider(
+                value: value,
+                min: min,
+                max: max,
+                divisions: isPercent ? 18 : 30,
+                activeColor: Colors.blue.shade600,
+                onChanged: onChanged,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     _showIosDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              backgroundColor: theme.isDark
-                  ? const Color(0xFF2B2D30)
-                  : Colors.white,
-              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-              actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+            // Live-preview the dialogBlur/dialogOpacity sliders on this very
+            // dialog (matches JA_Compare's GlassDialog behavior). Floor of
+            // 6px blur whenever opacity < 1.0 prevents the see-through
+            // overlapping-text glitch fixed in CHANGELOG v2.1.0.
+            final effectiveBlur = (dialogOpacity < 1.0 && dialogBlur < 6.0)
+                ? 6.0
+                : dialogBlur;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(
+                      sigmaX: effectiveBlur,
+                      sigmaY: effectiveBlur,
                     ),
-                    child: Icon(
-                      Icons.settings_suggest_rounded,
-                      color: Colors.blue.shade600,
-                      size: 22,
-                    ),
+                    child: const SizedBox.expand(),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    Translations.get('settings', logic.lang),
-                    style: TextStyle(
-                      color: theme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                ),
+                AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const Spacer(),
-                  // Connection Health Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (logic.isConnectionValid ?? false)
-                          ? Colors.green.withValues(alpha: 0.12)
-                          : Colors.amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: (logic.isConnectionValid ?? false)
-                            ? Colors.green.withValues(alpha: 0.3)
-                            : Colors.amber.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: (logic.isConnectionValid ?? false)
-                                ? Colors.green
-                                : Colors.amber.shade700,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          (logic.isConnectionValid ?? false)
-                              ? Translations.get('status_connected', logic.lang)
-                              : Translations.get('status_check', logic.lang),
-                          style: TextStyle(
-                            color: (logic.isConnectionValid ?? false)
-                                ? Colors.green.shade700
-                                : Colors.amber.shade800,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: 480,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  backgroundColor:
+                      (theme.isDark ? const Color(0xFF2B2D30) : Colors.white)
+                          .withValues(alpha: dialogOpacity),
+                  titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  title: Row(
                     children: [
-                      const SizedBox(height: 10),
-
-                      // Smart 2-Step Auto Sync Card
                       Container(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: theme.isDark
-                                ? [
-                                    const Color(0xFF1E2638),
-                                    const Color(0xFF1A2130),
-                                  ]
-                                : [
-                                    const Color(0xFFEBF3FE),
-                                    const Color(0xFFF4F8FE),
-                                  ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.blue.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.settings_suggest_rounded,
+                          color: Colors.blue.shade600,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        Translations.get('settings', logic.lang),
+                        style: TextStyle(
+                          color: theme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Connection Health Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (logic.isConnectionValid ?? false)
+                              ? Colors.green.withValues(alpha: 0.12)
+                              : Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.2),
+                            color: (logic.isConnectionValid ?? false)
+                                ? Colors.green.withValues(alpha: 0.3)
+                                : Colors.amber.withValues(alpha: 0.4),
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.bolt_rounded,
-                                  color: Colors.blue.shade600,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  Translations.get(
-                                    'cdp_sync_title',
-                                    logic.lang,
-                                  ),
-                                  style: TextStyle(
-                                    color: theme.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              Translations.get('cdp_sync_desc', logic.lang),
-                              style: TextStyle(
-                                color: theme.textSecondary,
-                                fontSize: 11,
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: (logic.isConnectionValid ?? false)
+                                    ? Colors.green
+                                    : Colors.amber.shade700,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(
-                                      Icons.open_in_browser_rounded,
-                                      size: 16,
+                            const SizedBox(width: 6),
+                            Text(
+                              (logic.isConnectionValid ?? false)
+                                  ? Translations.get(
+                                      'status_connected',
+                                      logic.lang,
+                                    )
+                                  : Translations.get(
+                                      'status_check',
+                                      logic.lang,
                                     ),
-                                    label: Text(
-                                      Translations.get(
-                                        'btn_open_browser',
-                                        logic.lang,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade600,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    onPressed: () async {
-                                      await BrowserHelper.launchBrowser();
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    icon: isFetchingCdp
-                                        ? const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.sync_rounded,
-                                            size: 16,
-                                          ),
-                                    label: Text(
-                                      isFetchingCdp
-                                          ? Translations.get(
-                                              'status_fetching',
-                                              logic.lang,
-                                            )
-                                          : Translations.get(
-                                              'btn_sync_credentials',
-                                              logic.lang,
-                                            ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.teal.shade600,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    onPressed: isFetchingCdp
-                                        ? null
-                                        : () async {
-                                            setDialogState(
-                                              () => isFetchingCdp = true,
-                                            );
-                                            final creds =
-                                                await BrowserHelper.fetchCredentialsFromBrowser();
-                                            setDialogState(
-                                              () => isFetchingCdp = false,
-                                            );
-
-                                            if (!context.mounted) return;
-                                            if (creds != null) {
-                                              if (creds.token != null &&
-                                                  creds.token!.isNotEmpty) {
-                                                tokenCtrl.text = creds.token!;
-                                              }
-                                              if (creds.operationId != null &&
-                                                  creds
-                                                      .operationId!
-                                                      .isNotEmpty) {
-                                                operationIdCtrl.text =
-                                                    creds.operationId!;
-                                              }
-                                              if (creds.uuid != null &&
-                                                  creds.uuid!.isNotEmpty) {
-                                                uuidCtrl.text = creds.uuid!;
-                                              }
-                                              if (creds.cookie != null &&
-                                                  creds.cookie!.isNotEmpty) {
-                                                cookieCtrl.text = creds.cookie!;
-                                              }
-
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    Translations.get(
-                                                      'fetched_success',
-                                                      logic.lang,
-                                                    ),
-                                                  ),
-                                                  backgroundColor: Colors.green,
-                                                ),
-                                              );
-                                            } else {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    Translations.get(
-                                                      'fetched_fail',
-                                                      logic.lang,
-                                                    ),
-                                                  ),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          },
-                                  ),
-                                ),
-                              ],
+                              style: TextStyle(
+                                color: (logic.isConnectionValid ?? false)
+                                    ? Colors.green.shade700
+                                    : Colors.amber.shade800,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
                       ),
+                    ],
+                  ),
+                  content: SizedBox(
+                    width: 480,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 10),
 
-                      const SizedBox(height: 12),
-
-                      // Sleek Toggle Button for Advanced Options
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              isExpanded = !isExpanded;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.isDark
-                                  ? const Color(0xFF1E1F22)
-                                  : const Color(0xFFF7F9FC),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isExpanded
-                                    ? Colors.blue.shade600
-                                    : (theme.isDark
-                                          ? Colors.white10
-                                          : Colors.black.withValues(
-                                              alpha: 0.08,
-                                            )),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.tune_rounded,
-                                  size: 18,
-                                  color: isExpanded
-                                      ? Colors.blue.shade600
-                                      : theme.textSecondary,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    isExpanded
-                                        ? Translations.get(
-                                            'hide_advanced',
-                                            logic.lang,
-                                          )
-                                        : Translations.get(
-                                            'show_advanced',
-                                            logic.lang,
-                                          ),
-                                    style: TextStyle(
-                                      color: isExpanded
-                                          ? Colors.blue.shade600
-                                          : theme.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                                Icon(
-                                  isExpanded
-                                      ? Icons.keyboard_arrow_up_rounded
-                                      : Icons.keyboard_arrow_down_rounded,
-                                  color: isExpanded
-                                      ? Colors.blue.shade600
-                                      : theme.textSecondary,
-                                  size: 20,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Expandable Section
-                      AnimatedCrossFade(
-                        firstChild: const SizedBox.shrink(),
-                        secondChild: Padding(
-                          padding: const EdgeInsets.only(top: 12.0),
-                          child: Container(
+                          // Smart 2-Step Auto Sync Card
+                          Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: theme.isDark
-                                  ? const Color(0xFF1E1F22)
-                                  : const Color(0xFFF8FAFC),
+                              gradient: LinearGradient(
+                                colors: theme.isDark
+                                    ? [
+                                        const Color(0xFF1E2638),
+                                        const Color(0xFF1A2130),
+                                      ]
+                                    : [
+                                        const Color(0xFFEBF3FE),
+                                        const Color(0xFFF4F8FE),
+                                      ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: theme.isDark
-                                    ? Colors.white10
-                                    : Colors.black.withValues(alpha: 0.06),
+                                color: Colors.blue.withValues(alpha: 0.2),
                               ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Parse Raw Header Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    icon: const Icon(
-                                      Icons.content_paste_rounded,
-                                      size: 16,
-                                    ),
-                                    label: Text(
-                                      Translations.get(
-                                        'paste_raw_http',
-                                        logic.lang,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      side: BorderSide(
-                                        color: Colors.blue.shade600.withValues(
-                                          alpha: 0.4,
-                                        ),
-                                      ),
-                                      foregroundColor: Colors.blue.shade600,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      final TextEditingController pasteCtrl =
-                                          TextEditingController();
-                                      _showIosDialog(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                          ),
-                                          backgroundColor: theme.isDark
-                                              ? const Color(0xFF2B2D30)
-                                              : Colors.white,
-                                          title: Text(
-                                            Translations.get(
-                                              'paste_raw_http',
-                                              logic.lang,
-                                            ),
-                                            style: TextStyle(
-                                              color: theme.textPrimary,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          content: SizedBox(
-                                            width: 450,
-                                            child: TextField(
-                                              controller: pasteCtrl,
-                                              maxLines: 10,
-                                              style: TextStyle(
-                                                color: theme.textPrimary,
-                                                fontSize: 12,
-                                              ),
-                                              decoration: InputDecoration(
-                                                hintText:
-                                                    'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
-                                                hintStyle: TextStyle(
-                                                  color: theme.textSecondary
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                                filled: true,
-                                                fillColor: theme.sidebarBg,
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(ctx),
-                                              child: Text(
-                                                Translations.get(
-                                                  'cancel',
-                                                  logic.lang,
-                                                ),
-                                              ),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                final creds =
-                                                    BrowserHelper.parseRawHttpRequest(
-                                                      pasteCtrl.text,
-                                                    );
-                                                if (creds.token != null &&
-                                                    creds.token!.isNotEmpty) {
-                                                  tokenCtrl.text = creds.token!;
-                                                }
-                                                if (creds.lang != null &&
-                                                    creds.lang!.isNotEmpty) {
-                                                  langCtrl.text = creds.lang!;
-                                                }
-                                                if (creds.operationId != null &&
-                                                    creds
-                                                        .operationId!
-                                                        .isNotEmpty) {
-                                                  operationIdCtrl.text =
-                                                      creds.operationId!;
-                                                }
-                                                if (creds.uuid != null &&
-                                                    creds.uuid!.isNotEmpty) {
-                                                  uuidCtrl.text = creds.uuid!;
-                                                }
-                                                if (creds.cookie != null &&
-                                                    creds.cookie!.isNotEmpty) {
-                                                  cookieCtrl.text =
-                                                      creds.cookie!;
-                                                }
-
-                                                Navigator.pop(ctx);
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      Translations.get(
-                                                        'fetched_success',
-                                                        logic.lang,
-                                                      ),
-                                                    ),
-                                                    backgroundColor:
-                                                        Colors.green,
-                                                  ),
-                                                );
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    Colors.blue.shade600,
-                                              ),
-                                              child: Text(
-                                                Translations.get(
-                                                  'parse_http',
-                                                  logic.lang,
-                                                ),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(height: 14),
-                                buildField(
-                                  Translations.get('mes_token', logic.lang),
-                                  tokenCtrl,
-                                  maxLines: 2,
-                                  hint: 'Bearer token string',
-                                ),
-                                buildField(
-                                  Translations.get('cookie', logic.lang),
-                                  cookieCtrl,
-                                  maxLines: 2,
-                                  hint: 'cultureName=...; CloudMES_Token=...',
-                                ),
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: buildField(
-                                        Translations.get(
-                                          'operation_id',
-                                          logic.lang,
-                                        ),
-                                        operationIdCtrl,
-                                      ),
+                                    Icon(
+                                      Icons.bolt_rounded,
+                                      color: Colors.blue.shade600,
+                                      size: 20,
                                     ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: buildField(
-                                        Translations.get('uuid', logic.lang),
-                                        uuidCtrl,
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      Translations.get(
+                                        'cdp_sync_title',
+                                        logic.lang,
+                                      ),
+                                      style: TextStyle(
+                                        color: theme.textPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
                                       ),
                                     ),
                                   ],
                                 ),
-                                buildField(
-                                  Translations.get('language', logic.lang),
-                                  langCtrl,
-                                  hint: 'en / vi-VN / zh-CN',
+                                const SizedBox(height: 4),
+                                Text(
+                                  Translations.get('cdp_sync_desc', logic.lang),
+                                  style: TextStyle(
+                                    color: theme.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(
+                                          Icons.open_in_browser_rounded,
+                                          size: 16,
+                                        ),
+                                        label: Text(
+                                          Translations.get(
+                                            'btn_open_browser',
+                                            logic.lang,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue.shade600,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        onPressed: () async {
+                                          await BrowserHelper.launchBrowser();
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        icon: isFetchingCdp
+                                            ? const SizedBox(
+                                                width: 14,
+                                                height: 14,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white,
+                                                    ),
+                                              )
+                                            : const Icon(
+                                                Icons.sync_rounded,
+                                                size: 16,
+                                              ),
+                                        label: Text(
+                                          isFetchingCdp
+                                              ? Translations.get(
+                                                  'status_fetching',
+                                                  logic.lang,
+                                                )
+                                              : Translations.get(
+                                                  'btn_sync_credentials',
+                                                  logic.lang,
+                                                ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.teal.shade600,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        onPressed: isFetchingCdp
+                                            ? null
+                                            : () async {
+                                                setDialogState(
+                                                  () => isFetchingCdp = true,
+                                                );
+                                                final creds =
+                                                    await BrowserHelper.fetchCredentialsFromBrowser();
+                                                setDialogState(
+                                                  () => isFetchingCdp = false,
+                                                );
+
+                                                if (!context.mounted) return;
+                                                if (creds != null) {
+                                                  if (creds.token != null &&
+                                                      creds.token!.isNotEmpty) {
+                                                    tokenCtrl.text =
+                                                        creds.token!;
+                                                  }
+                                                  if (creds.operationId !=
+                                                          null &&
+                                                      creds
+                                                          .operationId!
+                                                          .isNotEmpty) {
+                                                    operationIdCtrl.text =
+                                                        creds.operationId!;
+                                                  }
+                                                  if (creds.uuid != null &&
+                                                      creds.uuid!.isNotEmpty) {
+                                                    uuidCtrl.text = creds.uuid!;
+                                                  }
+                                                  if (creds.cookie != null &&
+                                                      creds
+                                                          .cookie!
+                                                          .isNotEmpty) {
+                                                    cookieCtrl.text =
+                                                        creds.cookie!;
+                                                  }
+
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        Translations.get(
+                                                          'fetched_success',
+                                                          logic.lang,
+                                                        ),
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.green,
+                                                    ),
+                                                  );
+                                                } else {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        Translations.get(
+                                                          'fetched_fail',
+                                                          logic.lang,
+                                                        ),
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        crossFadeState: isExpanded
-                            ? CrossFadeState.showSecond
-                            : CrossFadeState.showFirst,
-                        duration: const Duration(milliseconds: 200),
-                      ),
 
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                ),
-              ),
-              actionsAlignment: MainAxisAlignment.spaceBetween,
-              actions: [
-                // Left aligned items
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'v$appVersion',
-                      style: TextStyle(
-                        color: theme.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: isVerifying
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              Icons.verified_outlined,
-                              size: 18,
-                              color: Colors.blue.shade600,
-                            ),
-                      tooltip: Translations.get(
-                        'verify_connection',
-                        logic.lang,
-                      ),
-                      onPressed: isVerifying
-                          ? null
-                          : () async {
-                              setDialogState(() => isVerifying = true);
-                              final res = await logic.verifySettings(
-                                tokenCtrl.text,
-                                langCtrl.text,
-                                operationIdCtrl.text,
-                                uuidCtrl.text,
-                                cookieCtrl.text,
-                              );
-                              setDialogState(() => isVerifying = false);
-                              if (!context.mounted) return;
-                              if (res == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      Translations.get(
-                                        'connection_valid',
-                                        logic.lang,
+                          const SizedBox(height: 12),
+
+                          // Sleek Toggle Button for Advanced Options
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                setDialogState(() {
+                                  isExpanded = !isExpanded;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.isDark
+                                      ? const Color(0xFF1E1F22)
+                                      : const Color(0xFFF7F9FC),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isExpanded
+                                        ? Colors.blue.shade600
+                                        : (theme.isDark
+                                              ? Colors.white10
+                                              : Colors.black.withValues(
+                                                  alpha: 0.08,
+                                                )),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.tune_rounded,
+                                      size: 18,
+                                      color: isExpanded
+                                          ? Colors.blue.shade600
+                                          : theme.textSecondary,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        isExpanded
+                                            ? Translations.get(
+                                                'hide_advanced',
+                                                logic.lang,
+                                              )
+                                            : Translations.get(
+                                                'show_advanced',
+                                                logic.lang,
+                                              ),
+                                        style: TextStyle(
+                                          color: isExpanded
+                                              ? Colors.blue.shade600
+                                              : theme.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                      style: TextStyle(color: theme.passColor),
                                     ),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Invalid: $res',
-                                      style: TextStyle(color: theme.failColor),
+                                    Icon(
+                                      isExpanded
+                                          ? Icons.keyboard_arrow_up_rounded
+                                          : Icons.keyboard_arrow_down_rounded,
+                                      color: isExpanded
+                                          ? Colors.blue.shade600
+                                          : theme.textSecondary,
+                                      size: 20,
                                     ),
-                                    duration: const Duration(seconds: 3),
-                                  ),
-                                );
-                              }
-                            },
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        showAboutDialog(
-                          context: context,
-                          applicationName: appName,
-                          applicationVersion: appVersion,
-                          applicationLegalese:
-                              '© 2026 JA Tech.\nAll rights reserved.',
-                          children: [
-                            const SizedBox(height: 12),
-                            Text(
-                              Translations.get('about_detail', logic.lang),
-                              style: TextStyle(
-                                color: theme.textPrimary,
-                                fontSize: 13,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                      child: Text(
-                        Translations.get('about', logic.lang),
-                        style: TextStyle(
-                          color: Colors.blue.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        _showIosDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            backgroundColor: theme.isDark
-                                ? const Color(0xFF2B2D30)
-                                : Colors.white,
-                            title: Text(
-                              Translations.get('user_guide', logic.lang),
-                              style: TextStyle(
-                                color: theme.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            content: SizedBox(
-                              width: 520,
-                              child: SingleChildScrollView(
-                                child: Text(
-                                  Translations.get(
-                                    'user_guide_detail',
-                                    logic.lang,
-                                  ),
-                                  style: TextStyle(
-                                    color: theme.textPrimary,
-                                    fontSize: 13,
-                                    height: 1.5,
-                                  ),
+                                  ],
                                 ),
                               ),
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('OK'),
-                              ),
-                            ],
                           ),
-                        );
-                      },
-                      child: Text(
-                        Translations.get('user_guide', logic.lang),
-                        style: TextStyle(
-                          color: Colors.blue.shade600,
-                          fontSize: 12,
-                        ),
+
+                          // Expandable Section
+                          AnimatedCrossFade(
+                            firstChild: const SizedBox.shrink(),
+                            secondChild: Padding(
+                              padding: const EdgeInsets.only(top: 12.0),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: theme.isDark
+                                      ? const Color(0xFF1E1F22)
+                                      : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.isDark
+                                        ? Colors.white10
+                                        : Colors.black.withValues(alpha: 0.06),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Parse Raw Header Button
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(
+                                          Icons.content_paste_rounded,
+                                          size: 16,
+                                        ),
+                                        label: Text(
+                                          Translations.get(
+                                            'paste_raw_http',
+                                            logic.lang,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          side: BorderSide(
+                                            color: Colors.blue.shade600
+                                                .withValues(alpha: 0.4),
+                                          ),
+                                          foregroundColor: Colors.blue.shade600,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          final TextEditingController
+                                          pasteCtrl = TextEditingController();
+                                          _showIosDialog(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                              ),
+                                              backgroundColor: theme.isDark
+                                                  ? const Color(0xFF2B2D30)
+                                                  : Colors.white,
+                                              title: Text(
+                                                Translations.get(
+                                                  'paste_raw_http',
+                                                  logic.lang,
+                                                ),
+                                                style: TextStyle(
+                                                  color: theme.textPrimary,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              content: SizedBox(
+                                                width: 450,
+                                                child: TextField(
+                                                  controller: pasteCtrl,
+                                                  maxLines: 10,
+                                                  style: TextStyle(
+                                                    color: theme.textPrimary,
+                                                    fontSize: 12,
+                                                  ),
+                                                  decoration: InputDecoration(
+                                                    hintText:
+                                                        'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
+                                                    hintStyle: TextStyle(
+                                                      color: theme.textSecondary
+                                                          .withValues(
+                                                            alpha: 0.6,
+                                                          ),
+                                                    ),
+                                                    filled: true,
+                                                    fillColor: theme.sidebarBg,
+                                                    border: OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx),
+                                                  child: Text(
+                                                    Translations.get(
+                                                      'cancel',
+                                                      logic.lang,
+                                                    ),
+                                                  ),
+                                                ),
+                                                ElevatedButton(
+                                                  onPressed: () {
+                                                    final creds =
+                                                        BrowserHelper.parseRawHttpRequest(
+                                                          pasteCtrl.text,
+                                                        );
+                                                    if (creds.token != null &&
+                                                        creds
+                                                            .token!
+                                                            .isNotEmpty) {
+                                                      tokenCtrl.text =
+                                                          creds.token!;
+                                                    }
+                                                    if (creds.lang != null &&
+                                                        creds
+                                                            .lang!
+                                                            .isNotEmpty) {
+                                                      langCtrl.text =
+                                                          creds.lang!;
+                                                    }
+                                                    if (creds.operationId !=
+                                                            null &&
+                                                        creds
+                                                            .operationId!
+                                                            .isNotEmpty) {
+                                                      operationIdCtrl.text =
+                                                          creds.operationId!;
+                                                    }
+                                                    if (creds.uuid != null &&
+                                                        creds
+                                                            .uuid!
+                                                            .isNotEmpty) {
+                                                      uuidCtrl.text =
+                                                          creds.uuid!;
+                                                    }
+                                                    if (creds.cookie != null &&
+                                                        creds
+                                                            .cookie!
+                                                            .isNotEmpty) {
+                                                      cookieCtrl.text =
+                                                          creds.cookie!;
+                                                    }
+
+                                                    Navigator.pop(ctx);
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          Translations.get(
+                                                            'fetched_success',
+                                                            logic.lang,
+                                                          ),
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                      ),
+                                                    );
+                                                  },
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors
+                                                            .blue
+                                                            .shade600,
+                                                      ),
+                                                  child: Text(
+                                                    Translations.get(
+                                                      'parse_http',
+                                                      logic.lang,
+                                                    ),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    buildField(
+                                      Translations.get('mes_token', logic.lang),
+                                      tokenCtrl,
+                                      maxLines: 2,
+                                      hint: 'Bearer token string',
+                                    ),
+                                    buildField(
+                                      Translations.get('cookie', logic.lang),
+                                      cookieCtrl,
+                                      maxLines: 2,
+                                      hint:
+                                          'cultureName=...; CloudMES_Token=...',
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: buildField(
+                                            Translations.get(
+                                              'operation_id',
+                                              logic.lang,
+                                            ),
+                                            operationIdCtrl,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: buildField(
+                                            Translations.get(
+                                              'uuid',
+                                              logic.lang,
+                                            ),
+                                            uuidCtrl,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    buildField(
+                                      Translations.get('language', logic.lang),
+                                      langCtrl,
+                                      hint: 'en / vi-VN / zh-CN',
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      Translations.get(
+                                        'glass_settings_title',
+                                        logic.lang,
+                                      ),
+                                      style: TextStyle(
+                                        color: theme.textPrimary,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Theme(
+                                      data: Theme.of(context).copyWith(
+                                        dividerColor: Colors.transparent,
+                                      ),
+                                      child: ExpansionTile(
+                                        initiallyExpanded: isGlassExpanded,
+                                        tilePadding: EdgeInsets.zero,
+                                        childrenPadding: EdgeInsets.zero,
+                                        collapsedIconColor: theme.textSecondary,
+                                        iconColor: Colors.blue.shade600,
+                                        onExpansionChanged: (v) =>
+                                            setDialogState(
+                                              () => isGlassExpanded = v,
+                                            ),
+                                        title: Text(
+                                          Translations.get(
+                                            'glass_customize',
+                                            logic.lang,
+                                          ),
+                                          style: TextStyle(
+                                            color: theme.textSecondary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        children: [
+                                          buildGlassSlider(
+                                            label: Translations.get(
+                                              'bg_blur_label',
+                                              logic.lang,
+                                            ),
+                                            value: bgBlur,
+                                            min: 0,
+                                            max: 30,
+                                            onChanged: (v) => setDialogState(
+                                              () => bgBlur = v,
+                                            ),
+                                          ),
+                                          buildGlassSlider(
+                                            label: Translations.get(
+                                              'bg_opacity_label',
+                                              logic.lang,
+                                            ),
+                                            value: bgOpacity,
+                                            min: 0.1,
+                                            max: 1.0,
+                                            isPercent: true,
+                                            onChanged: (v) => setDialogState(
+                                              () => bgOpacity = v,
+                                            ),
+                                          ),
+                                          buildGlassSlider(
+                                            label: Translations.get(
+                                              'dialog_blur',
+                                              logic.lang,
+                                            ),
+                                            value: dialogBlur,
+                                            min: 0,
+                                            max: 30,
+                                            onChanged: (v) => setDialogState(
+                                              () => dialogBlur = v,
+                                            ),
+                                          ),
+                                          buildGlassSlider(
+                                            label: Translations.get(
+                                              'dialog_opacity',
+                                              logic.lang,
+                                            ),
+                                            value: dialogOpacity,
+                                            min: 0.3,
+                                            max: 1.0,
+                                            isPercent: true,
+                                            onChanged: (v) => setDialogState(
+                                              () => dialogOpacity = v,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            crossFadeState: isExpanded
+                                ? CrossFadeState.showSecond
+                                : CrossFadeState.showFirst,
+                            duration: const Duration(milliseconds: 200),
+                          ),
+
+                          const SizedBox(height: 10),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-                // Right aligned buttons
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        tokenCtrl.text = defaultToken;
-                        operationIdCtrl.text = defaultOperationId;
-                        uuidCtrl.text = defaultUuid;
-                        cookieCtrl.text = defaultCookie;
-                        langCtrl.text = 'en';
-                      },
-                      child: Text(
-                        Translations.get('default', logic.lang),
-                        style: TextStyle(
-                          color: theme.textSecondary,
-                          fontSize: 12,
+                  ),
+                  actionsAlignment: MainAxisAlignment.spaceBetween,
+                  actions: [
+                    // Left aligned items
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'v$appVersion',
+                          style: TextStyle(
+                            color: theme.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: isVerifying
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.verified_outlined,
+                                  size: 18,
+                                  color: Colors.blue.shade600,
+                                ),
+                          tooltip: Translations.get(
+                            'verify_connection',
+                            logic.lang,
+                          ),
+                          onPressed: isVerifying
+                              ? null
+                              : () async {
+                                  setDialogState(() => isVerifying = true);
+                                  final res = await logic.verifySettings(
+                                    tokenCtrl.text,
+                                    langCtrl.text,
+                                    operationIdCtrl.text,
+                                    uuidCtrl.text,
+                                    cookieCtrl.text,
+                                  );
+                                  setDialogState(() => isVerifying = false);
+                                  if (!context.mounted) return;
+                                  if (res == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          Translations.get(
+                                            'connection_valid',
+                                            logic.lang,
+                                          ),
+                                          style: TextStyle(
+                                            color: theme.passColor,
+                                          ),
+                                        ),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Invalid: $res',
+                                          style: TextStyle(
+                                            color: theme.failColor,
+                                          ),
+                                        ),
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                },
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            showAboutDialog(
+                              context: context,
+                              applicationName: appName,
+                              applicationVersion: appVersion,
+                              applicationLegalese:
+                                  '© 2026 JA Tech.\nAll rights reserved.',
+                              children: [
+                                const SizedBox(height: 12),
+                                Text(
+                                  Translations.get('about_detail', logic.lang),
+                                  style: TextStyle(
+                                    color: theme.textPrimary,
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                          child: Text(
+                            Translations.get('about', logic.lang),
+                            style: TextStyle(
+                              color: Colors.blue.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            _showIosDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                backgroundColor: theme.isDark
+                                    ? const Color(0xFF2B2D30)
+                                    : Colors.white,
+                                title: Text(
+                                  Translations.get('user_guide', logic.lang),
+                                  style: TextStyle(
+                                    color: theme.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                content: SizedBox(
+                                  width: 520,
+                                  child: SingleChildScrollView(
+                                    child: Text(
+                                      Translations.get(
+                                        'user_guide_detail',
+                                        logic.lang,
+                                      ),
+                                      style: TextStyle(
+                                        color: theme.textPrimary,
+                                        fontSize: 13,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: Text(
+                            Translations.get('user_guide', logic.lang),
+                            style: TextStyle(
+                              color: Colors.blue.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        Translations.get('cancel', logic.lang),
-                        style: TextStyle(
-                          color: theme.textSecondary,
-                          fontSize: 12,
+                    // Right aligned buttons
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            tokenCtrl.text = defaultToken;
+                            operationIdCtrl.text = defaultOperationId;
+                            uuidCtrl.text = defaultUuid;
+                            cookieCtrl.text = defaultCookie;
+                            langCtrl.text = 'en';
+                            setDialogState(() {
+                              bgBlur = 10.0;
+                              bgOpacity = 0.6;
+                              dialogBlur = 12.0;
+                              dialogOpacity = 0.75;
+                            });
+                          },
+                          child: Text(
+                            Translations.get('default', logic.lang),
+                            style: TextStyle(
+                              color: theme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    ElevatedButton(
-                      onPressed: () {
-                        logic.updateSettings(
-                          token: tokenCtrl.text,
-                          lang: langCtrl.text,
-                          operationId: operationIdCtrl.text,
-                          uuid: uuidCtrl.text,
-                          cookie: cookieCtrl.text,
-                        );
-                        Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 10,
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            Translations.get('cancel', logic.lang),
+                            style: TextStyle(
+                              color: theme.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        const SizedBox(width: 4),
+                        ElevatedButton(
+                          onPressed: () {
+                            logic.updateSettings(
+                              token: tokenCtrl.text,
+                              lang: langCtrl.text,
+                              operationId: operationIdCtrl.text,
+                              uuid: uuidCtrl.text,
+                              cookie: cookieCtrl.text,
+                              bgBlur: bgBlur,
+                              bgOpacity: bgOpacity,
+                              dialogBlur: dialogBlur,
+                              dialogOpacity: dialogOpacity,
+                            );
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade600,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            Translations.get('save', logic.lang),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        Translations.get('save', logic.lang),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
