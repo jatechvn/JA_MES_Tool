@@ -5,7 +5,7 @@ import 'package:ja_mes_tool/modules/translations.dart';
 void main() {
   group('App Info & Constants Tests', () {
     test('appVersion is defined and follows semantic versioning', () {
-      expect(appVersion, equals('2.5.2'));
+      expect(appVersion, equals('2.6.2'));
       expect(appName, equals('JA MES Tool'));
     });
   });
@@ -18,7 +18,10 @@ void main() {
     });
 
     test('returns key or fallback when key is not found', () {
-      expect(Translations.get('non_existing_key', 'en'), equals('non_existing_key'));
+      expect(
+        Translations.get('non_existing_key', 'en'),
+        equals('non_existing_key'),
+      );
     });
 
     test('tab titles exist in all languages', () {

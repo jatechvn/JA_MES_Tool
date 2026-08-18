@@ -5,6 +5,13 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.2] - 2026-08-18
+
+### 🎨 UI/UX Improvements
+- **⚙️ Tabbed Settings dialog**: Split Advanced Settings, User Guide, and About into dedicated tabs. The Advanced tab stays compact when collapsed, while the documentation tabs expand to fit their content.
+
+---
+
 ## [2.6.1] - 2026-08-17
 
 ### 🐛 Bug Fixes

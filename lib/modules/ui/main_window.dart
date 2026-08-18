@@ -2025,6 +2025,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     );
 
     bool isExpanded = false;
+    int settingsTabIndex = 0;
     bool isVerifying = false;
     // null = idle, true = last verify succeeded, false = last verify failed.
     // Drives the verify-connection icon's check/cross animation; auto-reverts
@@ -2155,6 +2156,135 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       );
     }
 
+    Widget buildSettingsTabButton({
+      required IconData icon,
+      required String label,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              curve: Motion.curveInOut,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.blue.withValues(alpha: 0.12)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 16,
+                    color: selected
+                        ? Colors.blue.shade600
+                        : theme.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: selected
+                            ? Colors.blue.shade600
+                            : theme.textSecondary,
+                        fontSize: 12,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget buildAboutTab() {
+      return SingleChildScrollView(
+        key: const ValueKey('about-tab'),
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      Icons.settings_suggest_rounded,
+                      color: Colors.blue.shade600,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    appName,
+                    style: TextStyle(
+                      color: theme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'v$appVersion',
+                    style: TextStyle(color: theme.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              Translations.get('about_detail', logic.lang),
+              style: TextStyle(
+                color: theme.textPrimary,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '© 2026 JA Tech.\nAll rights reserved.',
+              style: TextStyle(
+                color: theme.textSecondary,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildUserGuideTab() {
+      return SingleChildScrollView(
+        key: const ValueKey('user-guide-tab'),
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+        child: Text(
+          Translations.get('user_guide_detail', logic.lang),
+          style: TextStyle(color: theme.textPrimary, fontSize: 13, height: 1.5),
+        ),
+      );
+    }
+
     _showIosDialog(
       context: context,
       builder: (context) {
@@ -2167,6 +2297,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             final effectiveBlur = (dialogOpacity < 1.0 && dialogBlur < 6.0)
                 ? 6.0
                 : dialogBlur;
+            final settingsContentHeight = settingsTabIndex == 0 && !isExpanded
+                ? 190.0
+                : 430.0;
             return Stack(
               alignment: Alignment.center,
               children: [
@@ -2269,648 +2402,884 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   ),
                   content: SizedBox(
                     width: 480,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 10),
-
-                          // Smart 2-Step Auto Sync Card
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: theme.isDark
-                                    ? [
-                                        const Color(0xFF1E2638),
-                                        const Color(0xFF1A2130),
-                                      ]
-                                    : [
-                                        const Color(0xFFEBF3FE),
-                                        const Color(0xFFF4F8FE),
-                                      ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.blue.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.bolt_rounded,
-                                      color: Colors.blue.shade600,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      Translations.get(
-                                        'cdp_sync_title',
-                                        logic.lang,
-                                      ),
-                                      style: TextStyle(
-                                        color: theme.textPrimary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  Translations.get('cdp_sync_desc', logic.lang),
-                                  style: TextStyle(
-                                    color: theme.textSecondary,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        icon: const Icon(
-                                          Icons.open_in_browser_rounded,
-                                          size: 16,
-                                        ),
-                                        label: Text(
-                                          Translations.get(
-                                            'btn_open_browser',
-                                            logic.lang,
-                                          ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.blue.shade600,
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          textStyle: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        onPressed: () async {
-                                          await BrowserHelper.launchBrowser();
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        icon: isFetchingCdp
-                                            ? const SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Colors.white,
-                                                    ),
-                                              )
-                                            : const Icon(
-                                                Icons.sync_rounded,
-                                                size: 16,
-                                              ),
-                                        label: Text(
-                                          isFetchingCdp
-                                              ? Translations.get(
-                                                  'status_fetching',
-                                                  logic.lang,
-                                                )
-                                              : Translations.get(
-                                                  'btn_sync_credentials',
-                                                  logic.lang,
-                                                ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.teal.shade600,
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          textStyle: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        onPressed: isFetchingCdp
-                                            ? null
-                                            : () async {
-                                                setDialogState(
-                                                  () => isFetchingCdp = true,
-                                                );
-                                                final creds =
-                                                    await BrowserHelper.fetchCredentialsFromBrowser();
-                                                setDialogState(
-                                                  () => isFetchingCdp = false,
-                                                );
-
-                                                if (!context.mounted) return;
-                                                if (creds != null) {
-                                                  if (creds.token != null &&
-                                                      creds.token!.isNotEmpty) {
-                                                    tokenCtrl.text =
-                                                        creds.token!;
-                                                  }
-                                                  if (creds.operationId !=
-                                                          null &&
-                                                      creds
-                                                          .operationId!
-                                                          .isNotEmpty) {
-                                                    operationIdCtrl.text =
-                                                        creds.operationId!;
-                                                  }
-                                                  if (creds.uuid != null &&
-                                                      creds.uuid!.isNotEmpty) {
-                                                    uuidCtrl.text = creds.uuid!;
-                                                  }
-                                                  if (creds.cookie != null &&
-                                                      creds
-                                                          .cookie!
-                                                          .isNotEmpty) {
-                                                    cookieCtrl.text =
-                                                        creds.cookie!;
-                                                  }
-
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        Translations.get(
-                                                          'fetched_success',
-                                                          logic.lang,
-                                                        ),
-                                                      ),
-                                                      backgroundColor:
-                                                          Colors.green,
-                                                    ),
-                                                  );
-                                                } else {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        Translations.get(
-                                                          'fetched_fail',
-                                                          logic.lang,
-                                                        ),
-                                                      ),
-                                                      backgroundColor:
-                                                          Colors.red,
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: theme.sidebarBg,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-
-                          const SizedBox(height: 12),
-
-                          // Sleek Toggle Button for Advanced Options
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                setDialogState(() {
-                                  isExpanded = !isExpanded;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
+                          child: Row(
+                            children: [
+                              buildSettingsTabButton(
+                                icon: Icons.tune_rounded,
+                                label: Translations.get(
+                                  'advanced_settings',
+                                  logic.lang,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: theme.isDark
-                                      ? const Color(0xFF1E1F22)
-                                      : const Color(0xFFF7F9FC),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isExpanded
-                                        ? Colors.blue.shade600
-                                        : (theme.isDark
-                                              ? Colors.white10
-                                              : Colors.black.withValues(
-                                                  alpha: 0.08,
-                                                )),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.tune_rounded,
-                                      size: 18,
-                                      color: isExpanded
-                                          ? Colors.blue.shade600
-                                          : theme.textSecondary,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        isExpanded
-                                            ? Translations.get(
-                                                'hide_advanced',
-                                                logic.lang,
-                                              )
-                                            : Translations.get(
-                                                'show_advanced',
-                                                logic.lang,
-                                              ),
-                                        style: TextStyle(
-                                          color: isExpanded
-                                              ? Colors.blue.shade600
-                                              : theme.textPrimary,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(
-                                      isExpanded
-                                          ? Icons.keyboard_arrow_up_rounded
-                                          : Icons.keyboard_arrow_down_rounded,
-                                      color: isExpanded
-                                          ? Colors.blue.shade600
-                                          : theme.textSecondary,
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
+                                selected: settingsTabIndex == 0,
+                                onTap: () =>
+                                    setDialogState(() => settingsTabIndex = 0),
                               ),
-                            ),
-                          ),
-
-                          // Expandable Section
-                          AnimatedCrossFade(
-                            firstChild: const SizedBox.shrink(),
-                            secondChild: Padding(
-                              padding: const EdgeInsets.only(top: 12.0),
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: theme.isDark
-                                      ? const Color(0xFF1E1F22)
-                                      : const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: theme.isDark
-                                        ? Colors.white10
-                                        : Colors.black.withValues(alpha: 0.06),
-                                  ),
+                              buildSettingsTabButton(
+                                icon: Icons.menu_book_rounded,
+                                label: Translations.get(
+                                  'user_guide',
+                                  logic.lang,
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Parse Raw Header Button
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: OutlinedButton.icon(
-                                        icon: const Icon(
-                                          Icons.content_paste_rounded,
-                                          size: 16,
-                                        ),
-                                        label: Text(
-                                          Translations.get(
-                                            'paste_raw_http',
-                                            logic.lang,
-                                          ),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                          ),
-                                          side: BorderSide(
-                                            color: Colors.blue.shade600
-                                                .withValues(alpha: 0.4),
-                                          ),
-                                          foregroundColor: Colors.blue.shade600,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
+                                selected: settingsTabIndex == 1,
+                                onTap: () =>
+                                    setDialogState(() => settingsTabIndex = 1),
+                              ),
+                              buildSettingsTabButton(
+                                icon: Icons.info_outline_rounded,
+                                label: Translations.get('about', logic.lang),
+                                selected: settingsTabIndex == 2,
+                                onTap: () =>
+                                    setDialogState(() => settingsTabIndex = 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        AnimatedSize(
+                          duration: Motion.normal,
+                          curve: Motion.curveInOut,
+                          child: SizedBox(
+                            height: settingsContentHeight,
+                            child: AnimatedSwitcher(
+                              duration: Motion.normal,
+                              switchInCurve: Motion.curveOut,
+                              switchOutCurve: Motion.curveIn,
+                              layoutBuilder: (currentChild, previousChildren) =>
+                                  Stack(
+                                    alignment: Alignment.topCenter,
+                                    children: [
+                                      ...previousChildren,
+                                      ?currentChild,
+                                    ],
+                                  ),
+                              child: settingsTabIndex == 1
+                                  ? buildUserGuideTab()
+                                  : settingsTabIndex == 2
+                                  ? buildAboutTab()
+                                  : SingleChildScrollView(
+                                      key: const ValueKey('advanced-tab'),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const SizedBox(height: 10),
+
+                                          // Smart 2-Step Auto Sync Card
+                                          Container(
+                                            padding: const EdgeInsets.all(14),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: theme.isDark
+                                                    ? [
+                                                        const Color(0xFF1E2638),
+                                                        const Color(0xFF1A2130),
+                                                      ]
+                                                    : [
+                                                        const Color(0xFFEBF3FE),
+                                                        const Color(0xFFF4F8FE),
+                                                      ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: Colors.blue.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                          textStyle: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        onPressed: () {
-                                          final TextEditingController
-                                          pasteCtrl = TextEditingController();
-                                          _showIosDialog(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                              ),
-                                              backgroundColor: theme.isDark
-                                                  ? const Color(0xFF2B2D30)
-                                                  : Colors.white,
-                                              title: Text(
-                                                Translations.get(
-                                                  'paste_raw_http',
-                                                  logic.lang,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.bolt_rounded,
+                                                      color:
+                                                          Colors.blue.shade600,
+                                                      size: 20,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      Translations.get(
+                                                        'cdp_sync_title',
+                                                        logic.lang,
+                                                      ),
+                                                      style: TextStyle(
+                                                        color:
+                                                            theme.textPrimary,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                                style: TextStyle(
-                                                  color: theme.textPrimary,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              content: SizedBox(
-                                                width: 450,
-                                                child: TextField(
-                                                  controller: pasteCtrl,
-                                                  maxLines: 10,
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  Translations.get(
+                                                    'cdp_sync_desc',
+                                                    logic.lang,
+                                                  ),
                                                   style: TextStyle(
-                                                    color: theme.textPrimary,
-                                                    fontSize: 12,
-                                                  ),
-                                                  decoration: InputDecoration(
-                                                    hintText:
-                                                        'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
-                                                    hintStyle: TextStyle(
-                                                      color: theme.textSecondary
-                                                          .withValues(
-                                                            alpha: 0.6,
-                                                          ),
-                                                    ),
-                                                    filled: true,
-                                                    fillColor: theme.sidebarBg,
-                                                    border: OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            8,
-                                                          ),
-                                                    ),
+                                                    color: theme.textSecondary,
+                                                    fontSize: 11,
                                                   ),
                                                 ),
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(ctx),
-                                                  child: Text(
-                                                    Translations.get(
-                                                      'cancel',
-                                                      logic.lang,
-                                                    ),
-                                                  ),
-                                                ),
-                                                ElevatedButton(
-                                                  onPressed: () {
-                                                    final creds =
-                                                        BrowserHelper.parseRawHttpRequest(
-                                                          pasteCtrl.text,
-                                                        );
-                                                    if (creds.token != null &&
-                                                        creds
-                                                            .token!
-                                                            .isNotEmpty) {
-                                                      tokenCtrl.text =
-                                                          creds.token!;
-                                                    }
-                                                    if (creds.lang != null &&
-                                                        creds
-                                                            .lang!
-                                                            .isNotEmpty) {
-                                                      langCtrl.text =
-                                                          creds.lang!;
-                                                    }
-                                                    if (creds.operationId !=
-                                                            null &&
-                                                        creds
-                                                            .operationId!
-                                                            .isNotEmpty) {
-                                                      operationIdCtrl.text =
-                                                          creds.operationId!;
-                                                    }
-                                                    if (creds.uuid != null &&
-                                                        creds
-                                                            .uuid!
-                                                            .isNotEmpty) {
-                                                      uuidCtrl.text =
-                                                          creds.uuid!;
-                                                    }
-                                                    if (creds.cookie != null &&
-                                                        creds
-                                                            .cookie!
-                                                            .isNotEmpty) {
-                                                      cookieCtrl.text =
-                                                          creds.cookie!;
-                                                    }
-
-                                                    Navigator.pop(ctx);
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
+                                                const SizedBox(height: 12),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: ElevatedButton.icon(
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .open_in_browser_rounded,
+                                                          size: 16,
+                                                        ),
+                                                        label: Text(
                                                           Translations.get(
-                                                            'fetched_success',
+                                                            'btn_open_browser',
                                                             logic.lang,
                                                           ),
                                                         ),
-                                                        backgroundColor:
-                                                            Colors.green,
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .blue
+                                                                  .shade600,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          elevation: 0,
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                vertical: 10,
+                                                              ),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          textStyle:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                        onPressed: () async {
+                                                          await BrowserHelper.launchBrowser();
+                                                        },
                                                       ),
-                                                    );
-                                                  },
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                        backgroundColor: Colors
-                                                            .blue
-                                                            .shade600,
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: ElevatedButton.icon(
+                                                        icon: isFetchingCdp
+                                                            ? const SizedBox(
+                                                                width: 14,
+                                                                height: 14,
+                                                                child: CircularProgressIndicator(
+                                                                  strokeWidth:
+                                                                      2,
+                                                                  color: Colors
+                                                                      .white,
+                                                                ),
+                                                              )
+                                                            : const Icon(
+                                                                Icons
+                                                                    .sync_rounded,
+                                                                size: 16,
+                                                              ),
+                                                        label: Text(
+                                                          isFetchingCdp
+                                                              ? Translations.get(
+                                                                  'status_fetching',
+                                                                  logic.lang,
+                                                                )
+                                                              : Translations.get(
+                                                                  'btn_sync_credentials',
+                                                                  logic.lang,
+                                                                ),
+                                                        ),
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .teal
+                                                                  .shade600,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          elevation: 0,
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                vertical: 10,
+                                                              ),
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          textStyle:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                        onPressed: isFetchingCdp
+                                                            ? null
+                                                            : () async {
+                                                                setDialogState(
+                                                                  () =>
+                                                                      isFetchingCdp =
+                                                                          true,
+                                                                );
+                                                                final creds =
+                                                                    await BrowserHelper.fetchCredentialsFromBrowser();
+                                                                setDialogState(
+                                                                  () =>
+                                                                      isFetchingCdp =
+                                                                          false,
+                                                                );
+
+                                                                if (!context
+                                                                    .mounted) {
+                                                                  return;
+                                                                }
+                                                                if (creds !=
+                                                                    null) {
+                                                                  if (creds.token !=
+                                                                          null &&
+                                                                      creds
+                                                                          .token!
+                                                                          .isNotEmpty) {
+                                                                    tokenCtrl
+                                                                        .text = creds
+                                                                        .token!;
+                                                                  }
+                                                                  if (creds.operationId !=
+                                                                          null &&
+                                                                      creds
+                                                                          .operationId!
+                                                                          .isNotEmpty) {
+                                                                    operationIdCtrl
+                                                                        .text = creds
+                                                                        .operationId!;
+                                                                  }
+                                                                  if (creds.uuid !=
+                                                                          null &&
+                                                                      creds
+                                                                          .uuid!
+                                                                          .isNotEmpty) {
+                                                                    uuidCtrl
+                                                                        .text = creds
+                                                                        .uuid!;
+                                                                  }
+                                                                  if (creds.cookie !=
+                                                                          null &&
+                                                                      creds
+                                                                          .cookie!
+                                                                          .isNotEmpty) {
+                                                                    cookieCtrl
+                                                                        .text = creds
+                                                                        .cookie!;
+                                                                  }
+
+                                                                  ScaffoldMessenger.of(
+                                                                    context,
+                                                                  ).showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                        Translations.get(
+                                                                          'fetched_success',
+                                                                          logic
+                                                                              .lang,
+                                                                        ),
+                                                                      ),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .green,
+                                                                    ),
+                                                                  );
+                                                                } else {
+                                                                  ScaffoldMessenger.of(
+                                                                    context,
+                                                                  ).showSnackBar(
+                                                                    SnackBar(
+                                                                      content: Text(
+                                                                        Translations.get(
+                                                                          'fetched_fail',
+                                                                          logic
+                                                                              .lang,
+                                                                        ),
+                                                                      ),
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .red,
+                                                                    ),
+                                                                  );
+                                                                }
+                                                              },
                                                       ),
-                                                  child: Text(
-                                                    Translations.get(
-                                                      'parse_http',
-                                                      logic.lang,
                                                     ),
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
+                                                  ],
                                                 ),
                                               ],
                                             ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(height: 14),
-                                    buildField(
-                                      Translations.get('mes_token', logic.lang),
-                                      tokenCtrl,
-                                      maxLines: 2,
-                                      hint: 'Bearer token string',
-                                    ),
-                                    buildField(
-                                      Translations.get('cookie', logic.lang),
-                                      cookieCtrl,
-                                      maxLines: 2,
-                                      hint:
-                                          'cultureName=...; CloudMES_Token=...',
-                                    ),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: buildField(
-                                            Translations.get(
-                                              'operation_id',
-                                              logic.lang,
-                                            ),
-                                            operationIdCtrl,
                                           ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: buildField(
-                                            Translations.get(
-                                              'uuid',
-                                              logic.lang,
-                                            ),
-                                            uuidCtrl,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    buildField(
-                                      Translations.get('language', logic.lang),
-                                      langCtrl,
-                                      hint: 'en / vi-VN / zh-CN',
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      Translations.get(
-                                        'glass_settings_title',
-                                        logic.lang,
-                                      ),
-                                      style: TextStyle(
-                                        color: theme.textPrimary,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Theme(
-                                      data: Theme.of(context).copyWith(
-                                        dividerColor: Colors.transparent,
-                                      ),
-                                      child: ExpansionTile(
-                                        initiallyExpanded: isGlassExpanded,
-                                        tilePadding: EdgeInsets.zero,
-                                        childrenPadding: EdgeInsets.zero,
-                                        collapsedIconColor: theme.textSecondary,
-                                        iconColor: Colors.blue.shade600,
-                                        onExpansionChanged: (v) =>
-                                            setDialogState(
-                                              () => isGlassExpanded = v,
-                                            ),
-                                        title: Text(
-                                          Translations.get(
-                                            'glass_customize',
-                                            logic.lang,
-                                          ),
-                                          style: TextStyle(
-                                            color: theme.textSecondary,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        children: [
-                                          buildGlassSlider(
-                                            label: Translations.get(
-                                              'bg_blur_label',
-                                              logic.lang,
-                                            ),
-                                            value: bgBlur,
-                                            min: 0,
-                                            max: 30,
-                                            onChanged: (v) => setDialogState(
-                                              () => bgBlur = v,
+
+                                          const SizedBox(height: 12),
+
+                                          // Sleek Toggle Button for Advanced Options
+                                          Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: () {
+                                                setDialogState(() {
+                                                  isExpanded = !isExpanded;
+                                                });
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 12,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: theme.isDark
+                                                      ? const Color(0xFF1E1F22)
+                                                      : const Color(0xFFF7F9FC),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  border: Border.all(
+                                                    color: isExpanded
+                                                        ? Colors.blue.shade600
+                                                        : (theme.isDark
+                                                              ? Colors.white10
+                                                              : Colors.black
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.08,
+                                                                    )),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.tune_rounded,
+                                                      size: 18,
+                                                      color: isExpanded
+                                                          ? Colors.blue.shade600
+                                                          : theme.textSecondary,
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        isExpanded
+                                                            ? Translations.get(
+                                                                'hide_advanced',
+                                                                logic.lang,
+                                                              )
+                                                            : Translations.get(
+                                                                'show_advanced',
+                                                                logic.lang,
+                                                              ),
+                                                        style: TextStyle(
+                                                          color: isExpanded
+                                                              ? Colors
+                                                                    .blue
+                                                                    .shade600
+                                                              : theme
+                                                                    .textPrimary,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      isExpanded
+                                                          ? Icons
+                                                                .keyboard_arrow_up_rounded
+                                                          : Icons
+                                                                .keyboard_arrow_down_rounded,
+                                                      color: isExpanded
+                                                          ? Colors.blue.shade600
+                                                          : theme.textSecondary,
+                                                      size: 20,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          buildGlassSlider(
-                                            label: Translations.get(
-                                              'bg_opacity_label',
-                                              logic.lang,
+
+                                          // Expandable Section
+                                          AnimatedCrossFade(
+                                            firstChild: const SizedBox.shrink(),
+                                            secondChild: Padding(
+                                              padding: const EdgeInsets.only(
+                                                top: 12.0,
+                                              ),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  14,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: theme.isDark
+                                                      ? const Color(0xFF1E1F22)
+                                                      : const Color(0xFFF8FAFC),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: theme.isDark
+                                                        ? Colors.white10
+                                                        : Colors.black
+                                                              .withValues(
+                                                                alpha: 0.06,
+                                                              ),
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Parse Raw Header Button
+                                                    SizedBox(
+                                                      width: double.infinity,
+                                                      child: OutlinedButton.icon(
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .content_paste_rounded,
+                                                          size: 16,
+                                                        ),
+                                                        label: Text(
+                                                          Translations.get(
+                                                            'paste_raw_http',
+                                                            logic.lang,
+                                                          ),
+                                                        ),
+                                                        style: OutlinedButton.styleFrom(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                vertical: 10,
+                                                              ),
+                                                          side: BorderSide(
+                                                            color: Colors
+                                                                .blue
+                                                                .shade600
+                                                                .withValues(
+                                                                  alpha: 0.4,
+                                                                ),
+                                                          ),
+                                                          foregroundColor:
+                                                              Colors
+                                                                  .blue
+                                                                  .shade600,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          textStyle:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                        onPressed: () {
+                                                          final TextEditingController
+                                                          pasteCtrl =
+                                                              TextEditingController();
+                                                          _showIosDialog(
+                                                            context: context,
+                                                            builder: (ctx) => AlertDialog(
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius.circular(
+                                                                      14,
+                                                                    ),
+                                                              ),
+                                                              backgroundColor:
+                                                                  theme.isDark
+                                                                  ? const Color(
+                                                                      0xFF2B2D30,
+                                                                    )
+                                                                  : Colors
+                                                                        .white,
+                                                              title: Text(
+                                                                Translations.get(
+                                                                  'paste_raw_http',
+                                                                  logic.lang,
+                                                                ),
+                                                                style: TextStyle(
+                                                                  color: theme
+                                                                      .textPrimary,
+                                                                  fontSize: 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
+                                                              content: SizedBox(
+                                                                width: 450,
+                                                                child: TextField(
+                                                                  controller:
+                                                                      pasteCtrl,
+                                                                  maxLines: 10,
+                                                                  style: TextStyle(
+                                                                    color: theme
+                                                                        .textPrimary,
+                                                                    fontSize:
+                                                                        12,
+                                                                  ),
+                                                                  decoration: InputDecoration(
+                                                                    hintText:
+                                                                        'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
+                                                                    hintStyle: TextStyle(
+                                                                      color: theme
+                                                                          .textSecondary
+                                                                          .withValues(
+                                                                            alpha:
+                                                                                0.6,
+                                                                          ),
+                                                                    ),
+                                                                    filled:
+                                                                        true,
+                                                                    fillColor: theme
+                                                                        .sidebarBg,
+                                                                    border: OutlineInputBorder(
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            8,
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              actions: [
+                                                                TextButton(
+                                                                  onPressed: () =>
+                                                                      Navigator.pop(
+                                                                        ctx,
+                                                                      ),
+                                                                  child: Text(
+                                                                    Translations.get(
+                                                                      'cancel',
+                                                                      logic
+                                                                          .lang,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                ElevatedButton(
+                                                                  onPressed: () {
+                                                                    final creds =
+                                                                        BrowserHelper.parseRawHttpRequest(
+                                                                          pasteCtrl
+                                                                              .text,
+                                                                        );
+                                                                    if (creds.token !=
+                                                                            null &&
+                                                                        creds
+                                                                            .token!
+                                                                            .isNotEmpty) {
+                                                                      tokenCtrl
+                                                                          .text = creds
+                                                                          .token!;
+                                                                    }
+                                                                    if (creds.lang !=
+                                                                            null &&
+                                                                        creds
+                                                                            .lang!
+                                                                            .isNotEmpty) {
+                                                                      langCtrl
+                                                                          .text = creds
+                                                                          .lang!;
+                                                                    }
+                                                                    if (creds.operationId !=
+                                                                            null &&
+                                                                        creds
+                                                                            .operationId!
+                                                                            .isNotEmpty) {
+                                                                      operationIdCtrl
+                                                                          .text = creds
+                                                                          .operationId!;
+                                                                    }
+                                                                    if (creds.uuid !=
+                                                                            null &&
+                                                                        creds
+                                                                            .uuid!
+                                                                            .isNotEmpty) {
+                                                                      uuidCtrl
+                                                                          .text = creds
+                                                                          .uuid!;
+                                                                    }
+                                                                    if (creds.cookie !=
+                                                                            null &&
+                                                                        creds
+                                                                            .cookie!
+                                                                            .isNotEmpty) {
+                                                                      cookieCtrl
+                                                                          .text = creds
+                                                                          .cookie!;
+                                                                    }
+
+                                                                    Navigator.pop(
+                                                                      ctx,
+                                                                    );
+                                                                    ScaffoldMessenger.of(
+                                                                      context,
+                                                                    ).showSnackBar(
+                                                                      SnackBar(
+                                                                        content: Text(
+                                                                          Translations.get(
+                                                                            'fetched_success',
+                                                                            logic.lang,
+                                                                          ),
+                                                                        ),
+                                                                        backgroundColor:
+                                                                            Colors.green,
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                  style: ElevatedButton.styleFrom(
+                                                                    backgroundColor:
+                                                                        Colors
+                                                                            .blue
+                                                                            .shade600,
+                                                                  ),
+                                                                  child: Text(
+                                                                    Translations.get(
+                                                                      'parse_http',
+                                                                      logic
+                                                                          .lang,
+                                                                    ),
+                                                                    style: const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 14),
+                                                    buildField(
+                                                      Translations.get(
+                                                        'mes_token',
+                                                        logic.lang,
+                                                      ),
+                                                      tokenCtrl,
+                                                      maxLines: 2,
+                                                      hint:
+                                                          'Bearer token string',
+                                                    ),
+                                                    buildField(
+                                                      Translations.get(
+                                                        'cookie',
+                                                        logic.lang,
+                                                      ),
+                                                      cookieCtrl,
+                                                      maxLines: 2,
+                                                      hint:
+                                                          'cultureName=...; CloudMES_Token=...',
+                                                    ),
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: buildField(
+                                                            Translations.get(
+                                                              'operation_id',
+                                                              logic.lang,
+                                                            ),
+                                                            operationIdCtrl,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 10,
+                                                        ),
+                                                        Expanded(
+                                                          child: buildField(
+                                                            Translations.get(
+                                                              'uuid',
+                                                              logic.lang,
+                                                            ),
+                                                            uuidCtrl,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    buildField(
+                                                      Translations.get(
+                                                        'language',
+                                                        logic.lang,
+                                                      ),
+                                                      langCtrl,
+                                                      hint:
+                                                          'en / vi-VN / zh-CN',
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      Translations.get(
+                                                        'glass_settings_title',
+                                                        logic.lang,
+                                                      ),
+                                                      style: TextStyle(
+                                                        color:
+                                                            theme.textPrimary,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    Theme(
+                                                      data: Theme.of(context)
+                                                          .copyWith(
+                                                            dividerColor: Colors
+                                                                .transparent,
+                                                          ),
+                                                      child: ExpansionTile(
+                                                        initiallyExpanded:
+                                                            isGlassExpanded,
+                                                        tilePadding:
+                                                            EdgeInsets.zero,
+                                                        childrenPadding:
+                                                            EdgeInsets.zero,
+                                                        collapsedIconColor:
+                                                            theme.textSecondary,
+                                                        iconColor: Colors
+                                                            .blue
+                                                            .shade600,
+                                                        onExpansionChanged:
+                                                            (
+                                                              v,
+                                                            ) => setDialogState(
+                                                              () =>
+                                                                  isGlassExpanded =
+                                                                      v,
+                                                            ),
+                                                        title: Text(
+                                                          Translations.get(
+                                                            'glass_customize',
+                                                            logic.lang,
+                                                          ),
+                                                          style: TextStyle(
+                                                            color: theme
+                                                                .textSecondary,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                        children: [
+                                                          buildGlassSlider(
+                                                            label:
+                                                                Translations.get(
+                                                                  'bg_blur_label',
+                                                                  logic.lang,
+                                                                ),
+                                                            value: bgBlur,
+                                                            min: 0,
+                                                            max: 30,
+                                                            onChanged: (v) =>
+                                                                setDialogState(
+                                                                  () => bgBlur =
+                                                                      v,
+                                                                ),
+                                                          ),
+                                                          buildGlassSlider(
+                                                            label: Translations.get(
+                                                              'bg_opacity_label',
+                                                              logic.lang,
+                                                            ),
+                                                            value: bgOpacity,
+                                                            min: 0.1,
+                                                            max: 1.0,
+                                                            isPercent: true,
+                                                            onChanged: (v) =>
+                                                                setDialogState(
+                                                                  () =>
+                                                                      bgOpacity =
+                                                                          v,
+                                                                ),
+                                                          ),
+                                                          buildGlassSlider(
+                                                            label:
+                                                                Translations.get(
+                                                                  'dialog_blur',
+                                                                  logic.lang,
+                                                                ),
+                                                            value: dialogBlur,
+                                                            min: 0,
+                                                            max: 30,
+                                                            onChanged: (v) =>
+                                                                setDialogState(
+                                                                  () =>
+                                                                      dialogBlur =
+                                                                          v,
+                                                                ),
+                                                          ),
+                                                          buildGlassSlider(
+                                                            label: Translations.get(
+                                                              'dialog_opacity',
+                                                              logic.lang,
+                                                            ),
+                                                            value:
+                                                                dialogOpacity,
+                                                            min: 0.3,
+                                                            max: 1.0,
+                                                            isPercent: true,
+                                                            onChanged: (v) =>
+                                                                setDialogState(
+                                                                  () =>
+                                                                      dialogOpacity =
+                                                                          v,
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
-                                            value: bgOpacity,
-                                            min: 0.1,
-                                            max: 1.0,
-                                            isPercent: true,
-                                            onChanged: (v) => setDialogState(
-                                              () => bgOpacity = v,
+                                            crossFadeState: isExpanded
+                                                ? CrossFadeState.showSecond
+                                                : CrossFadeState.showFirst,
+                                            duration: const Duration(
+                                              milliseconds: 200,
                                             ),
                                           ),
-                                          buildGlassSlider(
-                                            label: Translations.get(
-                                              'dialog_blur',
-                                              logic.lang,
-                                            ),
-                                            value: dialogBlur,
-                                            min: 0,
-                                            max: 30,
-                                            onChanged: (v) => setDialogState(
-                                              () => dialogBlur = v,
-                                            ),
-                                          ),
-                                          buildGlassSlider(
-                                            label: Translations.get(
-                                              'dialog_opacity',
-                                              logic.lang,
-                                            ),
-                                            value: dialogOpacity,
-                                            min: 0.3,
-                                            max: 1.0,
-                                            isPercent: true,
-                                            onChanged: (v) => setDialogState(
-                                              () => dialogOpacity = v,
-                                            ),
-                                          ),
+
+                                          const SizedBox(height: 10),
                                         ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
                             ),
-                            crossFadeState: isExpanded
-                                ? CrossFadeState.showSecond
-                                : CrossFadeState.showFirst,
-                            duration: const Duration(milliseconds: 200),
                           ),
-
-                          const SizedBox(height: 10),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                   actionsAlignment: MainAxisAlignment.spaceBetween,
@@ -3018,86 +3387,6 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                       },
                                     );
                                   },
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            showAboutDialog(
-                              context: context,
-                              applicationName: appName,
-                              applicationVersion: appVersion,
-                              applicationLegalese:
-                                  '© 2026 JA Tech.\nAll rights reserved.',
-                              children: [
-                                const SizedBox(height: 12),
-                                Text(
-                                  Translations.get('about_detail', logic.lang),
-                                  style: TextStyle(
-                                    color: theme.textPrimary,
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                          child: Text(
-                            Translations.get('about', logic.lang),
-                            style: TextStyle(
-                              color: Colors.blue.shade600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            _showIosDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                backgroundColor: theme.isDark
-                                    ? const Color(0xFF2B2D30)
-                                    : Colors.white,
-                                title: Text(
-                                  Translations.get('user_guide', logic.lang),
-                                  style: TextStyle(
-                                    color: theme.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                content: SizedBox(
-                                  width: 520,
-                                  child: SingleChildScrollView(
-                                    child: Text(
-                                      Translations.get(
-                                        'user_guide_detail',
-                                        logic.lang,
-                                      ),
-                                      style: TextStyle(
-                                        color: theme.textPrimary,
-                                        fontSize: 13,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          child: Text(
-                            Translations.get('user_guide', logic.lang),
-                            style: TextStyle(
-                              color: Colors.blue.shade600,
-                              fontSize: 12,
-                            ),
                           ),
                         ),
                       ],
