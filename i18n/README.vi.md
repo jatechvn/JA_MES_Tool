@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.1 - Tiếng Việt
+# 🤖 JA MES Tool v2.6.2 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.6.1-blue.svg" alt="Phiên bản 2.6.1">
+  <img src="https://img.shields.io/badge/phien_ban-2.6.2-blue.svg" alt="Phiên bản 2.6.2">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.6.1)
+## 💡 Tính năng nổi bật (v2.6.2)
 
 ### 📊 Chế độ xem dữ liệu
 - 🗂️ **3 chế độ xem theo SN**: Chuyển đổi giữa **Kết quả Test** (Pass/Fail), **Lịch sử Barcode** (toàn bộ lộ trình công đoạn/trạm), và **Danh sách Linh kiện** (truy vết BOM/vật tư — nhà sản xuất, mã hãng, mã ngày SX, mã lô/gói) cho mỗi SN.
@@ -119,7 +119,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
 │       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.1)
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.2)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, 3 danh sách dữ liệu, ViewMode, cache phân giải SN
 │       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -146,7 +146,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.6.1+8)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.6.2+9)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -189,6 +189,7 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.6.2]** — Cài đặt được tách thành các tab Cài đặt nâng cao, Hướng dẫn sử dụng và Giới thiệu; chiều cao dialog tự điều chỉnh theo tab đang chọn.
 - **[2.6.1]** — Sửa lỗi thông báo Verify Connection bị ẩn phía sau lớp modal của cửa sổ Cài đặt; giờ icon tự chuyển động báo kết quả (dấu tích/dấu X) thay vì dựa vào SnackBar bị che khuất.
 - **[2.6.0]** — Cài đặt Glassmorphism nâng cao có thể tùy chỉnh (4 slider live-preview blur/opacity), dropdown Sắp xếp dựng lại bằng `BackdropFilter` blur thật, cửa sổ Cài đặt live-preview, kèm sàn an toàn chống lỗi chữ chồng xuyên thấu.
 - **[2.5.3]** — Thiết kế lại dropdown Sắp xếp cho khớp design system của app: bỏ tông tím mặc định của Material 3, thêm icon từng trường, item đang chọn hiển thị pill bo góc màu nhấn khớp style tab/sidebar.
