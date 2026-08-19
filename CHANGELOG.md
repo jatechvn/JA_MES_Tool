@@ -5,6 +5,14 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.3] - 2026-08-19
+
+### 🐛 Bug Fixes
+- **🌐 Persistent browser profiles:** Chrome and Edge now use separate profiles under `%LOCALAPPDATA%\JA_MES_Tool\browser_profiles`, preserving saved login sessions, passwords, and bookmarks across app restarts.
+- **🛡️ CDP startup stability:** Added legacy profile migration, bounded CDP readiness checks, stale-endpoint rejection, and launch de-duplication to prevent browser login windows from hanging.
+
+---
+
 ## [2.6.2] - 2026-08-18
 
 ### 🎨 UI/UX Improvements

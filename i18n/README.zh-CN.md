@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.2 - 中文说明
+# 🤖 JA MES Tool v2.6.3 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.6.2-blue.svg" alt="版本 2.6.2">
+  <img src="https://img.shields.io/badge/banben-2.6.3-blue.svg" alt="版本 2.6.3">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 主要功能 (v2.6.2)
+## 💡 主要功能 (v2.6.3)
 
 ### 📊 数据视图
 - 🗂️ **每个 SN 三种数据视图**：在 **测试记录** (Pass/Fail 结果)、**条码历史** (完整工序/工站流程) 与 **组件清单** (WIP BOM/物料追溯 — 制造商、料号、生产日期码、批次/包装号) 之间切换。
@@ -47,6 +47,7 @@
 ### 🔐 凭据与连接
 - ⚡ **启动时 Token 过期自动弹窗**：启动程序时自动检测 Token 有效性，过期时立即弹出 2 步凭据同步窗口。
 - 🌐 **兼容 Chrome 与 Microsoft Edge 多浏览器**：内置 Edge 专用进程隔离标志 (`--disable-features=msEdgeStartupBoost...`)，彻底解决登录弹窗卡死问题。
+- 💾 **持久化浏览器配置**：Chrome 与 Microsoft Edge 使用应用独立管理的不同配置目录，可在重启后保留登录会话、密码和书签，同时避免配置冲突。
 - 🌐 **CDP 网络拦截自动获取凭据**：通过 CDP 实时拦截浏览器 API 报文，100% 准确提取 **Token**、**UUID**、**Operation-ID** 和 **Cookie**。
 - 🛡️ **全新验证徽章图标 (🛡️)**：设置界面底部直观的连接验证徽章图标 `Icons.verified_outlined`。
 - 🔄 **保存设置时自动重新查询**：点击保存自动清除旧 401 错误并重新查询队列中的所有 SN。
@@ -119,7 +120,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord 与 WipComponentRecord
 │       ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │       ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│       ├── constants.dart         # 全局常量与默认配置 (v2.6.2)
+│       ├── constants.dart         # 全局常量与默认配置 (v2.6.3)
 │       ├── logger_service.dart    # 日志服务与 7 天自动清理
 │       ├── logic.dart             # 状态管理：SN 队列、三种记录列表、ViewMode、SN 解析缓存
 │       ├── translations.dart      # 多语言字典 (EN, VN, CN)
@@ -146,7 +147,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.6.2+9)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.6.3+10)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -186,6 +187,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.6.3]** — Chrome 与 Microsoft Edge 现在使用可持久化的独立配置，支持旧配置迁移与有界 CDP 就绪检查，避免登录窗口卡死。
 - **[2.6.2]** — 设置界面拆分为高级设置、使用说明和关于三个标签页；对话框高度会根据当前标签页自动调整。
 - **[2.6.1]** — 修复"验证连接"结果提示被设置窗口的模态遮罩挡住无法看见的问题；图标现会直接播放对/错动画反馈，不再依赖被遮挡的 SnackBar。
 - **[2.6.0]** — 可调节毛玻璃高级设置 (4 个实时预览模糊/不透明度滑块)，排序下拉菜单改用真实 `BackdropFilter` 模糊重新构建，设置窗口支持实时预览，并内置安全下限防止文字重叠透视问题。

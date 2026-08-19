@@ -5,7 +5,7 @@ import 'package:ja_mes_tool/modules/translations.dart';
 void main() {
   group('App Info & Constants Tests', () {
     test('appVersion is defined and follows semantic versioning', () {
-      expect(appVersion, equals('2.6.2'));
+      expect(appVersion, equals('2.6.3'));
       expect(appName, equals('JA MES Tool'));
     });
   });
