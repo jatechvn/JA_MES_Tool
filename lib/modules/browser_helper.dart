@@ -22,77 +22,229 @@ class ExtractedCredentials {
   });
 }
 
+class _CdpEndpoint {
+  final String profileDir;
+  final int port;
+  final List<dynamic> targets;
+
+  const _CdpEndpoint({
+    required this.profileDir,
+    required this.port,
+    required this.targets,
+  });
+}
+
 class BrowserHelper {
   static const String mesUrl =
       'https://vncmes.ces.myfiinet.com/#/zh-CN/ims/mes/report/test-record';
-  static const int cdpPort = 9222;
+  static const Duration _cdpProbeTimeout = Duration(seconds: 2);
+  static const Duration _cdpStartupTimeout = Duration(seconds: 10);
 
-  /// Launches Chrome or Edge with Remote Debugging enabled on port 9222.
-  static Future<bool> launchBrowser() async {
+  static String? _activeProfileDir;
+  static Future<bool>? _launchInProgress;
+
+  static String _profileRootPath() {
+    final localAppData = Platform.environment['LOCALAPPDATA'];
+    final root = localAppData == null || localAppData.isEmpty
+        ? Directory.systemTemp.path
+        : localAppData;
+    return '$root\\JA_MES_Tool\\browser_profiles';
+  }
+
+  static String _legacyProfilePath() {
+    return '${Directory.systemTemp.path}\\ja_mes_browser_profile';
+  }
+
+  static String _profilePath({required bool isEdge}) {
+    return '${_profileRootPath()}\\${isEdge ? 'edge' : 'chrome'}';
+  }
+
+  static List<String> _candidateProfilePaths() {
+    final candidates = <String>[];
+
+    void add(String path) {
+      if (!candidates.contains(path)) {
+        candidates.add(path);
+      }
+    }
+
+    if (_activeProfileDir != null) {
+      add(_activeProfileDir!);
+    }
+    add(_profilePath(isEdge: false));
+    add(_profilePath(isEdge: true));
+    return candidates;
+  }
+
+  static String? _findBrowserExecutable() {
+    const candidatePaths = [
+      r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+      r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+      r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+      r'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+    ];
+
+    for (final path in candidatePaths) {
+      if (File(path).existsSync()) {
+        return path;
+      }
+    }
+    return null;
+  }
+
+  static Future<String> _ensureProfileDirectory({required bool isEdge}) async {
+    final profilePath = _profilePath(isEdge: isEdge);
+    final profile = Directory(profilePath);
+    final legacyProfile = Directory(_legacyProfilePath());
+    await Directory(_profileRootPath()).create(recursive: true);
+
+    // Preserve profiles created by older builds when the new browser-specific
+    // profile does not exist yet. If the old profile is locked, leave it in
+    // place and start with a new profile instead of touching a live browser.
+    if (!profile.existsSync() && legacyProfile.existsSync()) {
+      try {
+        await legacyProfile.rename(profilePath);
+        _logger.info(
+          'Migrated legacy browser profile to persistent ${isEdge ? "Edge" : "Chrome"} profile: $profilePath',
+        );
+      } catch (e) {
+        _logger.warning(
+          'Could not migrate legacy browser profile; keeping it untouched: $e',
+        );
+      }
+    }
+
+    await profile.create(recursive: true);
+    return profile.path;
+  }
+
+  static Future<_CdpEndpoint?> _probeCdpEndpoint(String profileDir) async {
+    final activePortFile = File('$profileDir\\DevToolsActivePort');
+    if (!activePortFile.existsSync()) {
+      return null;
+    }
+
     try {
-      // Find Chrome or Edge executable on Windows
-      String? execPath;
+      final lines = await activePortFile.readAsLines();
+      if (lines.isEmpty) {
+        return null;
+      }
 
-      final candidatePaths = [
-        r'C:\Program Files\Google\Chrome\Application\chrome.exe',
-        r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-        r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-        r'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+      final port = int.tryParse(lines.first.trim());
+      if (port == null || port < 1 || port > 65535) {
+        return null;
+      }
+
+      final response = await http
+          .get(Uri.parse('http://127.0.0.1:$port/json'))
+          .timeout(_cdpProbeTimeout);
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final decoded = json.decode(response.body);
+      if (decoded is! List<dynamic>) {
+        return null;
+      }
+
+      return _CdpEndpoint(profileDir: profileDir, port: port, targets: decoded);
+    } catch (e) {
+      _logger.fine('CDP endpoint is not ready for $profileDir: $e');
+      return null;
+    }
+  }
+
+  static Future<_CdpEndpoint?> _findReadyCdpEndpoint() async {
+    for (final profileDir in _candidateProfilePaths()) {
+      final endpoint = await _probeCdpEndpoint(profileDir);
+      if (endpoint != null) {
+        _activeProfileDir = endpoint.profileDir;
+        return endpoint;
+      }
+    }
+    return null;
+  }
+
+  static Future<_CdpEndpoint?> _waitForCdp(String profileDir) async {
+    final deadline = DateTime.now().add(_cdpStartupTimeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final endpoint = await _probeCdpEndpoint(profileDir);
+      if (endpoint != null) {
+        return endpoint;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    return null;
+  }
+
+  /// Launches Chrome or Edge with a persistent, browser-specific profile.
+  static Future<bool> launchBrowser() async {
+    if (_launchInProgress != null) {
+      return _launchInProgress!;
+    }
+
+    final future = _launchBrowserInternal();
+    _launchInProgress = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_launchInProgress, future)) {
+        _launchInProgress = null;
+      }
+    }
+  }
+
+  static Future<bool> _launchBrowserInternal() async {
+    try {
+      final execPath = _findBrowserExecutable();
+      if (execPath == null) {
+        _logger.warning('Chrome or Edge executable was not found on Windows');
+        return false;
+      }
+
+      final isEdge = execPath.toLowerCase().contains('msedge');
+      final profileDir = await _ensureProfileDirectory(isEdge: isEdge);
+      _activeProfileDir = profileDir;
+
+      final args = [
+        '--remote-debugging-port=0',
+        '--user-data-dir=$profileDir',
+        '--profile-directory=Default',
+        '--new-window',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-background-networking',
+        '--disable-component-update',
+        '--disable-default-apps',
+        '--disable-popup-blocking',
       ];
 
-      for (var path in candidatePaths) {
-        if (File(path).existsSync()) {
-          execPath = path;
-          break;
-        }
-      }
-
-      final userDataDir =
-          '${Directory.systemTemp.path}\\ja_mes_browser_profile';
-      final dir = Directory(userDataDir);
-      if (!dir.existsSync()) {
-        dir.createSync(recursive: true);
-      }
-
-      if (execPath != null) {
-        final isEdge = execPath.toLowerCase().contains('msedge');
-        final args = [
-          '--remote-debugging-port=0',
-          '--user-data-dir=$userDataDir',
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--disable-background-networking',
-          '--disable-component-update',
-          '--disable-default-apps',
-          '--disable-popup-blocking',
-        ];
-
-        if (isEdge) {
-          args.addAll([
-            '--disable-features=msEdgeStartupBoost,msUnderside,msEdgeSidebar,msHubs,WebAuthentication',
-            '--no-service-autorun',
-          ]);
-        }
-
-        args.add(mesUrl);
-
-        await Process.start(execPath, args);
-        _logger.info(
-          'Launched browser (${isEdge ? "Edge" : "Chrome"}) with dynamic CDP port and profile $userDataDir: $execPath',
-        );
-        return true;
-      } else {
-        // Fallback: launch default browser using cmd start
-        await Process.run('cmd', [
-          '/c',
-          'start',
-          'msedge',
-          '--remote-debugging-port=$cdpPort',
-          '--user-data-dir=$userDataDir',
-          mesUrl,
+      if (isEdge) {
+        args.addAll([
+          '--disable-features=msEdgeStartupBoost,msUnderside,msEdgeSidebar,msHubs,WebAuthentication',
+          '--no-service-autorun',
         ]);
-        return true;
       }
+
+      args.add(mesUrl);
+
+      await Process.start(
+        execPath,
+        args,
+        mode: ProcessStartMode.detached,
+      ).timeout(const Duration(seconds: 5));
+      _logger.info(
+        'Launched ${isEdge ? "Edge" : "Chrome"} with persistent profile $profileDir: $execPath',
+      );
+
+      final endpoint = await _waitForCdp(profileDir);
+      if (endpoint == null) {
+        _logger.warning(
+          'Browser launched but CDP did not become ready within ${_cdpStartupTimeout.inSeconds}s for $profileDir',
+        );
+        return false;
+      }
+      return true;
     } catch (e, stack) {
       _logger.severe('Failed to launch browser with CDP', e, stack);
       return false;
@@ -104,29 +256,16 @@ class BrowserHelper {
   /// This is more reliable than reading from localStorage, especially for UUID.
   static Future<ExtractedCredentials?> fetchCredentialsFromBrowser() async {
     try {
-      int port = cdpPort;
-      final activePortFile = File(
-        '${Directory.systemTemp.path}\\ja_mes_browser_profile\\DevToolsActivePort',
-      );
-      if (activePortFile.existsSync()) {
-        final lines = activePortFile.readAsLinesSync();
-        if (lines.isNotEmpty) {
-          port = int.tryParse(lines.first.trim()) ?? cdpPort;
-        }
-      }
-      _logger.info('Attempting CDP connection on port $port');
-
-      final response = await http
-          .get(Uri.parse('http://127.0.0.1:$port/json'))
-          .timeout(const Duration(seconds: 5));
-      if (response.statusCode != 200) {
+      final endpoint = await _findReadyCdpEndpoint();
+      if (endpoint == null) {
         _logger.warning(
-          'CDP endpoint responded with status ${response.statusCode}',
+          'No responsive CDP endpoint found in the Chrome/Edge app profiles',
         );
         return null;
       }
-
-      final List<dynamic> targets = json.decode(response.body);
+      final port = endpoint.port;
+      final targets = endpoint.targets;
+      _logger.info('Attempting CDP connection on port $port');
       Map<String, dynamic>? mesTarget;
 
       for (var t in targets) {

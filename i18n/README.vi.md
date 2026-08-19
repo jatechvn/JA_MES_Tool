@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.2 - Tiếng Việt
+# 🤖 JA MES Tool v2.6.3 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.6.2-blue.svg" alt="Phiên bản 2.6.2">
+  <img src="https://img.shields.io/badge/phien_ban-2.6.3-blue.svg" alt="Phiên bản 2.6.3">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.6.2)
+## 💡 Tính năng nổi bật (v2.6.3)
 
 ### 📊 Chế độ xem dữ liệu
 - 🗂️ **3 chế độ xem theo SN**: Chuyển đổi giữa **Kết quả Test** (Pass/Fail), **Lịch sử Barcode** (toàn bộ lộ trình công đoạn/trạm), và **Danh sách Linh kiện** (truy vết BOM/vật tư — nhà sản xuất, mã hãng, mã ngày SX, mã lô/gói) cho mỗi SN.
@@ -47,6 +47,7 @@
 ### 🔐 Xác thực & Kết nối
 - ⚡ **Tự động Cảnh báo Popup Token Hết Hạn trên Startup**: Phát hiện Token hết hạn ngay khi mở app và tự động bật Cửa sổ Popup đồng bộ 2 bước.
 - 🌐 **Tương thích Đa trình duyệt Chrome & Microsoft Edge**: Tích hợp bộ cờ cách ly luồng chống treo/đứng hình cửa sổ Đăng nhập Edge (`--disable-features=msEdgeStartupBoost...`).
+- 💾 **Profile trình duyệt bền vững**: Chrome và Microsoft Edge dùng profile riêng do app quản lý, giữ phiên đăng nhập, mật khẩu và bookmark sau khi mở lại app, đồng thời tránh xung đột profile.
 - 🌐 **Đồng bộ Token tự động qua CDP**: Lấy chính xác 100% các thông số **Token**, **UUID**, **Operation-ID**, và **Cookie** thực tế từ lưu lượng mạng trình duyệt.
 - 🛡️ **Huy hiệu Xác thực Kết nối Mới (🛡️)**: Biểu tượng khiên xác thực `Icons.verified_outlined` trực quan ở chân trang Cài đặt.
 - 🔄 **Tự động Tra cứu lại Hàng đợi khi Lưu**: Tự động xóa các lỗi hết hạn Token cũ (401) và tra cứu lại toàn bộ danh sách SN trong hàng đợi khi bấm Save.
@@ -119,7 +120,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
 │       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.2)
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.3)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, 3 danh sách dữ liệu, ViewMode, cache phân giải SN
 │       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -146,7 +147,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.6.2+9)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.6.3+10)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -189,6 +190,7 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.6.3]** — Chrome và Microsoft Edge dùng profile riêng có thể giữ lại, hỗ trợ chuyển profile cũ và kiểm tra CDP có giới hạn thời gian để tránh treo cửa sổ đăng nhập.
 - **[2.6.2]** — Cài đặt được tách thành các tab Cài đặt nâng cao, Hướng dẫn sử dụng và Giới thiệu; chiều cao dialog tự điều chỉnh theo tab đang chọn.
 - **[2.6.1]** — Sửa lỗi thông báo Verify Connection bị ẩn phía sau lớp modal của cửa sổ Cài đặt; giờ icon tự chuyển động báo kết quả (dấu tích/dấu X) thay vì dựa vào SnackBar bị che khuất.
 - **[2.6.0]** — Cài đặt Glassmorphism nâng cao có thể tùy chỉnh (4 slider live-preview blur/opacity), dropdown Sắp xếp dựng lại bằng `BackdropFilter` blur thật, cửa sổ Cài đặt live-preview, kèm sàn an toàn chống lỗi chữ chồng xuyên thấu.
