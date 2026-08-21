@@ -5,6 +5,15 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.4] - 2026-08-21
+
+### 🚀 Major Features & Enhancements
+- **🔍 SN Master now captures its full API response**: `SnMasterInfo` previously parsed only 9 of the ~32 fields returned by `getSnMasterProcess` (and none of them were ever shown in the UI). It now also captures `lineCode`, `nextProcessCode`/`nextProcessName`, `errorCode`, and `routeCode`/`routeName`.
+- **🏷️ "Next process" chip on the records header**: "Records for SN" now shows a small chip with the SN's next process (`nextProcessName`, falling back to `nextProcessCode`) when the SN Master lookup has one, right next to the SN label.
+- **↔️ Asymmetric marquee for overflowing SN labels**: The "typed SN → resolved SN" label no longer truncates with `…` when the header runs out of room (e.g. once the new chip is showing) — it now scrolls: a slow, readable pass to the end, a hold, a quick snap back to the start, a hold, repeat. Timing confirmed against an interactive reference simulation.
+
+---
+
 ## [2.6.3] - 2026-08-19
 
 ### 🐛 Bug Fixes

@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.3 - Tiếng Việt
+# 🤖 JA MES Tool v2.6.4 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.6.3-blue.svg" alt="Phiên bản 2.6.3">
+  <img src="https://img.shields.io/badge/phien_ban-2.6.4-blue.svg" alt="Phiên bản 2.6.4">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,11 +27,11 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.6.3)
+## 💡 Tính năng nổi bật (v2.6.4)
 
 ### 📊 Chế độ xem dữ liệu
 - 🗂️ **3 chế độ xem theo SN**: Chuyển đổi giữa **Kết quả Test** (Pass/Fail), **Lịch sử Barcode** (toàn bộ lộ trình công đoạn/trạm), và **Danh sách Linh kiện** (truy vết BOM/vật tư — nhà sản xuất, mã hãng, mã ngày SX, mã lô/gói) cho mỗi SN.
-- 🔗 **Tự động phân giải SN chính tắc**: Nhập SN nội bộ sẽ tự động quy đổi sang SN sản phẩm chính tắc (`snMaster/getSnMasterProcess`) trước khi tra cứu cả 3 chế độ xem — tiêu đề hiển thị `SN nhập → SN chính tắc` khi 2 giá trị khác nhau, có cache theo phiên và tự động fallback nếu phân giải lỗi.
+- 🔗 **Tự động phân giải SN chính tắc**: Nhập SN nội bộ sẽ tự động quy đổi sang SN sản phẩm chính tắc (`snMaster/getSnMasterProcess`) trước khi tra cứu cả 3 chế độ xem — tiêu đề hiển thị `SN nhập → SN chính tắc` khi 2 giá trị khác nhau (tự cuộn nếu không đủ chỗ hiển thị), kèm **chip "Next"** hiện công đoạn kế tiếp của SN nếu có. Có cache theo phiên và tự động fallback nếu phân giải lỗi.
 - 🔍 **Tìm kiếm kiểu Excel**: Ô tìm kiếm trực tiếp trên mỗi danh sách, khớp mọi trường dữ liệu khi bạn gõ.
 - ⬍ **Sắp xếp theo trường**: Nút Sắp xếp cho phép chọn trường và đảo chiều tăng/giảm, áp dụng cho cả 3 chế độ xem — mỗi trường có icon riêng, trường đang chọn hiển thị dạng pill bo góc màu nhấn, khớp phong cách chọn lựa của tab/sidebar.
 - 📋 **Chọn & Copy dữ liệu**: Mọi giá trị bản ghi — kể cả danh sách SN ở sidebar — đều có thể bôi đen (kéo chuột hoặc double-click) và copy (Ctrl+C) như bảng tính.
@@ -120,7 +120,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
 │       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.3)
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.4)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, 3 danh sách dữ liệu, ViewMode, cache phân giải SN
 │       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -147,7 +147,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.6.3+10)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.6.4+11)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -190,12 +190,11 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.6.4]** — SN Master giờ lấy đủ dữ liệu từ API (công đoạn kế tiếp, mã lỗi, route, mã line); chip "Next" hiện công đoạn kế tiếp trên header danh sách bản ghi, label SN tự cuộn thay vì bị cắt khi hết chỗ.
 - **[2.6.3]** — Chrome và Microsoft Edge dùng profile riêng có thể giữ lại, hỗ trợ chuyển profile cũ và kiểm tra CDP có giới hạn thời gian để tránh treo cửa sổ đăng nhập.
 - **[2.6.2]** — Cài đặt được tách thành các tab Cài đặt nâng cao, Hướng dẫn sử dụng và Giới thiệu; chiều cao dialog tự điều chỉnh theo tab đang chọn.
 - **[2.6.1]** — Sửa lỗi thông báo Verify Connection bị ẩn phía sau lớp modal của cửa sổ Cài đặt; giờ icon tự chuyển động báo kết quả (dấu tích/dấu X) thay vì dựa vào SnackBar bị che khuất.
 - **[2.6.0]** — Cài đặt Glassmorphism nâng cao có thể tùy chỉnh (4 slider live-preview blur/opacity), dropdown Sắp xếp dựng lại bằng `BackdropFilter` blur thật, cửa sổ Cài đặt live-preview, kèm sàn an toàn chống lỗi chữ chồng xuyên thấu.
 - **[2.5.3]** — Thiết kế lại dropdown Sắp xếp cho khớp design system của app: bỏ tông tím mặc định của Material 3, thêm icon từng trường, item đang chọn hiển thị pill bo góc màu nhấn khớp style tab/sidebar.
-- **[2.5.2]** — Chọn & copy được text danh sách SN ở sidebar; nút làm mới riêng từng SN và làm mới tất cả để tra cứu lại dữ liệu không cần khởi động lại app.
-- **[2.5.1]** — Sửa lỗi hiệu ứng cascade danh sách bị lặp lại khi cuộn; 2 tab Lịch sử Barcode & Danh sách Linh kiện giờ được tải song song cùng Kết quả Test thay vì tải lười khi chuyển tab.
 
 Xem đầy đủ lịch sử phiên bản tại [**CHANGELOG.md**](../CHANGELOG.md).
