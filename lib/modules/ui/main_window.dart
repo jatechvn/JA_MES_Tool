@@ -759,6 +759,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           theme: theme,
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
+          snMasterInfo: logic.snMasterInfo[sn],
           listState: _testRecordListState,
           sortOptions: [
             _SortOption(
@@ -1001,6 +1002,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           theme: theme,
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
+          snMasterInfo: logic.snMasterInfo[sn],
           listState: _barcodeListState,
           sortOptions: [
             _SortOption(
@@ -1214,6 +1216,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           theme: theme,
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
+          snMasterInfo: logic.snMasterInfo[sn],
           listState: _wipListState,
           sortOptions: [
             _SortOption(
@@ -1544,6 +1547,28 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     return result;
   }
 
+  /// Small tinted pill for at-a-glance SN Master info (error code / next
+  /// process) next to the records header title — same visual language as
+  /// the connection-health pill in Settings (tinted bg, no border).
+  Widget _buildInfoChip({required String label, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildRecordsHeader({
     required String sn,
     required int count,
@@ -1552,31 +1577,51 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     required _ListViewState listState,
     required List<_SortOption> sortOptions,
     String? resolvedSn,
+    SnMasterInfo? snMasterInfo,
   }) {
     final countSuffix = count > 1 ? ' ($count)' : '';
     final snLabel =
         (resolvedSn != null && resolvedSn.isNotEmpty && resolvedSn != sn)
         ? '$sn → $resolvedSn'
         : sn;
+    final nextProcessLabel = snMasterInfo == null
+        ? ''
+        : (snMasterInfo.nextProcessName.isNotEmpty
+              ? snMasterInfo.nextProcessName
+              : snMasterInfo.nextProcessCode);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Text(
-            '${Translations.get('records_for', lang)}: $snLabel$countSuffix',
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: theme.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  color: theme.isDark ? Colors.black87 : Colors.white70,
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
+          child: Row(
+            children: [
+              Flexible(
+                child: _MarqueeText(
+                  key: ValueKey('records_header_$snLabel'),
+                  text:
+                      '${Translations.get('records_for', lang)}: $snLabel$countSuffix',
+                  style: TextStyle(
+                    color: theme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        color: theme.isDark ? Colors.black87 : Colors.white70,
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (nextProcessLabel.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                _buildInfoChip(
+                  label: 'Next: $nextProcessLabel',
+                  color: Colors.blue.shade600,
                 ),
               ],
-            ),
+            ],
           ),
         ),
         const SizedBox(width: 12),
@@ -3938,6 +3983,80 @@ class _HoverChipState extends State<_HoverChip> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Horizontally auto-scrolls [text] when it overflows the space given to
+/// this widget, instead of clipping it with an ellipsis — per the
+/// `dart-build-pro` skill's Marquee spec: a slow, readable scroll out to
+/// the end, then a quick snap back to the start (asymmetric, not a
+/// symmetric back-and-forth). Relies on
+/// `SingleChildScrollView.position.maxScrollExtent` (computed by Flutter
+/// from the real layout) rather than manually measuring text width, which
+/// has repeatedly proven unreliable for this exact use case.
+class _MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  const _MarqueeText({super.key, required this.text, required this.style});
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runLoop());
+  }
+
+  Future<void> _runLoop() async {
+    if (!mounted || !_scrollController.hasClients) return;
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final maxScrollExtent = _scrollController.position.maxScrollExtent;
+    if (maxScrollExtent <= 0) return; // fits within the box, nothing to do
+
+    // Asymmetric on purpose: slow, readable linear scroll out to the end,
+    // then a quick easeOut snap back to the start — not a symmetric back-
+    // and-forth. Forward duration scales with text length so longer labels
+    // don't fly by; the return trip is a fixed short duration regardless.
+    while (mounted) {
+      await _scrollController.animateTo(
+        maxScrollExtent,
+        duration: Duration(milliseconds: widget.text.length * 60),
+        curve: Curves.linear,
+      );
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) return;
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOut,
+      );
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 1500));
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Text(widget.text, style: widget.style, maxLines: 1),
     );
   }
 }

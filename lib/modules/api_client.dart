@@ -199,9 +199,15 @@ class SnMasterInfo {
   final String productName;
   final String productVersion;
   final String woNo;
+  final String lineCode;
   final String lineName;
   final String currentProcessCode;
   final String currentProcessName;
+  final String nextProcessCode;
+  final String nextProcessName;
+  final String errorCode;
+  final String routeCode;
+  final String routeName;
   final String productStatus;
 
   SnMasterInfo({
@@ -210,9 +216,15 @@ class SnMasterInfo {
     required this.productName,
     required this.productVersion,
     required this.woNo,
+    required this.lineCode,
     required this.lineName,
     required this.currentProcessCode,
     required this.currentProcessName,
+    required this.nextProcessCode,
+    required this.nextProcessName,
+    required this.errorCode,
+    required this.routeCode,
+    required this.routeName,
     required this.productStatus,
   });
 
@@ -223,9 +235,15 @@ class SnMasterInfo {
       productName: json['productName']?.toString() ?? '',
       productVersion: json['productVersion']?.toString() ?? '',
       woNo: json['woNo']?.toString() ?? '',
+      lineCode: json['lineCode']?.toString() ?? '',
       lineName: json['lineName']?.toString() ?? '',
       currentProcessCode: json['currentProcessCode']?.toString() ?? '',
       currentProcessName: json['currentProcessName']?.toString() ?? '',
+      nextProcessCode: json['nextProcessCode']?.toString() ?? '',
+      nextProcessName: json['nextProcessName']?.toString() ?? '',
+      errorCode: json['errorCode']?.toString() ?? '',
+      routeCode: json['routeCode']?.toString() ?? '',
+      routeName: json['routeName']?.toString() ?? '',
       productStatus: json['productStatus']?.toString() ?? '',
     );
   }

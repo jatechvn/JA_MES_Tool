@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.6.3
+Version      : v2.6.4
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -17,7 +17,9 @@ Key Features:
   and Component List (WIP BOM / material traceability).
 - Automatic SN Master Resolution: typed internal SNs are auto-resolved to
   the canonical product SN (snMaster/getSnMasterProcess) before fetching,
-  shown as "typed SN -> resolved SN" in the header.
+  shown as "typed SN -> resolved SN" in the header, with a "Next" chip
+  showing the SN's next process and an auto-scrolling label when the
+  header runs out of room to display it in full.
 - iOS-style Smooth UI Transitions: fade+slide tab/SN switching, cascading
   list-item entrance animation with bouncing scroll, scale+fade dialog
   presentation, animated sidebar selection & record-count badge, and
