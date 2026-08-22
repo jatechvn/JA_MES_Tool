@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.4 - Tiếng Việt
+# 🤖 JA MES Tool v2.7.0 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.6.4-blue.svg" alt="Phiên bản 2.6.4">
+  <img src="https://img.shields.io/badge/phien_ban-2.7.0-blue.svg" alt="Phiên bản 2.7.0">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -23,17 +23,18 @@
 
 **JA MES Tool** là phần mềm chuyên dụng được thiết kế nhằm tối ưu hóa quy trình kiểm tra số Serial Number (SN), trích xuất lịch sử test/công đoạn, truy vết linh kiện BOM và xuất báo cáo từ nền tảng API **Foxconn CloudMES**.
 
-Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc trên 3 chế độ xem dữ liệu, tự động đồng bộ Token qua trình duyệt (CDP Interception), và giao diện hiện đại với tìm kiếm & sắp xếp kiểu Excel.
+Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc trên 3 chế độ xem dữ liệu theo SN cộng thêm chế độ tra cứu ngược Component Trace, tự động đồng bộ Token qua trình duyệt (CDP Interception), và giao diện hiện đại với tìm kiếm & sắp xếp kiểu Excel.
 
 ---
 
-## 💡 Tính năng nổi bật (v2.6.4)
+## 💡 Tính năng nổi bật (v2.7.0)
 
 ### 📊 Chế độ xem dữ liệu
 - 🗂️ **3 chế độ xem theo SN**: Chuyển đổi giữa **Kết quả Test** (Pass/Fail), **Lịch sử Barcode** (toàn bộ lộ trình công đoạn/trạm), và **Danh sách Linh kiện** (truy vết BOM/vật tư — nhà sản xuất, mã hãng, mã ngày SX, mã lô/gói) cho mỗi SN.
+- 🧭 **Component Trace (tra cứu ngược)**: Chế độ xem thứ 4 cho chiều ngược lại — quét hoặc nhập chính SN của linh kiện (`report/queryInfoList`) để biết nó đang lắp trong sản phẩm nào, kèm đầy đủ chi tiết truy vết vật tư. Có lịch sử CSN đã tra riêng ở sidebar (được lưu lại kể cả khi tắt/mở lại app, giống hàng đợi SN), dùng chung ô nhập/thêm với hàng đợi SN — placeholder, icon và hành vi của ô này tự đổi theo tab đang chọn thay vì phải có ô riêng.
 - 🔗 **Tự động phân giải SN chính tắc**: Nhập SN nội bộ sẽ tự động quy đổi sang SN sản phẩm chính tắc (`snMaster/getSnMasterProcess`) trước khi tra cứu cả 3 chế độ xem — tiêu đề hiển thị `SN nhập → SN chính tắc` khi 2 giá trị khác nhau (tự cuộn nếu không đủ chỗ hiển thị), kèm **chip "Next"** hiện công đoạn kế tiếp của SN nếu có. Có cache theo phiên và tự động fallback nếu phân giải lỗi.
-- 🔍 **Tìm kiếm kiểu Excel**: Ô tìm kiếm trực tiếp trên mỗi danh sách, khớp mọi trường dữ liệu khi bạn gõ.
-- ⬍ **Sắp xếp theo trường**: Nút Sắp xếp cho phép chọn trường và đảo chiều tăng/giảm, áp dụng cho cả 3 chế độ xem — mỗi trường có icon riêng, trường đang chọn hiển thị dạng pill bo góc màu nhấn, khớp phong cách chọn lựa của tab/sidebar.
+- 🔍 **Tìm kiếm kiểu Excel**: Ô tìm kiếm trực tiếp trên mỗi danh sách — kể cả Component Trace — khớp mọi trường dữ liệu khi bạn gõ.
+- ⬍ **Sắp xếp theo trường**: Nút Sắp xếp cho phép chọn trường và đảo chiều tăng/giảm, áp dụng cho cả 4 chế độ xem — mỗi trường có icon riêng, trường đang chọn hiển thị dạng pill bo góc màu nhấn, khớp phong cách chọn lựa của tab/sidebar.
 - 📋 **Chọn & Copy dữ liệu**: Mọi giá trị bản ghi — kể cả danh sách SN ở sidebar — đều có thể bôi đen (kéo chuột hoặc double-click) và copy (Ctrl+C) như bảng tính.
 - 🔄 **Làm mới riêng từng SN & Làm mới tất cả**: Mỗi SN trong hàng đợi có icon làm mới riêng để tra cứu lại đúng SN đó (cả 3 chế độ xem + phân giải SN chính tắc), cộng thêm nút "Làm mới tất cả" ở đầu sidebar để tra cứu lại toàn bộ hàng đợi — không cần tắt mở lại app.
 - 🔢 **Số lượng bản ghi thông minh**: "Bản ghi của SN" tự động hiện số lượng `(N)`, ẩn đi khi chỉ có 0 hoặc 1 bản ghi.
@@ -55,7 +56,7 @@
 
 ### ⚙️ Lõi & Quản lý dữ liệu
 - ⚡ **Hàng đợi tra cứu SN song song**: Xử lý tra cứu danh sách SN nhanh chóng theo cơ chế bất đồng bộ, trên cả 3 chế độ xem.
-- 📄 **Nhập & Xuất file CSV thông minh**: Tự động bỏ qua các dòng tiêu đề (chứa chữ `"SN"`) và xuất báo cáo CSV chi tiết.
+- 📄 **Nhập & Xuất file CSV thông minh**: Tự động bỏ qua các dòng tiêu đề (chứa chữ `"SN"`/`"CSN"`) và xuất báo cáo CSV chi tiết — 3 nút **[Tải Mẫu]/[Nhập]/[Xuất]** tự động chuyển sang mẫu/dữ liệu CSN khi đang ở tab Component Trace.
 - 🛠️ **Bộ lọc & Làm sạch dữ liệu Header**: Tự động cắt bỏ ký tự xuống dòng ẩn (`\r\n`), khoảng trắng và dấu ngoặc kép thừa.
 - 📋 **Quản lý Nhật ký hệ thống (Logs)**: Ghi vết theo ngày và tự động xóa các file log cũ quá 7 ngày mỗi khi khởi động.
 
@@ -94,14 +95,21 @@
 * Kéo chuột hoặc double-click vào giá trị bất kỳ để chọn, rồi **Ctrl+C** để copy — như bảng tính.
 * Bấm **[Xuất (Export)]** để lưu toàn bộ dữ liệu Kết quả Test ra file CSV.
 
-### 3. Tự động lấy Token từ Trình duyệt (Quy trình 2 bước CDP)
+### 3. Component Trace (tra cứu ngược linh kiện)
+* Bấm tab **🧭 Component Trace** — sidebar chuyển từ hàng đợi SN sang danh sách **Lịch sử Tra cứu**, và ô nhập vẫn ở vị trí cũ nhưng giờ dùng để tra cứu SN linh kiện thay vì thêm SN.
+* Gõ hoặc quét SN linh kiện rồi ấn **Enter** (hoặc **[+]/🔍**) — có thể dán nhiều SN cùng lúc (mỗi dòng 1 cái, hoặc cách nhau bằng dấu phẩy) để tra hết trong 1 lần.
+* Mỗi SN đã tra trở thành 1 dòng trong Lịch sử Tra cứu ở sidebar (bấm để xem lại kết quả cũ, 🔄 để tra lại, ✕ để xoá) và **được lưu xuống đĩa**, nên tắt/mở lại app vẫn còn nguyên lịch sử.
+* Khung kết quả hiện toàn bộ SN sản phẩm mà linh kiện đó đang lắp vào, kèm thanh **tìm kiếm/sắp xếp** giống hệt 3 chế độ xem còn lại.
+* **[Tải Mẫu]/[Nhập]/[Xuất]** tự động thao tác trên SN linh kiện khi đang ở tab này.
+
+### 4. Tự động lấy Token từ Trình duyệt (Quy trình 2 bước CDP)
 1. Mở **Cài đặt ⚙️** (hoặc thông qua Cửa sổ Popup cảnh báo Token hết hạn tự động khi vừa khởi động).
 2. **Bước 1**: Nhấn nút **[1. Mở trình duyệt]** để mở Chrome hoặc Microsoft Edge.
 3. Đăng nhập tài khoản MES của bạn trên trang web.
 4. **Bước 2**: Nhấn nút **[2. Lấy Token]**. Phần mềm sẽ dùng cơ chế CDP Network Interception để bắt chính xác 100% **Token**, **UUID**, **Operation-ID** và **Cookie**.
-5. Nhấn **Lưu** để tự động dọn dẹp màn hình lỗi cũ và tra cứu lại toàn bộ danh sách SN trong hàng đợi.
+5. Nhấn **Lưu** để tự động dọn dẹp màn hình lỗi cũ và tra cứu lại toàn bộ danh sách SN trong hàng đợi (kèm cả lịch sử Component Trace, nếu có).
 
-### 4. Kiểm tra kết nối
+### 5. Kiểm tra kết nối
 * Đèn báo trạng thái bên cạnh tiêu đề **"Cài đặt"**:
   - 🟢 **Đã kết nối**: Token hợp lệ và kết nối tới máy chủ MES thành công.
   - 🟡 **Kiểm tra**: Token hết hạn hoặc chưa được cấp quyền (401).
@@ -117,12 +125,12 @@ ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # Điểm khởi chạy ứng dụng, Provider & khởi tạo window_manager
 │   └── modules/
-│       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
+│       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
 │       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.6.4)
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.7.0)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
-│       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, 3 danh sách dữ liệu, ViewMode, cache phân giải SN
+│       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
 │       └── ui/
 │           ├── main_window.dart   # Tab, tìm kiếm/sắp xếp, hover chip, hộp thoại (WindowListener)
@@ -147,7 +155,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.6.4+11)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.7.0+12)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -179,6 +187,7 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 {
   "token": "",
   "sns": ["SN123456", "SN789012"],
+  "traceCsns": ["OPM1106349G1CCX", "QB940AE002627V05171"],
   "lang": "en",
   "operationId": "1826874274766209025",
   "uuid": "e1d5e78c-bf60-4aba-9b5f-a94b15cb63d4",
@@ -190,11 +199,11 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.7.0]** — Thêm chế độ xem **Component Trace**: tra cứu ngược SN linh kiện để biết nó đang lắp trong sản phẩm nào, có lịch sử tra cứu riêng được lưu lại ở sidebar, tìm kiếm/sắp xếp và hỗ trợ CSV template/nhập/xuất — dùng chung ô nhập/tìm kiếm với hàng đợi SN thay vì thêm ô riêng.
 - **[2.6.4]** — SN Master giờ lấy đủ dữ liệu từ API (công đoạn kế tiếp, mã lỗi, route, mã line); chip "Next" hiện công đoạn kế tiếp trên header danh sách bản ghi, label SN tự cuộn thay vì bị cắt khi hết chỗ.
 - **[2.6.3]** — Chrome và Microsoft Edge dùng profile riêng có thể giữ lại, hỗ trợ chuyển profile cũ và kiểm tra CDP có giới hạn thời gian để tránh treo cửa sổ đăng nhập.
 - **[2.6.2]** — Cài đặt được tách thành các tab Cài đặt nâng cao, Hướng dẫn sử dụng và Giới thiệu; chiều cao dialog tự điều chỉnh theo tab đang chọn.
 - **[2.6.1]** — Sửa lỗi thông báo Verify Connection bị ẩn phía sau lớp modal của cửa sổ Cài đặt; giờ icon tự chuyển động báo kết quả (dấu tích/dấu X) thay vì dựa vào SnackBar bị che khuất.
 - **[2.6.0]** — Cài đặt Glassmorphism nâng cao có thể tùy chỉnh (4 slider live-preview blur/opacity), dropdown Sắp xếp dựng lại bằng `BackdropFilter` blur thật, cửa sổ Cài đặt live-preview, kèm sàn an toàn chống lỗi chữ chồng xuyên thấu.
-- **[2.5.3]** — Thiết kế lại dropdown Sắp xếp cho khớp design system của app: bỏ tông tím mặc định của Material 3, thêm icon từng trường, item đang chọn hiển thị pill bo góc màu nhấn khớp style tab/sidebar.
 
 Xem đầy đủ lịch sử phiên bản tại [**CHANGELOG.md**](../CHANGELOG.md).

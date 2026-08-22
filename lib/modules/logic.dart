@@ -8,7 +8,7 @@ import 'constants.dart';
 
 final _logger = Logger('AppLogic');
 
-enum ViewMode { testRecord, barcodeHistory, wipComponents }
+enum ViewMode { testRecord, barcodeHistory, wipComponents, componentTrace }
 
 class AppLogic extends ChangeNotifier {
   ViewMode _viewMode = ViewMode.testRecord;
@@ -35,6 +35,27 @@ class AppLogic extends ChangeNotifier {
   Map<String, String> get wipErrors => _wipErrors;
 
   bool _isWipBatchLoading = false;
+
+  // Component Trace: a standalone reverse lookup (scanned component CSN ->
+  // product SN it's installed into). Unrelated to the SN queue above — it
+  // has its own history of searched CSNs (shown in the sidebar in place of
+  // the SN queue while this tab is active), each with its own cached
+  // result set, since the input identifier space is different (component,
+  // not product SN).
+  final List<String> _traceHistory = [];
+  List<String> get traceHistory => _traceHistory;
+
+  final Map<String, List<QueryInfoRecord>> _traceResults = {};
+  Map<String, List<QueryInfoRecord>> get traceResults => _traceResults;
+
+  final Map<String, bool> _traceLoadingStatus = {};
+  Map<String, bool> get traceLoadingStatus => _traceLoadingStatus;
+
+  final Map<String, String> _traceErrors = {};
+  Map<String, String> get traceErrors => _traceErrors;
+
+  String _selectedTraceCsn = '';
+  String get selectedTraceCsn => _selectedTraceCsn;
 
   // Maps the SN string the user typed (internal SN, customer SN, or product
   // SN) to its resolved canonical product SN + master info. Test Record,
@@ -129,6 +150,9 @@ class AppLogic extends ChangeNotifier {
     if (config['sns'] != null) {
       _snList = List<String>.from(config['sns']);
     }
+    if (config['traceCsns'] != null) {
+      _traceHistory.addAll(List<String>.from(config['traceCsns']));
+    }
 
     if (_token.isEmpty) {
       _token = defaultToken;
@@ -136,21 +160,25 @@ class AppLogic extends ChangeNotifier {
     if (_snList.isNotEmpty) {
       _selectedSn = _snList.first;
     }
+    if (_traceHistory.isNotEmpty) {
+      _selectedTraceCsn = _traceHistory.first;
+    }
     notifyListeners();
-    // Auto-fetch all 3 data views for any SNs without results, so switching
-    // tabs never has to wait — not just the currently active view.
+    // Auto-fetch all 3 SN data views + the saved Component Trace history, so
+    // switching tabs never has to wait — not just the currently active view.
     _fetchAllPending();
     _startValidationTimer();
   }
 
-  /// Kicks off the Test Record, Barcode History, and Component List fetches
-  /// for every SN concurrently, so all 3 tabs are ready before the user
-  /// clicks into them instead of loading lazily on tab switch.
+  /// Kicks off the Test Record, Barcode History, Component List, and
+  /// Component Trace fetches concurrently, so all 4 tabs are ready before
+  /// the user clicks into them instead of loading lazily on tab switch.
   Future<void> _fetchAllPending() {
     return Future.wait([
       _fetchPendingSns(),
       _fetchPendingProcessHistory(),
       _fetchPendingWipComponents(),
+      refetchAllTraceSearches(),
     ]);
   }
 
@@ -185,6 +213,7 @@ class AppLogic extends ChangeNotifier {
     return {
       'token': _token,
       'sns': _snList,
+      'traceCsns': _traceHistory,
       'lang': _lang,
       'operationId': _operationId,
       'uuid': _uuid,
@@ -326,7 +355,7 @@ class AppLogic extends ChangeNotifier {
     await ConfigService.saveConfig(_exportConfigMap());
     _validateNow();
     notifyListeners();
-    if (_snList.isNotEmpty) {
+    if (_snList.isNotEmpty || _traceHistory.isNotEmpty) {
       refetchAllSns();
     }
   }
@@ -616,6 +645,206 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     }
 
     _isWipBatchLoading = false;
+    notifyListeners();
+  }
+
+  /// Reverse component lookup: given a scanned/typed component CSN, finds
+  /// which product SN it is currently installed into. Adds the CSN to the
+  /// trace history (if new) and selects it, so the sidebar and detail view
+  /// both reflect the just-searched CSN.
+  Future<void> searchComponentTrace(String csn) async {
+    final trimmed = csn.trim().toUpperCase();
+    if (trimmed.isEmpty) return;
+
+    if (!_traceHistory.contains(trimmed)) {
+      _traceHistory.insert(0, trimmed);
+      ConfigService.saveConfig(_exportConfigMap());
+    }
+    _selectedTraceCsn = trimmed;
+    _traceLoadingStatus[trimmed] = true;
+    _traceErrors.remove(trimmed);
+    notifyListeners();
+
+    try {
+      final records = await ApiClient.queryComponentInfo(
+        csn: trimmed,
+        token: _token,
+        lang: _lang,
+        operationId: _operationId,
+        uuid: _uuid,
+        cookie: _cookie,
+      );
+      _traceResults[trimmed] = records;
+      if (records.isEmpty) {
+        _traceErrors[trimmed] = 'No records found';
+      }
+    } catch (e) {
+      _logger.severe('Failed to query component info for $trimmed: $e');
+      _traceErrors[trimmed] = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      _traceLoadingStatus[trimmed] = false;
+      notifyListeners();
+    }
+  }
+
+  /// Selects a previously searched CSN from the trace history without
+  /// re-fetching (its result is already cached).
+  void selectTraceCsn(String csn) {
+    _selectedTraceCsn = csn;
+    notifyListeners();
+  }
+
+  /// Re-runs the lookup for a CSN already in the trace history.
+  Future<void> refreshTraceCsn(String csn) async {
+    _traceResults.remove(csn);
+    _traceErrors.remove(csn);
+    notifyListeners();
+    await searchComponentTrace(csn);
+  }
+
+  void removeTraceCsn(String csn) {
+    _traceHistory.remove(csn);
+    _traceResults.remove(csn);
+    _traceErrors.remove(csn);
+    _traceLoadingStatus.remove(csn);
+    if (_selectedTraceCsn == csn) {
+      _selectedTraceCsn = _traceHistory.isNotEmpty ? _traceHistory.first : '';
+    }
+    ConfigService.saveConfig(_exportConfigMap());
+    notifyListeners();
+  }
+
+  void clearTraceHistory() {
+    _traceHistory.clear();
+    _traceResults.clear();
+    _traceErrors.clear();
+    _traceLoadingStatus.clear();
+    _selectedTraceCsn = '';
+    ConfigService.saveConfig(_exportConfigMap());
+    notifyListeners();
+  }
+
+  /// Re-runs the lookup for every CSN in the trace history (e.g. on app
+  /// startup, or after credentials change). Preserves whatever was selected
+  /// beforehand rather than leaving the last-fetched item selected as a side
+  /// effect of the loop.
+  Future<void> refetchAllTraceSearches() async {
+    final current = List<String>.from(_traceHistory);
+    final previousSelected = _selectedTraceCsn;
+    for (final csn in current) {
+      await searchComponentTrace(csn);
+    }
+    _selectedTraceCsn = previousSelected.isNotEmpty
+        ? previousSelected
+        : (_traceHistory.isNotEmpty ? _traceHistory.first : '');
+    notifyListeners();
+  }
+
+  /// Parses a multi-line/comma-separated blob of component CSNs (manual
+  /// paste or CSV file content) and searches each new one in turn — the
+  /// Component Trace equivalent of [addSns], reusing the same delimiter and
+  /// header-row-skip conventions.
+  Future<void> addTraceCsns(String input) async {
+    final lines = input.split(RegExp(r'[\n\r,;\s]+'));
+    final toSearch = <String>[];
+    for (var line in lines) {
+      final csn = line.trim().toUpperCase();
+      if (csn == 'SN' || csn == 'CSN') continue;
+      if (csn.isNotEmpty &&
+          RegExp(r'^[A-Z0-9_-]+$').hasMatch(csn) &&
+          !toSearch.contains(csn)) {
+        toSearch.add(csn);
+      }
+    }
+
+    for (final csn in toSearch) {
+      await searchComponentTrace(csn);
+    }
+  }
+
+  Future<void> downloadTraceTemplateCsv() async {
+    _globalError = '';
+    notifyListeners();
+    try {
+      final script = '''
+Add-Type -AssemblyName System.Windows.Forms
+\$f = New-Object System.Windows.Forms.SaveFileDialog
+\$f.Filter = "CSV Files (*.csv)|*.csv"
+\$f.FileName = "Template_Component_SN.csv"
+\$f.InitialDirectory = [Environment]::GetFolderPath("Desktop")
+if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
+''';
+      final result = await Process.run('powershell', [
+        '-NoProfile',
+        '-STA',
+        '-Command',
+        script,
+      ]);
+      final path = result.stdout.toString().trim();
+      if (path.isEmpty) return; // User canceled
+
+      final file = File(path.replaceAll('"', '').trim());
+      await file.writeAsString('CSN\nOPM1106349G1CCX\nQB940AE002627V05171\n');
+      _globalError = 'Template downloaded successfully to $path';
+    } catch (e) {
+      _globalError = 'Error downloading template: $e';
+    }
+    notifyListeners();
+  }
+
+  Future<void> importTraceCsv() async {
+    _globalError = '';
+    notifyListeners();
+    try {
+      final path = await pickFile(isSave: false);
+      if (path == null || path.isEmpty) return; // User canceled
+
+      final file = File(path.replaceAll('"', '').trim());
+      if (!await file.exists()) {
+        _globalError = 'CSV file not found.';
+        notifyListeners();
+        return;
+      }
+      final content = await file.readAsString();
+      await addTraceCsns(content);
+    } catch (e) {
+      _globalError = 'Error importing CSV: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> exportTraceCsv() async {
+    _globalError = '';
+    notifyListeners();
+    try {
+      final path = await pickFile(isSave: true);
+      if (path == null || path.isEmpty) return; // User canceled
+
+      final file = File(path.replaceAll('"', '').trim());
+      final buffer = StringBuffer();
+      buffer.writeln(
+        'Component SN,Product SN,Material No,Material Name,Category,Manufacturer,Mfg Part No,Product No,Line Code,Process Code,WO,Qty,Process Time,Assembled Status',
+      );
+
+      for (final csn in _traceHistory) {
+        final records = _traceResults[csn];
+        if (records != null && records.isNotEmpty) {
+          for (final r in records) {
+            buffer.writeln(
+              '$csn,${r.productSn},${r.materialNo},"${r.materialName}",${r.materialCategory},${r.mfgName},${r.mfgPn},${r.productNo},${r.lineCode},${r.processCode},${r.woNo},${r.installedQty},${r.createdDt},${r.checkAssembled}',
+            );
+          }
+        } else {
+          final err = _traceErrors[csn] ?? 'No records / Pending';
+          buffer.writeln('$csn,,,,,,,,,,,,,"$err"');
+        }
+      }
+
+      await file.writeAsString(buffer.toString());
+      _globalError = 'Exported successfully to $path';
+    } catch (e) {
+      _globalError = 'Error exporting CSV: $e';
+    }
     notifyListeners();
   }
 

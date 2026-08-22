@@ -5,6 +5,16 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-08-22
+
+### 🚀 Major Features & Enhancements
+- **🧭 New Component Trace view**: A 4th tab for the reverse lookup — scan or type a *component's own* CSN (`report/queryInfoList`) to find which product SN it is currently installed into, with full material/traceability detail per match (manufacturer, part no, category, product SN, line code, process code, WO, qty, assembled status).
+- **🗂️ Persisted trace history in the sidebar**: While Component Trace is active, the sidebar swaps the SN queue for a "Trace History" list — every searched CSN becomes a row (select to revisit a cached result, refresh to re-run it, remove to delete it) and is saved to `config.json`, surviving app restarts just like the SN queue.
+- **🔗 Shared add/search input box**: Rather than a second input field, the existing sidebar "Add SN" box now switches its placeholder, button icon, and behavior (`addSns` vs `addTraceCsns`) automatically based on the active tab — including accepting multi-line/comma-separated pastes for batch CSN search.
+- **🔍 Search, Sort, and CSV parity**: Component Trace reuses the same search/sort header and CSV Template/Import/Export toolbar buttons as the other 3 views, retargeted to CSNs (with dedicated `QueryInfoRecord` filter/sort fields) instead of SNs.
+
+---
+
 ## [2.6.4] - 2026-08-21
 
 ### 🚀 Major Features & Enhancements
