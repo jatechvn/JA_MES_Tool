@@ -18,9 +18,16 @@ class ConfigService {
         } else if (data['sn'] != null) {
           snList = [data['sn'].toString()];
         }
+        List<String> traceCsns = [];
+        if (data['traceCsns'] is List) {
+          traceCsns = List<String>.from(
+            data['traceCsns'].map((e) => e.toString()),
+          );
+        }
         return {
           'token': data['token']?.toString() ?? '',
           'sns': snList,
+          'traceCsns': traceCsns,
           'lang': data['lang']?.toString() ?? 'en',
           'operationId': data['operationId']?.toString() ?? defaultOperationId,
           'uuid': data['uuid']?.toString() ?? defaultUuid,
@@ -37,6 +44,7 @@ class ConfigService {
     return {
       'token': '',
       'sns': <String>[],
+      'traceCsns': <String>[],
       'lang': 'en',
       'operationId': defaultOperationId,
       'uuid': defaultUuid,

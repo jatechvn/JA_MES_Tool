@@ -57,6 +57,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   final _ListViewState _testRecordListState = _ListViewState();
   final _ListViewState _barcodeListState = _ListViewState();
   final _ListViewState _wipListState = _ListViewState();
+  final _ListViewState _traceListState = _ListViewState();
 
   // Tracks the glass Sort dropdown's OverlayEntry so it can be closed on
   // selection, outside tap, tab/SN switch, or widget dispose. Anchor position
@@ -88,6 +89,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     _testRecordListState.filterCtrl.dispose();
     _barcodeListState.filterCtrl.dispose();
     _wipListState.filterCtrl.dispose();
+    _traceListState.filterCtrl.dispose();
     super.dispose();
   }
 
@@ -120,7 +122,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     // AnimatedSwitcher that owns the tab/SN view — closing it here (rather
     // than at every tab-pill/SN-row onTap) guarantees it can never be left
     // open and bound to a _ListViewState that's no longer the visible tab.
-    final sortViewKey = '${logic.viewMode}_${logic.selectedSn}';
+    final sortViewKey =
+        '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}';
     if (_lastSortViewKey != null &&
         _lastSortViewKey != sortViewKey &&
         _sortOverlayEntry != null) {
@@ -157,7 +160,12 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      Translations.get('mes_queue', logic.lang),
+                      Translations.get(
+                        logic.viewMode == ViewMode.componentTrace
+                            ? 'trace_history'
+                            : 'mes_queue',
+                        logic.lang,
+                      ),
                       style: TextStyle(
                         color: theme.textPrimary,
                         fontSize: 18,
@@ -182,9 +190,19 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             color: theme.textPrimary,
                             size: 20,
                           ),
-                          onPressed: logic.snList.isEmpty
+                          onPressed:
+                              (logic.viewMode == ViewMode.componentTrace
+                                  ? logic.traceHistory.isEmpty
+                                  : logic.snList.isEmpty)
                               ? null
-                              : () => logic.refetchAllSns(),
+                              : () {
+                                  if (logic.viewMode ==
+                                      ViewMode.componentTrace) {
+                                    logic.refetchAllTraceSearches();
+                                  } else {
+                                    logic.refetchAllSns();
+                                  }
+                                },
                           tooltip: Translations.get('refresh_all', logic.lang),
                         ),
                         IconButton(
@@ -193,9 +211,19 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             color: theme.failColor,
                             size: 20,
                           ),
-                          onPressed: logic.snList.isEmpty
+                          onPressed:
+                              (logic.viewMode == ViewMode.componentTrace
+                                  ? logic.traceHistory.isEmpty
+                                  : logic.snList.isEmpty)
                               ? null
-                              : () => logic.clearAllSns(),
+                              : () {
+                                  if (logic.viewMode ==
+                                      ViewMode.componentTrace) {
+                                    logic.clearTraceHistory();
+                                  } else {
+                                    logic.clearAllSns();
+                                  }
+                                },
                           tooltip: Translations.get('clear_all', logic.lang),
                         ),
                       ],
@@ -204,7 +232,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                 ),
                 const SizedBox(height: 12),
 
-                // Add SN
+                // Add SN / Add Component CSN — one shared input whose
+                // behavior switches with the active tab (SN queue vs
+                // Component Trace search), instead of two separate boxes.
                 Row(
                   children: [
                     Expanded(
@@ -215,7 +245,12 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                           fontSize: 13,
                         ),
                         decoration: InputDecoration(
-                          hintText: Translations.get('enter_sn', logic.lang),
+                          hintText: Translations.get(
+                            logic.viewMode == ViewMode.componentTrace
+                                ? 'component_trace_hint'
+                                : 'enter_sn',
+                            logic.lang,
+                          ),
                           hintStyle: TextStyle(color: theme.textSecondary),
                           filled: true,
                           fillColor: theme.cardBg,
@@ -229,7 +264,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                           ),
                         ),
                         onSubmitted: (val) {
-                          logic.addSns(val);
+                          if (logic.viewMode == ViewMode.componentTrace) {
+                            logic.addTraceCsns(val);
+                          } else {
+                            logic.addSns(val);
+                          }
                           _snController.clear();
                         },
                       ),
@@ -241,9 +280,18 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.add, color: Colors.white),
+                        icon: Icon(
+                          logic.viewMode == ViewMode.componentTrace
+                              ? Icons.search_rounded
+                              : Icons.add,
+                          color: Colors.white,
+                        ),
                         onPressed: () {
-                          logic.addSns(_snController.text);
+                          if (logic.viewMode == ViewMode.componentTrace) {
+                            logic.addTraceCsns(_snController.text);
+                          } else {
+                            logic.addSns(_snController.text);
+                          }
                           _snController.clear();
                         },
                       ),
@@ -255,9 +303,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                 const SizedBox(height: 16),
                 const Divider(color: Colors.white24),
 
-                // SN List Queue
+                // SN List Queue / Trace History
                 Expanded(
-                  child: logic.snList.isEmpty
+                  child: logic.viewMode == ViewMode.componentTrace
+                      ? _buildTraceHistoryList(logic, theme)
+                      : logic.snList.isEmpty
                       ? Center(
                           child: Text(
                             Translations.get('no_sns_in_queue', logic.lang),
@@ -553,19 +603,47 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                               onTap: () =>
                                   logic.setViewMode(ViewMode.wipComponents),
                             ),
+                            _HoverChip(
+                              icon: Icons.travel_explore_rounded,
+                              label: Translations.get(
+                                'tab_component_trace',
+                                logic.lang,
+                              ),
+                              background:
+                                  logic.viewMode == ViewMode.componentTrace
+                                  ? Colors.blue.shade700
+                                  : Colors.transparent,
+                              foreground:
+                                  logic.viewMode == ViewMode.componentTrace
+                                  ? Colors.white
+                                  : theme.textSecondary,
+                              hoverBackground: theme.isDark
+                                  ? Colors.white12
+                                  : Colors.black.withValues(alpha: 0.06),
+                              keepExpanded:
+                                  logic.viewMode == ViewMode.componentTrace ||
+                                  _isMaximized,
+                              onTap: () =>
+                                  logic.setViewMode(ViewMode.componentTrace),
+                            ),
                           ],
                         ),
                       ),
                       const Spacer(),
 
-                      // Template CSV
+                      // Template CSV — Component Trace has its own
+                      // CSN-oriented template/import/export instead of the
+                      // SN-queue ones, since it's a separate identifier
+                      // space and result shape.
                       _HoverChip(
                         icon: Icons.file_present_rounded,
                         label: Translations.get('template', logic.lang),
                         background: Colors.blueGrey.shade700,
                         foreground: Colors.white,
                         keepExpanded: _isMaximized,
-                        onTap: () => logic.downloadTemplateCsv(),
+                        onTap: () => logic.viewMode == ViewMode.componentTrace
+                            ? logic.downloadTraceTemplateCsv()
+                            : logic.downloadTemplateCsv(),
                       ),
                       const SizedBox(width: 6),
 
@@ -576,7 +654,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         background: Colors.orange.shade700,
                         foreground: Colors.white,
                         keepExpanded: _isMaximized,
-                        onTap: () => logic.importCsv(),
+                        onTap: () => logic.viewMode == ViewMode.componentTrace
+                            ? logic.importTraceCsv()
+                            : logic.importCsv(),
                       ),
                       const SizedBox(width: 6),
 
@@ -587,7 +667,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         background: Colors.green.shade700,
                         foreground: Colors.white,
                         keepExpanded: _isMaximized,
-                        onTap: () => logic.exportCsv(),
+                        onTap: () => logic.viewMode == ViewMode.componentTrace
+                            ? logic.exportTraceCsv()
+                            : logic.exportCsv(),
                       ),
                       const SizedBox(width: 12),
 
@@ -674,7 +756,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         },
                         child: KeyedSubtree(
                           key: ValueKey(
-                            '${logic.viewMode}_${logic.selectedSn}',
+                            '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}',
                           ),
                           child: _buildDetailView(context, logic, theme),
                         ),
@@ -695,6 +777,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     AppLogic logic,
     ThemeProvider theme,
   ) {
+    if (logic.viewMode == ViewMode.componentTrace) {
+      return _buildComponentTraceView(context, logic, theme);
+    }
+
     if (logic.selectedSn.isEmpty) {
       return Center(
         child: Text(
@@ -1370,6 +1456,438 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           ),
       ],
     );
+  }
+
+  /// Sidebar list shown instead of the SN queue while Component Trace is
+  /// active: one row per previously searched component CSN, mirroring the
+  /// SN queue's row layout (select / loading / error / result-count badge /
+  /// refresh / remove) but keyed by CSN and backed by the trace history.
+  Widget _buildTraceHistoryList(AppLogic logic, ThemeProvider theme) {
+    if (logic.traceHistory.isEmpty) {
+      return Center(
+        child: Text(
+          Translations.get('no_trace_history', logic.lang),
+          style: TextStyle(color: theme.textSecondary),
+        ),
+      );
+    }
+
+    return SelectionArea(
+      child: ListView.builder(
+        itemCount: logic.traceHistory.length,
+        itemBuilder: (context, index) {
+          final csn = logic.traceHistory[index];
+          final isSelected = csn == logic.selectedTraceCsn;
+          final isLoading = logic.traceLoadingStatus[csn] == true;
+          final hasError = logic.traceErrors[csn] != null;
+          final recordCount = logic.traceResults[csn]?.length ?? 0;
+
+          return InkWell(
+            onTap: () => logic.selectTraceCsn(csn),
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              curve: Motion.curveOut,
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Colors.blue.withValues(alpha: 0.3)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected ? Colors.blue : Colors.transparent,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      csn,
+                      style: TextStyle(
+                        color: hasError ? theme.failColor : theme.textPrimary,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  if (isLoading)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else if (hasError)
+                    const Icon(Icons.error, color: Colors.red, size: 16)
+                  else if (logic.traceResults.containsKey(csn))
+                    AnimatedSwitcher(
+                      duration: Motion.fast,
+                      switchInCurve: Motion.curveOut,
+                      switchOutCurve: Motion.curveIn,
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: Container(
+                        key: ValueKey(recordCount),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: recordCount > 0
+                              ? theme.passColor
+                              : Colors.grey,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          recordCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 4),
+                  if (!isLoading)
+                    InkWell(
+                      onTap: () => logic.refreshTraceCsn(csn),
+                      child: Icon(
+                        Icons.refresh,
+                        color: theme.textSecondary,
+                        size: 16,
+                      ),
+                    ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () => logic.removeTraceCsn(csn),
+                    child: Icon(
+                      Icons.close,
+                      color: theme.textSecondary,
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Standalone reverse-lookup view: given a component CSN searched via the
+  /// shared sidebar input, shows which product SN(s) it is currently
+  /// installed into plus material/traceability detail. Unlike the other 3
+  /// tabs this isn't keyed off the SN queue/selected SN — it reads from the
+  /// trace history's currently selected CSN (selection happens in the
+  /// sidebar, same as the SN queue does for the other tabs).
+  Widget _buildComponentTraceView(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+  ) {
+    final selectedCsn = logic.selectedTraceCsn;
+    final isLoading = logic.traceLoadingStatus[selectedCsn] == true;
+    final error = logic.traceErrors[selectedCsn];
+    final records = logic.traceResults[selectedCsn] ?? const [];
+    final hasSearched = selectedCsn.isNotEmpty;
+
+    return _buildComponentTraceResults(
+      logic,
+      theme,
+      isLoading,
+      error,
+      records,
+      hasSearched,
+    );
+  }
+
+  Widget _buildComponentTraceResults(
+    AppLogic logic,
+    ThemeProvider theme,
+    bool isLoading,
+    String? error,
+    List<QueryInfoRecord> records,
+    bool hasSearched,
+  ) {
+    if (!hasSearched) {
+      return Center(
+        child: Text(
+          Translations.get('trace_prompt', logic.lang),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: theme.textSecondary),
+        ),
+      );
+    }
+
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (error != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '${Translations.get('no_trace_results', logic.lang)}: ${logic.selectedTraceCsn}',
+          style: TextStyle(color: theme.failColor),
+        ),
+      );
+    }
+
+    final displayRecords = _filterSortTraceRecords(records, _traceListState);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildRecordsHeader(
+          sn: logic.selectedTraceCsn,
+          count: records.length,
+          theme: theme,
+          lang: logic.lang,
+          listState: _traceListState,
+          sortOptions: [
+            _SortOption(
+              'process_time',
+              Translations.get('process_time', logic.lang),
+              icon: Icons.schedule_rounded,
+            ),
+            _SortOption(
+              'product_sn',
+              Translations.get('product_sn', logic.lang),
+              icon: Icons.qr_code_rounded,
+            ),
+            _SortOption(
+              'material_no',
+              Translations.get('material_no', logic.lang),
+              icon: Icons.tag_rounded,
+            ),
+            _SortOption(
+              'material_category',
+              Translations.get('material_category', logic.lang),
+              icon: Icons.category_rounded,
+            ),
+            _SortOption(
+              'manufacturer',
+              Translations.get('manufacturer', logic.lang),
+              icon: Icons.factory_rounded,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (displayRecords.isEmpty)
+          Expanded(
+            child: Center(
+              child: Text(
+                Translations.get('no_matches', logic.lang),
+                style: TextStyle(color: theme.textSecondary),
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              itemCount: displayRecords.length,
+              itemBuilder: (context, index) {
+                final record = displayRecords[index];
+                final itemKey =
+                    '${record.productSn}_${record.scannedCsn}_${record.createdDt}';
+                return _StaggeredItem(
+                  key: ValueKey(itemKey),
+                  itemKey: itemKey,
+                  animatedKeys: _traceListState.animatedItemKeys,
+                  index: index,
+                  child: _buildTraceResultCard(record, logic, theme),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTraceResultCard(
+    QueryInfoRecord record,
+    AppLogic logic,
+    ThemeProvider theme,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.borderTheme),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  record.productSn,
+                  style: TextStyle(
+                    color: theme.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              if (record.checkAssembled.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade600,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    record.checkAssembled,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            Translations.get('component_sn', logic.lang),
+            record.scannedCsn,
+            theme,
+            highlight: true,
+          ),
+          _buildInfoRow(
+            Translations.get('material_no', logic.lang),
+            record.materialNo,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('material_name', logic.lang),
+            record.materialName,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('material_category', logic.lang),
+            record.materialCategory,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('manufacturer', logic.lang),
+            record.mfgName,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('mfg_pn', logic.lang),
+            record.mfgPn,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('product_no', logic.lang),
+            record.productNo,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('line_code', logic.lang),
+            record.lineCode,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('process_code', logic.lang),
+            record.processCode,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('work_order', logic.lang),
+            record.woNo,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('quantity', logic.lang),
+            record.installedQty,
+            theme,
+          ),
+          _buildInfoRow(
+            Translations.get('process_time', logic.lang),
+            record.createdDt,
+            theme,
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<QueryInfoRecord> _filterSortTraceRecords(
+    List<QueryInfoRecord> records,
+    _ListViewState listState,
+  ) {
+    var result = records;
+    final q = listState.filter.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      result = result
+          .where(
+            (r) => [
+              r.productSn,
+              r.mac,
+              r.materialNo,
+              r.materialName,
+              r.materialCategory,
+              r.mfgName,
+              r.mfgPn,
+              r.productNo,
+              r.lineCode,
+              r.processCode,
+              r.woNo,
+              r.createdDt,
+              r.checkAssembled,
+              r.scannedCsn,
+              r.parsedCsn,
+            ].any((f) => f.toLowerCase().contains(q)),
+          )
+          .toList();
+    } else {
+      result = List<QueryInfoRecord>.from(result);
+    }
+    final field = listState.sortField;
+    if (field != null) {
+      result.sort((a, b) {
+        int cmp;
+        switch (field) {
+          case 'process_time':
+            cmp = a.createdDt.compareTo(b.createdDt);
+            break;
+          case 'product_sn':
+            cmp = a.productSn.compareTo(b.productSn);
+            break;
+          case 'material_no':
+            cmp = a.materialNo.compareTo(b.materialNo);
+            break;
+          case 'material_category':
+            cmp = a.materialCategory.compareTo(b.materialCategory);
+            break;
+          case 'manufacturer':
+            cmp = a.mfgName.compareTo(b.mfgName);
+            break;
+          default:
+            cmp = 0;
+        }
+        return listState.sortAsc ? cmp : -cmp;
+      });
+    }
+    return result;
   }
 
   /// Header row shown above each record list: "Records for SN: X (N)" (the

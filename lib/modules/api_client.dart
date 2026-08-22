@@ -249,6 +249,95 @@ class SnMasterInfo {
   }
 }
 
+/// Result of a reverse component lookup: given a scanned/typed component
+/// serial (e.g. a mainboard CSN), returns which product SN it is currently
+/// installed into plus its material/traceability detail. Unlike
+/// [SnMasterInfo] and the other record types, the input here is a
+/// *component* identifier, not necessarily a top-level product SN.
+class QueryInfoRecord {
+  final String productSn;
+  final String mac;
+  final String productNo;
+  final String snMasterId;
+  final String productSeriesCode;
+  final String productSeriesName;
+  final String customerMaterialCode;
+  final String materialName;
+  final String customerMaterialVersion;
+  final String woNo;
+  final String lineCode;
+  final String createdDt;
+  final String materialNo;
+  final String customerMaterialNo;
+  final String materialVersion;
+  final String scannedCsn;
+  final String parsedCsn;
+  final String checkAssembled;
+  final String processCode;
+  final String mfgName;
+  final String mfgPn;
+  final String materialCategory;
+  final String installedQty;
+  final String scanType;
+
+  QueryInfoRecord({
+    required this.productSn,
+    required this.mac,
+    required this.productNo,
+    required this.snMasterId,
+    required this.productSeriesCode,
+    required this.productSeriesName,
+    required this.customerMaterialCode,
+    required this.materialName,
+    required this.customerMaterialVersion,
+    required this.woNo,
+    required this.lineCode,
+    required this.createdDt,
+    required this.materialNo,
+    required this.customerMaterialNo,
+    required this.materialVersion,
+    required this.scannedCsn,
+    required this.parsedCsn,
+    required this.checkAssembled,
+    required this.processCode,
+    required this.mfgName,
+    required this.mfgPn,
+    required this.materialCategory,
+    required this.installedQty,
+    required this.scanType,
+  });
+
+  factory QueryInfoRecord.fromJson(Map<String, dynamic> json) {
+    return QueryInfoRecord(
+      productSn: json['productSn']?.toString() ?? '',
+      mac: json['mac']?.toString() ?? '',
+      productNo: json['productNo']?.toString() ?? '',
+      snMasterId: json['snMasterId']?.toString() ?? '',
+      productSeriesCode: json['productSeriesCode']?.toString() ?? '',
+      productSeriesName: json['productSeriesName']?.toString() ?? '',
+      customerMaterialCode: json['customerMaterialCode']?.toString() ?? '',
+      materialName: json['materialName']?.toString() ?? '',
+      customerMaterialVersion:
+          json['customerMaterialVersion']?.toString() ?? '',
+      woNo: json['woNo']?.toString() ?? '',
+      lineCode: json['lineCode']?.toString() ?? '',
+      createdDt: json['createdDt']?.toString() ?? '',
+      materialNo: json['materialNo']?.toString() ?? '',
+      customerMaterialNo: json['customerMaterialNo']?.toString() ?? '',
+      materialVersion: json['materialVersion']?.toString() ?? '',
+      scannedCsn: json['scannedCsn']?.toString() ?? '',
+      parsedCsn: json['parsedCsn']?.toString() ?? '',
+      checkAssembled: json['checkAssembled']?.toString() ?? '',
+      processCode: json['processCode']?.toString() ?? '',
+      mfgName: json['mfgName']?.toString() ?? '',
+      mfgPn: json['mfgPn']?.toString() ?? '',
+      materialCategory: json['materialCategory']?.toString() ?? '',
+      installedQty: json['installedQty']?.toString() ?? '',
+      scanType: json['scanType']?.toString() ?? '',
+    );
+  }
+}
+
 class ApiClient {
   static Future<List<TestRecord>> fetchTestRecords({
     required String sn,
@@ -571,6 +660,97 @@ class ApiClient {
     }
 
     return SnMasterInfo.fromJson(Map<String, dynamic>.from(snData));
+  }
+
+  /// Reverse component lookup: given a scanned component serial (`csn`),
+  /// finds which product SN it is currently installed into. `filedType`
+  /// selects what kind of identifier `csn` is on the server side (`'2'` =
+  /// CSN scan, matching the MES web frontend's default).
+  static Future<List<QueryInfoRecord>> queryComponentInfo({
+    required String csn,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+    String filedType = '2',
+  }) async {
+    final cleanToken = _cleanHeader(
+      token,
+    ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanLang = _cleanHeader(lang);
+    final cleanOpId = _cleanHeader(operationId);
+    final cleanUuid = _cleanHeader(uuid);
+    final cleanCookie = _cleanHeader(cookie);
+
+    final uri = Uri.parse(
+      'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/report/queryInfoList',
+    );
+
+    final headers = {
+      'Host': 'vncmes.ces.myfiinet.com',
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Authorization': 'bearer $cleanToken',
+      'factoryid': '13',
+      'lang': cleanLang,
+      'operation-id': cleanOpId,
+      'org-code': defaultOrgCode,
+      'timezone': '+07:00',
+      'uuid': cleanUuid,
+      'Cookie': cleanCookie.isNotEmpty
+          ? cleanCookie
+          : 'CloudMES-token=$cleanToken',
+    };
+
+    _logger.info('Querying component info for CSN: $csn');
+
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: json.encode({
+        'pageIndex': 1,
+        'pageSize': 100,
+        'filedType': filedType,
+        'filedValue': csn,
+        'orgCode': defaultOrgCode,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
+      }
+      throw Exception('Server error: ${response.statusCode}');
+    }
+
+    final data = json.decode(response.body);
+
+    final code = data['code'];
+    final msg = data['msg'] ?? data['message'] ?? '';
+
+    if (code != 200 &&
+        code != 0 &&
+        code.toString() != '200' &&
+        code.toString() != '0') {
+      if (code.toString() == '401' || msg.toString().contains('401')) {
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
+      }
+      throw Exception('API Error [$code]: $msg');
+    }
+
+    final responseData = data['data'];
+    List<dynamic> recordsList = [];
+    if (responseData is Map) {
+      recordsList = responseData['list'] ?? [];
+    } else if (responseData is List) {
+      recordsList = responseData;
+    }
+
+    return recordsList.map((e) => QueryInfoRecord.fromJson(e)).toList();
   }
 
   static Future<String?> verifyConnection({

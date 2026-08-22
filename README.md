@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.6.4
+# 🤖 JA MES Tool v2.7.0
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.6.4-blue.svg" alt="Version 2.6.4">
+  <img src="https://img.shields.io/badge/version-2.7.0-blue.svg" alt="Version 2.7.0">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -37,18 +37,19 @@
 
 **JA MES Tool** is a specialized desktop application engineered to streamline serial number (SN) verification, test/process history extraction, BOM component traceability, and result reporting from the **Foxconn CloudMES** API platform.
 
-Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN, automated token credential synchronization via browser CDP, and an intuitive modern interface with Excel-style search & sort.
+Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN plus a fourth reverse component-lookup view (Component Trace), automated token credential synchronization via browser CDP, and an intuitive modern interface with Excel-style search & sort.
 
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.6.4)
+## 💡 Key Features (v2.7.0)
 
 ### 📊 Data Views
 - 🗂️ **Three Views per SN**: Switch between **Test Record** (pass/fail results), **Barcode History** (full process/station routing), and **Component List** (WIP BOM / material traceability — manufacturer, part no, date code, package/lot ID) for every queried SN.
+- 🧭 **Component Trace (reverse lookup)**: A fourth view for the opposite direction — scan or type a *component's own* CSN (`report/queryInfoList`) to find which product SN it is currently installed into, with full material/traceability detail per match. It keeps its own searched-CSN history in the sidebar (persisted across restarts, just like the SN queue), sharing the same add/search input box — the box's placeholder, icon, and behavior switch automatically with the active tab instead of showing a second input.
 - 🔗 **Automatic SN Master Resolution**: Typing an internal/alias SN auto-resolves it to the canonical product SN (`snMaster/getSnMasterProcess`) before fetching any of the 3 views — the header shows `typed SN → resolved SN` whenever they differ (auto-scrolling if it doesn't fit), plus a **"Next" chip** with the SN's next process when one is reported. Cached per-session with automatic fallback if resolution fails.
-- 🔍 **Excel-style Search Filter**: A live search box on every record list matches against any visible field as you type.
-- ⬍ **Click-to-sort**: A sort-by button lets you pick a field and toggle ascending/descending, on all three views — each field has its own icon and the active field is highlighted as a rounded accent pill, matching the app's tab/sidebar selection style.
+- 🔍 **Excel-style Search Filter**: A live search box on every record list — including Component Trace — matches against any visible field as you type.
+- ⬍ **Click-to-sort**: A sort-by button lets you pick a field and toggle ascending/descending, on all four views — each field has its own icon and the active field is highlighted as a rounded accent pill, matching the app's tab/sidebar selection style.
 - 📋 **Selectable & Copyable Data**: Every record value — including the SN queue sidebar — can be selected with a click-drag or double-click and copied (Ctrl+C), just like a spreadsheet.
 - 🔄 **Per-SN & Refresh-All**: Each SN in the queue has its own refresh icon to re-fetch just that SN (all 3 views + its SN Master resolution), plus a "Refresh All" button in the sidebar header to re-fetch the entire queue — no more closing and reopening the app to force fresh data.
 - 🔢 **Smart Record Counts**: "Records for SN" shows a `(N)` count automatically, hidden when there are 0 or 1 records.
@@ -70,7 +71,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 
 ### ⚙️ Core & Data Management
 - ⚡ **Parallel SN Query Queue**: Process individual or batch Serial Numbers with asynchronous API fetch, across all three data views.
-- 📄 **Smart CSV Batch Import & Export**: Automatically filters out header/title rows (e.g., rows containing `"SN"`) and generates structured CSV exports.
+- 📄 **Smart CSV Batch Import & Export**: Automatically filters out header/title rows (e.g., rows containing `"SN"`/`"CSN"`) and generates structured CSV exports — the **[Template]**/**[Import]**/**[Export]** toolbar buttons switch to CSN-shaped Component Trace templates/exports automatically while that tab is active.
 - 🛠️ **Header Sanitization Engine**: Cleans invisible Carriage Returns (`\r\n`), extra whitespaces, and quote wrappers to prevent HTTP header errors.
 - 📋 **Daily System Logs**: Logs operational events with automatic 7-day file cleanup.
 
@@ -111,14 +112,21 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 * Click-drag or double-click any value to select it, then **Ctrl+C** to copy — just like a spreadsheet.
 * Click **[Export]** to save all fetched Test Record data to a structured CSV file.
 
-### 3. Auto Sync Token from Browser (2-Step CDP Wizard)
+### 3. Component Trace (reverse component lookup)
+* Click the **🧭 Component Trace** tab — the sidebar switches from the SN queue to a **Trace History** list, and the same input box now searches component CSNs instead of adding SNs.
+* Type or scan a component's CSN and press **Enter** (or **[+]/🔍**) — paste multiple CSNs at once (one per line, or comma-separated) to search them all in one go.
+* Each searched CSN becomes a row in the Trace History sidebar (click to revisit a cached result, 🔄 to re-run it, ✕ to remove it) and is **saved to disk**, so the history survives closing and reopening the app.
+* The result panel shows every product SN the CSN is currently installed into, with the same **search/sort** toolbar as the other 3 views.
+* **[Template]/[Import]/[Export]** automatically operate on CSNs instead of SNs while this tab is active.
+
+### 4. Auto Sync Token from Browser (2-Step CDP Wizard)
 1. Open **Settings ⚙️** (or use the automatic startup expired token popup).
 2. **Step 1**: Click **[1. Open Browser]** to launch Chrome or Microsoft Edge.
 3. Log into your MES account on the web page.
 4. **Step 2**: Click **[2. Sync Credentials]**. The app captures live **Token**, **UUID**, **Operation-ID**, and **Cookie** directly from browser traffic.
-5. Click **Save** to automatically clear prior error screens and re-fetch the entire SN queue.
+5. Click **Save** to automatically clear prior error screens and re-fetch the entire SN queue (and the Component Trace history, if any).
 
-### 4. Connection Health Check
+### 5. Connection Health Check
 * The status indicator near **"Settings"** title shows:
   - 🟢 **Connected**: Token valid and server reachable.
   - 🟡 **Check Status**: Token expired or unauthorized (401).
@@ -135,12 +143,12 @@ ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # App entry point, Provider setup & window_manager init
 │   └── modules/
-│       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord & WipComponentRecord
+│       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
 │       ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │       ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│       ├── constants.dart         # Global app constants & defaults (v2.6.4)
+│       ├── constants.dart         # Global app constants & defaults (v2.7.0)
 │       ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
-│       ├── logic.dart             # App state: SN queue, 3 record maps, ViewMode, SN Master resolve cache
+│       ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │       ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
 │       └── ui/
 │           ├── main_window.dart   # Tabs, filter/sort, hover chips, dialogs (WindowListener)
@@ -165,7 +173,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.6.4+11)
+├── pubspec.yaml                   # Flutter package manifest (v2.7.0+12)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -205,6 +213,7 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 {
   "token": "",
   "sns": ["SN123456", "SN789012"],
+  "traceCsns": ["OPM1106349G1CCX", "QB940AE002627V05171"],
   "lang": "en",
   "operationId": "1826874274766209025",
   "uuid": "e1d5e78c-bf60-4aba-9b5f-a94b15cb63d4",
@@ -219,11 +228,11 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.7.0]** — New **Component Trace** view: reverse-lookup a component's own CSN to the product SN it's installed into, with its own persisted sidebar history, search/sort, and CSV template/import/export — sharing the SN queue's add/search input box instead of adding a second one.
 - **[2.6.4]** — SN Master resolution now captures its full API response (next process, error code, route, line code); a "Next" chip surfaces the next process on the records header, whose SN label now auto-scrolls instead of truncating when space is tight.
 - **[2.6.3]** — Chrome and Edge now use persistent, browser-specific profiles with legacy-profile migration and bounded CDP readiness checks to prevent login hangs.
 - **[2.6.2]** — Settings reorganized into Advanced Settings, User Guide, and About tabs; the dialog now adapts its height to the selected tab.
 - **[2.6.1]** — Fixed Verify Connection feedback being invisible behind the Settings dialog's modal barrier; the icon now animates a check/cross result directly instead of relying on a hidden SnackBar.
-- **[2.6.0]** — Adjustable Glassmorphism Advanced Settings (4 live-preview blur/opacity sliders), Sort dropdown rebuilt with real `BackdropFilter` blur, Settings dialog live-preview, and a built-in legibility floor to prevent text-overlap glitches.
 
 See [**CHANGELOG.md**](CHANGELOG.md) for the full version history.
 
