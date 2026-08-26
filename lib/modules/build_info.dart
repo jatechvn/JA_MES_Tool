@@ -13,18 +13,46 @@ class BuildInfo {
   static String _generateBuildTimestamp() {
     try {
       final exeFile = File(Platform.resolvedExecutable);
-      final appSoFile = File(
-        '${exeFile.parent.path}${Platform.pathSeparator}data${Platform.pathSeparator}app.so',
-      );
-      final targetFile = appSoFile.existsSync() ? appSoFile : exeFile;
+      final exeDir = exeFile.parent.path;
+      final sep = Platform.pathSeparator;
 
-      if (targetFile.existsSync()) {
-        final modified = targetFile.lastModifiedSync();
-        return '${modified.year}-${modified.month.toString().padLeft(2, '0')}-${modified.day.toString().padLeft(2, '0')} '
-            '${modified.hour.toString().padLeft(2, '0')}:${modified.minute.toString().padLeft(2, '0')}:${modified.second.toString().padLeft(2, '0')}';
+      // 1. Primary target: data/app.so next to executable
+      final appSoFile = File('$exeDir${sep}data${sep}app.so');
+      if (appSoFile.existsSync()) {
+        return _formatDateTime(appSoFile.lastModifiedSync());
+      }
+
+      // 2. Secondary target: app.so in current build directories
+      final buildPaths = [
+        'build${sep}windows${sep}x64${sep}runner${sep}Debug${sep}data${sep}app.so',
+        'build${sep}windows${sep}x64${sep}runner${sep}Release${sep}data${sep}app.so',
+        'build${sep}windows${sep}runner${sep}Debug${sep}data${sep}app.so',
+        'build${sep}windows${sep}runner${sep}Release${sep}data${sep}app.so',
+        'dist${sep}data${sep}app.so',
+      ];
+      for (final p in buildPaths) {
+        final f = File(p);
+        if (f.existsSync()) {
+          return _formatDateTime(f.lastModifiedSync());
+        }
+      }
+
+      // 3. Executable itself
+      if (exeFile.existsSync()) {
+        return _formatDateTime(exeFile.lastModifiedSync());
       }
     } catch (_) {}
-    return DateTime.now().toString().split('.')[0];
+    return _formatDateTime(DateTime.now());
+  }
+
+  static String _formatDateTime(DateTime dt) {
+    final y = dt.year;
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    final h = dt.hour.toString().padLeft(2, '0');
+    final min = dt.minute.toString().padLeft(2, '0');
+    final s = dt.second.toString().padLeft(2, '0');
+    return '$y-$m-$d $h:$min:$s';
   }
 
   static bool get isDebug => kDebugMode || isCliDebug;

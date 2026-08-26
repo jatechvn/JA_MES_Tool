@@ -5,6 +5,23 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-08-26
+
+### 🎨 Major UI/UX Overhaul & Bento Glassmorphism Architecture
+- **🌟 Bento Glassmorphism & Liquid Glass Engine**: Complete modern visual upgrade matching the latest `flutter_ui_template` framework. Features floating Bento Cards with 1px top highlight reflective edges, 20-24px BackdropFilter blur, and ambient drifting Mesh Orbs composited on GPU.
+- **✨ Un-nested Floating Glass Architecture**: Completely resolved the opaque double-nesting issue where stacked Bento Cards created solid white boxes. All cards now float as independent translucent surfaces over the animated background.
+- **🎛️ Live-Preview 4-Slider Glassmorphism Controls**: Added 4 interactive tuning sliders in Settings (Card Blur `0-40px`, Card Opacity `5-100%`, Dialog Blur `0-40px`, Dialog Opacity `10-100%`) with real-time live preview feedback across all UI surfaces, a Default reset button, and Cancel rollback.
+- **🌓 1-Click Direct Theme Switcher**: Refactored `toggleTheme()` to seamlessly switch between Light and Dark mode on every click without redundant intermediate cycles.
+- **⏱️ Accurate Build Timestamp Reader**: Enhanced `BuildInfo` to read last-modified date/time from compiled `data/app.so` and executable, displayed directly under the header version tag and in the About modal tab.
+- **🛡️ Multi-Theme Windows Token Sets**: Fine-tuned `styles_win10.dart` (Aero) and `styles_win11.dart` (Acrylic/Mica) with ideal ~20-25% card opacity and vibrant 0.20-0.25 mesh orb blending.
+
+### 🐛 Bug Fixes
+- **🎛️ First-run glassmorphism defaults now match "Default"**: `AppLogic._init()`'s config-fallback values previously used the old pre-redesign numbers (10.0/0.6/12.0/0.75) instead of the new ones (20.0/0.25/20.0/0.85), so a fresh install (or any pre-2.8.0 `config.json`) rendered a different glass look than clicking Settings → Default — and saving once silently locked the mismatch into `config.json`.
+- **🛡️ Crash risk on closing a dialog mid-CDP-sync**: The Settings and Token-Expired-warning dialogs' "Sync Credentials" buttons called `setDialogState()` right after an `await BrowserHelper.fetchCredentialsFromBrowser()` without checking `context.mounted` first — closing the dialog while the browser fetch was still in flight could throw `setState() called after dispose()`. Both call sites now check `context.mounted` immediately after the `await`, before touching dialog state.
+- **🌓 Theme now follows Windows light/dark changes live**: `ThemeProvider` computed `isDark` from the OS brightness in `'system'` mode but never observed platform brightness changes, so switching Windows' theme while the app was open left the UI stale until an unrelated rebuild happened to occur. It now implements `WidgetsBindingObserver` and calls `notifyListeners()` on `didChangePlatformBrightness()` while in `'system'` mode.
+
+---
+
 ## [2.7.0] - 2026-08-22
 
 ### 🚀 Major Features & Enhancements

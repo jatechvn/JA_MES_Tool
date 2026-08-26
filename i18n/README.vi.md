@@ -1,12 +1,12 @@
-# 🤖 JA MES Tool v2.7.0 - Tiếng Việt
+# 🤖 JA MES Tool v2.8.0 - Tiếng Việt
 
 <p align="center">
   <br>
-  <i><b>Ứng dụng desktop hiệu năng cao phát triển bằng Dart & Flutter giúp tự động hóa tra cứu, kiểm tra và xuất báo cáo dữ liệu kiểm thử, lịch sử công đoạn/barcode, và truy vết linh kiện BOM từ hệ thống Foxconn CloudMES.</b></i>
+  <i><b>Ứng dụng desktop hiệu năng cao phát triển bằng Dart & Flutter giúp tự động hóa tra cứu, kiểm tra và xuất báo cáo dữ liệu kiểm thử, lịch sử công đoạn/barcode, và truy vết linh kiện BOM từ hệ thống Foxconn CloudMES với giao diện Bento Glassmorphism.</b></i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.7.0-blue.svg" alt="Phiên bản 2.7.0">
+  <img src="https://img.shields.io/badge/phien_ban-2.8.0-blue.svg" alt="Phiên bản 2.8.0">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -23,25 +23,19 @@
 
 **JA MES Tool** là phần mềm chuyên dụng được thiết kế nhằm tối ưu hóa quy trình kiểm tra số Serial Number (SN), trích xuất lịch sử test/công đoạn, truy vết linh kiện BOM và xuất báo cáo từ nền tảng API **Foxconn CloudMES**.
 
-Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc trên 3 chế độ xem dữ liệu theo SN cộng thêm chế độ tra cứu ngược Component Trace, tự động đồng bộ Token qua trình duyệt (CDP Interception), và giao diện hiện đại với tìm kiếm & sắp xếp kiểu Excel.
+Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc trên 3 chế độ xem dữ liệu theo SN cộng thêm chế độ tra cứu ngược Component Trace, tự động đồng bộ Token qua trình duyệt (CDP Interception), cùng giao diện Bento Glassmorphism, Liquid Glass, Dynamic Island status capsule và tìm kiếm & sắp xếp kiểu Excel.
 
 ---
 
-## 💡 Tính năng nổi bật (v2.7.0)
+## 💡 Tính năng nổi bật (v2.8.0)
 
-### 📊 Chế độ xem dữ liệu
-- 🗂️ **3 chế độ xem theo SN**: Chuyển đổi giữa **Kết quả Test** (Pass/Fail), **Lịch sử Barcode** (toàn bộ lộ trình công đoạn/trạm), và **Danh sách Linh kiện** (truy vết BOM/vật tư — nhà sản xuất, mã hãng, mã ngày SX, mã lô/gói) cho mỗi SN.
-- 🧭 **Component Trace (tra cứu ngược)**: Chế độ xem thứ 4 cho chiều ngược lại — quét hoặc nhập chính SN của linh kiện (`report/queryInfoList`) để biết nó đang lắp trong sản phẩm nào, kèm đầy đủ chi tiết truy vết vật tư. Có lịch sử CSN đã tra riêng ở sidebar (được lưu lại kể cả khi tắt/mở lại app, giống hàng đợi SN), dùng chung ô nhập/thêm với hàng đợi SN — placeholder, icon và hành vi của ô này tự đổi theo tab đang chọn thay vì phải có ô riêng.
-- 🔗 **Tự động phân giải SN chính tắc**: Nhập SN nội bộ sẽ tự động quy đổi sang SN sản phẩm chính tắc (`snMaster/getSnMasterProcess`) trước khi tra cứu cả 3 chế độ xem — tiêu đề hiển thị `SN nhập → SN chính tắc` khi 2 giá trị khác nhau (tự cuộn nếu không đủ chỗ hiển thị), kèm **chip "Next"** hiện công đoạn kế tiếp của SN nếu có. Có cache theo phiên và tự động fallback nếu phân giải lỗi.
-- 🔍 **Tìm kiếm kiểu Excel**: Ô tìm kiếm trực tiếp trên mỗi danh sách — kể cả Component Trace — khớp mọi trường dữ liệu khi bạn gõ.
-- ⬍ **Sắp xếp theo trường**: Nút Sắp xếp cho phép chọn trường và đảo chiều tăng/giảm, áp dụng cho cả 4 chế độ xem — mỗi trường có icon riêng, trường đang chọn hiển thị dạng pill bo góc màu nhấn, khớp phong cách chọn lựa của tab/sidebar.
-- 📋 **Chọn & Copy dữ liệu**: Mọi giá trị bản ghi — kể cả danh sách SN ở sidebar — đều có thể bôi đen (kéo chuột hoặc double-click) và copy (Ctrl+C) như bảng tính.
-- 🔄 **Làm mới riêng từng SN & Làm mới tất cả**: Mỗi SN trong hàng đợi có icon làm mới riêng để tra cứu lại đúng SN đó (cả 3 chế độ xem + phân giải SN chính tắc), cộng thêm nút "Làm mới tất cả" ở đầu sidebar để tra cứu lại toàn bộ hàng đợi — không cần tắt mở lại app.
-- 🔢 **Số lượng bản ghi thông minh**: "Bản ghi của SN" tự động hiện số lượng `(N)`, ẩn đi khi chỉ có 0 hoặc 1 bản ghi.
-
-### 🎨 Giao diện
-- ✨ **Hiệu ứng chuyển tiếp mượt mà kiểu iOS**: Chuyển tab/SN có animation fade+slide, danh sách bản ghi xuất hiện theo hiệu ứng cascade kèm cuộn có độ nảy, hộp thoại scale+fade khi mở, item chọn trong sidebar và badge số lượng có animation mượt, đổi theme sáng/tối crossfade màu nền — tất cả dùng chung cấu hình timing/easing (`lib/modules/ui/motion.dart`).
-- 🏝️ **Thanh công cụ Hover kiểu Dynamic Island**: 3 tab chế độ xem và các nút Tải Mẫu/Nhập/Xuất/Ngôn ngữ/Giao diện thu gọn thành icon, tự mở rộng thành chữ khi hover — tránh tràn giao diện. Khi cửa sổ ở chế độ maximize, tất cả tự động hiện đầy đủ chữ.
+### 🎨 Giao diện Bento Glassmorphism
+- 🌟 **Kiến trúc Bento Grid & Liquid Glass**: Thẻ Bento bồng bềnh với viền phản chiếu ánh sáng 1px trên đỉnh, độ mờ 20-24px BackdropFilter và nền quả cầu Mesh Orbs khuếch tán ánh sáng trên GPU.
+- 🎛️ **Bộ 4 thanh trượt Glassmorphism Live-Preview**: Tùy chỉnh trực tiếp Độ mờ khối Bento (0-40px), Độ đục khối (5-100%), Độ mờ Hộp thoại (0-40px), Độ đục Hộp thoại (10-100%) với chế độ xem trước thời gian thực, nút Mặc định và Hủy hoàn tác.
+- 🌓 **Đổi Theme 1-Click**: Chuyển đổi trực tiếp Sáng/Tối mượt mà tức thì mỗi lần nhấn.
+- ⏱️ **Đọc ngày giờ Build tự động**: Tự động trích xuất thời gian biên dịch file `data/app.so` hoặc file thực thi hiển thị tại Header và mục Giới thiệu.
+- ✨ **Hiệu ứng chuyển tiếp mượt mà kiểu iOS**: Chuyển tab/SN có animation fade+slide, danh sách bản ghi xuất hiện theo hiệu ứng cascade kèm cuộn có độ nảy, hộp thoại scale+fade khi mở.
+- 🏝️ **Dynamic Island Status Capsule**: Sóng trạng thái kết nối MES trực quan và thanh công cụ thao tác nhanh.
 - 🪟 **Glassmorphism có thể tùy chỉnh**: Cài đặt → Nâng cao có mục "Tùy chỉnh độ mờ & trong suốt" với 4 slider live-preview (Độ mờ/Trong suốt nền chính, Độ mờ/Trong suốt Dialog). Dropdown Sắp xếp và chính cửa sổ Cài đặt đều blur lại theo thời gian thực khi kéo slider — kèm sàn an toàn chống lỗi chữ chồng xuyên thấu dù chỉnh opacity thấp đến đâu.
 - 🎨 **Giao diện Đa ngôn ngữ & Solid**: Hỗ trợ Light/Dark Mode và chuyển đổi 3 ngôn ngữ (**Tiếng Việt**, **Tiếng Anh**, **Tiếng Trung**).
 
@@ -128,7 +122,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
 │       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.7.0)
+│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.8.0)
 │       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -155,7 +149,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.7.0+12)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.8.0+13)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -199,6 +193,7 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.8.0]** — **Đại tu Giao diện Bento Glassmorphism & Liquid Glass**: Nâng cấp toàn diện giao diện với thẻ Bento bồng bềnh, hiệu ứng Mesh Orbs chuyển động trên GPU, bộ 4 slider điều chỉnh độ mờ/đục kính mờ có Live Preview thời gian thực & Hủy hoàn tác, chuyển đổi Theme Sáng/Tối 1-Click và đọc ngày giờ build chính xác từ file compiled.
 - **[2.7.0]** — Thêm chế độ xem **Component Trace**: tra cứu ngược SN linh kiện để biết nó đang lắp trong sản phẩm nào, có lịch sử tra cứu riêng được lưu lại ở sidebar, tìm kiếm/sắp xếp và hỗ trợ CSV template/nhập/xuất — dùng chung ô nhập/tìm kiếm với hàng đợi SN thay vì thêm ô riêng.
 - **[2.6.4]** — SN Master giờ lấy đủ dữ liệu từ API (công đoạn kế tiếp, mã lỗi, route, mã line); chip "Next" hiện công đoạn kế tiếp trên header danh sách bản ghi, label SN tự cuộn thay vì bị cắt khi hết chỗ.
 - **[2.6.3]** — Chrome và Microsoft Edge dùng profile riêng có thể giữ lại, hỗ trợ chuyển profile cũ và kiểm tra CDP có giới hạn thời gian để tránh treo cửa sổ đăng nhập.

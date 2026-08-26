@@ -4,9 +4,9 @@ import 'package:window_manager/window_manager.dart';
 import 'modules/build_info.dart';
 import 'modules/constants.dart';
 import 'modules/logic.dart';
-import 'modules/ui/styles.dart';
 import 'modules/logger_service.dart';
 import 'modules/ui/main_window.dart';
+import 'theme/theme_provider.dart';
 
 void main(List<String> args) async {
   if (args.contains('-debug') ||
@@ -43,10 +43,10 @@ class MyApp extends StatelessWidget {
       title: '$appName v$appVersion',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
         brightness: theme.isDark ? Brightness.dark : Brightness.light,
         scaffoldBackgroundColor:
             Colors.transparent, // Required for Aero/Acrylic
-        // In a real app we'd load Outfit font here: fontFamily: 'Outfit'
       ),
       home: const MainWindow(),
     );

@@ -8,6 +8,8 @@ import '../build_info.dart';
 import '../constants.dart';
 import '../translations.dart';
 import '../browser_helper.dart';
+import '../../widgets/glass_widgets.dart';
+import '../../widgets/glass_dialog.dart';
 import 'styles.dart';
 import 'motion.dart';
 
@@ -18,8 +20,7 @@ class MainWindow extends StatefulWidget {
   State<MainWindow> createState() => _MainWindowState();
 }
 
-/// Presents a dialog with an iOS-style scale+fade transition instead of
-/// Material's default fade — drop-in replacement for [showDialog].
+/// Presents a dialog with an iOS-style scale+fade transition.
 Future<T?> _showIosDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -55,19 +56,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   bool _isMaximized = false;
 
   final _ListViewState _testRecordListState = _ListViewState();
-  final _ListViewState _barcodeListState = _ListViewState();
-  final _ListViewState _wipListState = _ListViewState();
-  final _ListViewState _traceListState = _ListViewState();
+  final _BarcodeListViewState _barcodeListState = _BarcodeListViewState();
+  final _WipListViewState _wipListState = _WipListViewState();
+  final _TraceListViewState _traceListState = _TraceListViewState();
 
-  // Tracks the glass Sort dropdown's OverlayEntry so it can be closed on
-  // selection, outside tap, tab/SN switch, or widget dispose. Anchor position
-  // is computed fresh at open-time from the button's own RenderBox (see
-  // _openSortOverlay) — no shared Key/LayerLink is involved.
   OverlayEntry? _sortOverlayEntry;
-  // Last '${viewMode}_${selectedSn}' seen in build(), used to detect a tab or
-  // SN change and close a stale, still-open Sort dropdown — otherwise its
-  // onSelect closure keeps pointing at the _ListViewState of the tab the
-  // user just left, silently re-sorting content that's no longer visible.
   String? _lastSortViewKey;
 
   @override
@@ -90,6 +83,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     _barcodeListState.filterCtrl.dispose();
     _wipListState.filterCtrl.dispose();
     _traceListState.filterCtrl.dispose();
+    _snController.dispose();
     super.dispose();
   }
 
@@ -116,12 +110,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    final colors = theme.colors;
     final logic = context.watch<AppLogic>();
 
-    // The Sort dropdown lives in the root Overlay, decoupled from the
-    // AnimatedSwitcher that owns the tab/SN view — closing it here (rather
-    // than at every tab-pill/SN-row onTap) guarantees it can never be left
-    // open and bound to a _ListViewState that's no longer the visible tab.
     final sortViewKey =
         '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}';
     if (_lastSortViewKey != null &&
@@ -143,690 +134,1073 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Row(
+      backgroundColor: colors.bgPrimary,
+      body: Stack(
         children: [
-          // Sidebar
-          AnimatedContainer(
-            duration: Motion.normal,
-            curve: Motion.curveInOut,
-            width: 300,
-            color: theme.sidebarBg,
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      Translations.get(
-                        logic.viewMode == ViewMode.componentTrace
-                            ? 'trace_history'
-                            : 'mes_queue',
-                        logic.lang,
-                      ),
-                      style: TextStyle(
-                        color: theme.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.settings,
-                            color: theme.textPrimary,
-                            size: 20,
-                          ),
-                          onPressed: () =>
-                              _showSettingsDialog(context, logic, theme),
-                          tooltip: Translations.get('settings', logic.lang),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.refresh,
-                            color: theme.textPrimary,
-                            size: 20,
-                          ),
-                          onPressed:
-                              (logic.viewMode == ViewMode.componentTrace
-                                  ? logic.traceHistory.isEmpty
-                                  : logic.snList.isEmpty)
-                              ? null
-                              : () {
-                                  if (logic.viewMode ==
-                                      ViewMode.componentTrace) {
-                                    logic.refetchAllTraceSearches();
-                                  } else {
-                                    logic.refetchAllSns();
-                                  }
-                                },
-                          tooltip: Translations.get('refresh_all', logic.lang),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.delete_sweep,
-                            color: theme.failColor,
-                            size: 20,
-                          ),
-                          onPressed:
-                              (logic.viewMode == ViewMode.componentTrace
-                                  ? logic.traceHistory.isEmpty
-                                  : logic.snList.isEmpty)
-                              ? null
-                              : () {
-                                  if (logic.viewMode ==
-                                      ViewMode.componentTrace) {
-                                    logic.clearTraceHistory();
-                                  } else {
-                                    logic.clearAllSns();
-                                  }
-                                },
-                          tooltip: Translations.get('clear_all', logic.lang),
-                        ),
-                      ],
-                    ),
+          // 1. Mesh Gradient Base Tint (Translucent)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colors.bgSecondary,
+                    colors.bgSecondary.withValues(alpha: 0.5),
+                    colors.bgSecondary.withValues(alpha: 0.2),
                   ],
                 ),
-                const SizedBox(height: 12),
-
-                // Add SN / Add Component CSN — one shared input whose
-                // behavior switches with the active tab (SN queue vs
-                // Component Trace search), instead of two separate boxes.
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _snController,
-                        style: TextStyle(
-                          color: theme.textPrimary,
-                          fontSize: 13,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: Translations.get(
-                            logic.viewMode == ViewMode.componentTrace
-                                ? 'component_trace_hint'
-                                : 'enter_sn',
-                            logic.lang,
-                          ),
-                          hintStyle: TextStyle(color: theme.textSecondary),
-                          filled: true,
-                          fillColor: theme.cardBg,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderSide: BorderSide.none,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onSubmitted: (val) {
-                          if (logic.viewMode == ViewMode.componentTrace) {
-                            logic.addTraceCsns(val);
-                          } else {
-                            logic.addSns(val);
-                          }
-                          _snController.clear();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade700,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: Icon(
-                          logic.viewMode == ViewMode.componentTrace
-                              ? Icons.search_rounded
-                              : Icons.add,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          if (logic.viewMode == ViewMode.componentTrace) {
-                            logic.addTraceCsns(_snController.text);
-                          } else {
-                            logic.addSns(_snController.text);
-                          }
-                          _snController.clear();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                const SizedBox(height: 16),
-                const Divider(color: Colors.white24),
-
-                // SN List Queue / Trace History
-                Expanded(
-                  child: logic.viewMode == ViewMode.componentTrace
-                      ? _buildTraceHistoryList(logic, theme)
-                      : logic.snList.isEmpty
-                      ? Center(
-                          child: Text(
-                            Translations.get('no_sns_in_queue', logic.lang),
-                            style: TextStyle(color: theme.textSecondary),
-                          ),
-                        )
-                      : SelectionArea(
-                          child: ListView.builder(
-                            itemCount: logic.snList.length,
-                            itemBuilder: (context, index) {
-                              final sn = logic.snList[index];
-                              final isSelected = sn == logic.selectedSn;
-                              final isLoading = logic.loadingStatus[sn] == true;
-                              final hasError = logic.errors[sn] != null;
-                              final recordCount =
-                                  logic.results[sn]?.length ?? 0;
-
-                              return InkWell(
-                                onTap: () => logic.selectSn(sn),
-                                child: AnimatedContainer(
-                                  duration: Motion.fast,
-                                  curve: Motion.curveOut,
-                                  margin: const EdgeInsets.only(bottom: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Colors.blue.withValues(alpha: 0.3)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? Colors.blue
-                                          : Colors.transparent,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          sn,
-                                          style: TextStyle(
-                                            color: hasError
-                                                ? theme.failColor
-                                                : theme.textPrimary,
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                          ),
-                                        ),
-                                      ),
-                                      if (isLoading)
-                                        const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      else if (hasError)
-                                        const Icon(
-                                          Icons.error,
-                                          color: Colors.red,
-                                          size: 16,
-                                        )
-                                      else if (logic.results.containsKey(sn))
-                                        AnimatedSwitcher(
-                                          duration: Motion.fast,
-                                          switchInCurve: Motion.curveOut,
-                                          switchOutCurve: Motion.curveIn,
-                                          transitionBuilder:
-                                              (child, animation) =>
-                                                  ScaleTransition(
-                                                    scale: animation,
-                                                    child: child,
-                                                  ),
-                                          child: Container(
-                                            key: ValueKey(recordCount),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: recordCount > 0
-                                                  ? theme.passColor
-                                                  : Colors.grey,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              recordCount.toString(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      const SizedBox(width: 4),
-                                      if (!isLoading)
-                                        InkWell(
-                                          onTap: () => logic.refreshSn(sn),
-                                          child: Icon(
-                                            Icons.refresh,
-                                            color: theme.textSecondary,
-                                            size: 16,
-                                          ),
-                                        ),
-                                      const SizedBox(width: 4),
-                                      InkWell(
-                                        onTap: () => logic.removeSn(sn),
-                                        child: Icon(
-                                          Icons.close,
-                                          color: theme.textSecondary,
-                                          size: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                ),
-              ],
+              ),
             ),
           ),
 
-          // Main Content
-          Expanded(
-            child: AnimatedContainer(
-              duration: Motion.normal,
-              curve: Motion.curveInOut,
-              color: theme.sidebarBg,
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // App Bar
-                  Row(
+          // 2. GPU Composited Floating Ambient Mesh Orbs
+          Positioned.fill(child: MeshBackground(colors: colors)),
+
+          // 3. Main Scaffold Layout: Top Header + Bento Body
+          Column(
+            children: [
+              _buildTopHeader(context, logic, theme, colors),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        Translations.get('result_details', logic.lang),
-                        style: TextStyle(
-                          color: theme.textPrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: theme.isDark
-                                  ? Colors.black87
-                                  : Colors.white70,
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
+                      // Bento Sidebar with custom live blur & opacity
+                      SizedBox(
+                        width: 320,
+                        child: BentoCard(
+                          colors: colors,
+                          blurSigma: logic.bgBlur,
+                          bgOpacity: logic.bgOpacity,
+                          padding: const EdgeInsets.all(14),
+                          child: _buildSidebarContent(
+                            context,
+                            logic,
+                            theme,
+                            colors,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      if (logic.isConnectionValid == null)
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else if (logic.isConnectionValid == true)
-                        Tooltip(
-                          message: 'Connection Valid',
-                          child: Icon(
-                            Icons.check_circle,
-                            color: theme.passColor,
-                            size: 20,
-                          ),
-                        )
-                      else
-                        Tooltip(
-                          message: logic.connectionError ?? 'Connection Error',
-                          child: Icon(
-                            Icons.error,
-                            color: theme.failColor,
-                            size: 20,
-                          ),
-                        ),
-                      if (BuildInfo.isDebug) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.amber.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Text(
-                            'DEBUG • v${BuildInfo.version} (${BuildInfo.debugTimestamp})',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber,
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(width: 16),
-                      AnimatedContainer(
-                        duration: Motion.normal,
-                        curve: Motion.curveInOut,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: theme.cardBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: theme.isDark
-                                ? Colors.white24
-                                : Colors.black12,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      const SizedBox(width: 14),
+
+                      // Main Floating Workspace Detail (Individual floating glass components)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _HoverChip(
-                              icon: Icons.fact_check_rounded,
-                              label: Translations.get(
-                                'tab_test_record',
-                                logic.lang,
+                            if (logic.globalError.isNotEmpty) ...[
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      logic.globalError.contains('successfully')
+                                      ? colors.accentEmerald.withValues(
+                                          alpha: 0.12,
+                                        )
+                                      : colors.accentRose.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                  border: Border.all(
+                                    color:
+                                        logic.globalError.contains(
+                                          'successfully',
+                                        )
+                                        ? colors.accentEmerald.withValues(
+                                            alpha: 0.4,
+                                          )
+                                        : colors.accentRose.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      logic.globalError.contains('successfully')
+                                          ? Icons.check_circle_rounded
+                                          : Icons.error_outline_rounded,
+                                      size: 18,
+                                      color:
+                                          logic.globalError.contains(
+                                            'successfully',
+                                          )
+                                          ? colors.accentEmerald
+                                          : colors.accentRose,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        logic.globalError,
+                                        style: TextStyle(
+                                          color:
+                                              logic.globalError.contains(
+                                                'successfully',
+                                              )
+                                              ? colors.accentEmerald
+                                              : colors.accentRose,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              background: logic.viewMode == ViewMode.testRecord
-                                  ? Colors.blue.shade700
-                                  : Colors.transparent,
-                              foreground: logic.viewMode == ViewMode.testRecord
-                                  ? Colors.white
-                                  : theme.textSecondary,
-                              hoverBackground: theme.isDark
-                                  ? Colors.white12
-                                  : Colors.black.withValues(alpha: 0.06),
-                              keepExpanded:
-                                  logic.viewMode == ViewMode.testRecord ||
-                                  _isMaximized,
-                              onTap: () =>
-                                  logic.setViewMode(ViewMode.testRecord),
-                            ),
-                            _HoverChip(
-                              icon: Icons.qr_code_2_rounded,
-                              label: Translations.get(
-                                'tab_barcode_history',
-                                logic.lang,
+                            ],
+                            Expanded(
+                              child: SelectionArea(
+                                child: AnimatedSwitcher(
+                                  duration: Motion.normal,
+                                  switchInCurve: Motion.curveOut,
+                                  switchOutCurve: Motion.curveIn,
+                                  transitionBuilder: (child, animation) {
+                                    final slide = Tween<Offset>(
+                                      begin: const Offset(0.02, 0),
+                                      end: Offset.zero,
+                                    ).animate(animation);
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: slide,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: KeyedSubtree(
+                                    key: ValueKey(
+                                      '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}',
+                                    ),
+                                    child: _buildDetailView(
+                                      context,
+                                      logic,
+                                      theme,
+                                      colors,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              background:
-                                  logic.viewMode == ViewMode.barcodeHistory
-                                  ? Colors.blue.shade700
-                                  : Colors.transparent,
-                              foreground:
-                                  logic.viewMode == ViewMode.barcodeHistory
-                                  ? Colors.white
-                                  : theme.textSecondary,
-                              hoverBackground: theme.isDark
-                                  ? Colors.white12
-                                  : Colors.black.withValues(alpha: 0.06),
-                              keepExpanded:
-                                  logic.viewMode == ViewMode.barcodeHistory ||
-                                  _isMaximized,
-                              onTap: () =>
-                                  logic.setViewMode(ViewMode.barcodeHistory),
-                            ),
-                            _HoverChip(
-                              icon: Icons.memory_rounded,
-                              label: Translations.get(
-                                'tab_wip_components',
-                                logic.lang,
-                              ),
-                              background:
-                                  logic.viewMode == ViewMode.wipComponents
-                                  ? Colors.blue.shade700
-                                  : Colors.transparent,
-                              foreground:
-                                  logic.viewMode == ViewMode.wipComponents
-                                  ? Colors.white
-                                  : theme.textSecondary,
-                              hoverBackground: theme.isDark
-                                  ? Colors.white12
-                                  : Colors.black.withValues(alpha: 0.06),
-                              keepExpanded:
-                                  logic.viewMode == ViewMode.wipComponents ||
-                                  _isMaximized,
-                              onTap: () =>
-                                  logic.setViewMode(ViewMode.wipComponents),
-                            ),
-                            _HoverChip(
-                              icon: Icons.travel_explore_rounded,
-                              label: Translations.get(
-                                'tab_component_trace',
-                                logic.lang,
-                              ),
-                              background:
-                                  logic.viewMode == ViewMode.componentTrace
-                                  ? Colors.blue.shade700
-                                  : Colors.transparent,
-                              foreground:
-                                  logic.viewMode == ViewMode.componentTrace
-                                  ? Colors.white
-                                  : theme.textSecondary,
-                              hoverBackground: theme.isDark
-                                  ? Colors.white12
-                                  : Colors.black.withValues(alpha: 0.06),
-                              keepExpanded:
-                                  logic.viewMode == ViewMode.componentTrace ||
-                                  _isMaximized,
-                              onTap: () =>
-                                  logic.setViewMode(ViewMode.componentTrace),
                             ),
                           ],
                         ),
-                      ),
-                      const Spacer(),
-
-                      // Template CSV — Component Trace has its own
-                      // CSN-oriented template/import/export instead of the
-                      // SN-queue ones, since it's a separate identifier
-                      // space and result shape.
-                      _HoverChip(
-                        icon: Icons.file_present_rounded,
-                        label: Translations.get('template', logic.lang),
-                        background: Colors.blueGrey.shade700,
-                        foreground: Colors.white,
-                        keepExpanded: _isMaximized,
-                        onTap: () => logic.viewMode == ViewMode.componentTrace
-                            ? logic.downloadTraceTemplateCsv()
-                            : logic.downloadTemplateCsv(),
-                      ),
-                      const SizedBox(width: 6),
-
-                      // Import CSV
-                      _HoverChip(
-                        icon: Icons.file_upload_rounded,
-                        label: Translations.get('import', logic.lang),
-                        background: Colors.orange.shade700,
-                        foreground: Colors.white,
-                        keepExpanded: _isMaximized,
-                        onTap: () => logic.viewMode == ViewMode.componentTrace
-                            ? logic.importTraceCsv()
-                            : logic.importCsv(),
-                      ),
-                      const SizedBox(width: 6),
-
-                      // Export CSV
-                      _HoverChip(
-                        icon: Icons.file_download_rounded,
-                        label: Translations.get('export', logic.lang),
-                        background: Colors.green.shade700,
-                        foreground: Colors.white,
-                        keepExpanded: _isMaximized,
-                        onTap: () => logic.viewMode == ViewMode.componentTrace
-                            ? logic.exportTraceCsv()
-                            : logic.exportCsv(),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Language Toggle
-                      _HoverChip(
-                        icon: Icons.language_rounded,
-                        label: logic.lang.toUpperCase(),
-                        background: theme.cardBg,
-                        foreground: theme.textPrimary,
-                        border: Border.all(
-                          color: theme.isDark ? Colors.white24 : Colors.black12,
-                        ),
-                        keepExpanded: _isMaximized,
-                        onTap: () => logic.cycleLanguage(),
-                      ),
-                      const SizedBox(width: 6),
-
-                      // Theme Toggle
-                      _HoverChip(
-                        icon: theme.isDark
-                            ? Icons.light_mode_rounded
-                            : Icons.dark_mode_rounded,
-                        label: Translations.get('toggle_theme', logic.lang),
-                        background: theme.cardBg,
-                        foreground: theme.isDark
-                            ? Colors.amber
-                            : Colors.indigo.shade600,
-                        border: Border.all(
-                          color: theme.isDark ? Colors.white24 : Colors.black12,
-                        ),
-                        keepExpanded: _isMaximized,
-                        onTap: () =>
-                            context.read<ThemeProvider>().toggleTheme(),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  if (logic.globalError.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: logic.globalError.contains('successfully')
-                            ? Colors.green.withValues(alpha: 0.1)
-                            : Colors.red.withValues(alpha: 0.1),
-                        border: Border.all(
-                          color: logic.globalError.contains('successfully')
-                              ? Colors.green
-                              : Colors.red.withValues(alpha: 0.3),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        logic.globalError,
-                        style: TextStyle(
-                          color: logic.globalError.contains('successfully')
-                              ? Colors.green
-                              : theme.failColor,
-                        ),
-                      ),
-                    ),
-
-                  // Detail View
-                  Expanded(
-                    child: SelectionArea(
-                      child: AnimatedSwitcher(
-                        duration: Motion.normal,
-                        switchInCurve: Motion.curveOut,
-                        switchOutCurve: Motion.curveIn,
-                        transitionBuilder: (child, animation) {
-                          final slide = Tween<Offset>(
-                            begin: const Offset(0.03, 0),
-                            end: Offset.zero,
-                          ).animate(animation);
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: slide,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: KeyedSubtree(
-                          key: ValueKey(
-                            '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}',
-                          ),
-                          child: _buildDetailView(context, logic, theme),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  /// Top Modern Bento Header Bar
+  Widget _buildTopHeader(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+    AppColors colors,
+  ) {
+    int currentTabIndex = 0;
+    switch (logic.viewMode) {
+      case ViewMode.testRecord:
+        currentTabIndex = 0;
+        break;
+      case ViewMode.barcodeHistory:
+        currentTabIndex = 1;
+        break;
+      case ViewMode.wipComponents:
+        currentTabIndex = 2;
+        break;
+      case ViewMode.componentTrace:
+        currentTabIndex = 3;
+        break;
+    }
+
+    final isConnValid = logic.isConnectionValid == true;
+    final isConnError = logic.isConnectionValid == false;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: colors.headerBg,
+        border: Border(
+          bottom: BorderSide(color: colors.headerBorder, width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Brand Logo + Title + Version Tag
+          InkWell(
+            onTap: () => logic.setViewMode(ViewMode.testRecord),
+            borderRadius: BorderRadius.circular(10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [colors.accentColor, colors.accentCyan],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.primaryGlow.withValues(alpha: 0.4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'JA',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13.5,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          appName,
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        if (BuildInfo.isDebug) ...[
+                          const SizedBox(width: 6),
+                          PillBadge(
+                            label: 'DEBUG',
+                            color: colors.accentAmber,
+                            bg: colors.accentAmber.withValues(alpha: 0.15),
+                            border: colors.accentAmber.withValues(alpha: 0.4),
+                            icon: Icons.bug_report_rounded,
+                            fontSize: 9.5,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      BuildInfo.isDebug
+                          ? 'v$appVersion (${BuildInfo.debugTimestamp})'
+                          : 'v$appVersion',
+                      style: TextStyle(
+                        color: colors.textMuted,
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Sliding Pill Tab Bar (Centered 4 Tabs)
+          Expanded(
+            child: Center(
+              child: SlidingPillTabBar(
+                colors: colors,
+                currentIndex: currentTabIndex,
+                tabs: [
+                  Translations.get('tab_test_record', logic.lang),
+                  Translations.get('tab_barcode_history', logic.lang),
+                  Translations.get('tab_wip_components', logic.lang),
+                  Translations.get('tab_component_trace', logic.lang),
+                ],
+                icons: const [
+                  Icons.fact_check_rounded,
+                  Icons.qr_code_2_rounded,
+                  Icons.memory_rounded,
+                  Icons.travel_explore_rounded,
+                ],
+                onTabSelected: (index) {
+                  switch (index) {
+                    case 0:
+                      logic.setViewMode(ViewMode.testRecord);
+                      break;
+                    case 1:
+                      logic.setViewMode(ViewMode.barcodeHistory);
+                      break;
+                    case 2:
+                      logic.setViewMode(ViewMode.wipComponents);
+                      break;
+                    case 3:
+                      logic.setViewMode(ViewMode.componentTrace);
+                      break;
+                  }
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          // Dynamic Island Status Capsule (Live MES state)
+          DynamicIslandCapsule(
+            colors: colors,
+            isRunning: isConnValid,
+            statusText: isConnValid
+                ? 'LIVE • MES OK'
+                : (isConnError ? 'TOKEN EXPIRED' : 'CONNECTING...'),
+            subText: logic.viewMode == ViewMode.componentTrace
+                ? '${logic.traceHistory.length} csn'
+                : '${logic.snList.length} sn',
+            customColor: isConnValid
+                ? colors.accentEmerald
+                : (isConnError ? colors.accentRose : colors.accentAmber),
+            onTap: () => _showSettingsDialog(context, logic, theme),
+          ),
+
+          const SizedBox(width: 10),
+
+          // Template CSV button
+          _HoverChip(
+            icon: Icons.file_present_rounded,
+            label: Translations.get('template', logic.lang),
+            background: colors.subCardBg,
+            foreground: colors.textSecondary,
+            border: Border.all(color: colors.subCardBorder),
+            hoverBackground: colors.accentColor.withValues(alpha: 0.15),
+            keepExpanded: _isMaximized,
+            onTap: () => logic.viewMode == ViewMode.componentTrace
+                ? logic.downloadTraceTemplateCsv()
+                : logic.downloadTemplateCsv(),
+          ),
+
+          const SizedBox(width: 4),
+
+          // Import CSV button
+          _HoverChip(
+            icon: Icons.file_upload_rounded,
+            label: Translations.get('import', logic.lang),
+            background: colors.subCardBg,
+            foreground: colors.accentAmber,
+            border: Border.all(color: colors.subCardBorder),
+            hoverBackground: colors.accentAmber.withValues(alpha: 0.15),
+            keepExpanded: _isMaximized,
+            onTap: () => logic.viewMode == ViewMode.componentTrace
+                ? logic.importTraceCsv()
+                : logic.importCsv(),
+          ),
+
+          const SizedBox(width: 4),
+
+          // Export CSV button
+          _HoverChip(
+            icon: Icons.file_download_rounded,
+            label: Translations.get('export', logic.lang),
+            background: colors.subCardBg,
+            foreground: colors.accentEmerald,
+            border: Border.all(color: colors.subCardBorder),
+            hoverBackground: colors.accentEmerald.withValues(alpha: 0.15),
+            keepExpanded: _isMaximized,
+            onTap: () => logic.viewMode == ViewMode.componentTrace
+                ? logic.exportTraceCsv()
+                : logic.exportCsv(),
+          ),
+
+          const SizedBox(width: 6),
+
+          // Language Cycle Toggle
+          _HoverChip(
+            icon: Icons.language_rounded,
+            label: logic.lang.toUpperCase(),
+            background: colors.subCardBg,
+            foreground: colors.textPrimary,
+            border: Border.all(color: colors.subCardBorder),
+            keepExpanded: _isMaximized,
+            onTap: () => logic.cycleLanguage(),
+          ),
+
+          const SizedBox(width: 4),
+
+          // Theme Toggle Button
+          IconButton(
+            icon: Icon(
+              theme.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: theme.isDark ? colors.accentAmber : colors.accentPurple,
+              size: 18,
+            ),
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            splashRadius: 18,
+            onPressed: () => theme.toggleTheme(),
+            tooltip: Translations.get('toggle_theme', logic.lang),
+          ),
+
+          const SizedBox(width: 4),
+
+          // Settings Button
+          IconButton(
+            icon: Icon(
+              Icons.settings_rounded,
+              color: colors.textSecondary,
+              size: 18,
+            ),
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            splashRadius: 18,
+            onPressed: () => _showSettingsDialog(context, logic, theme),
+            tooltip: Translations.get('settings', logic.lang),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sidebar content (SN Queue or Component Trace CSN History)
+  Widget _buildSidebarContent(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+    AppColors colors,
+  ) {
+    final isTraceMode = logic.viewMode == ViewMode.componentTrace;
+    final count = isTraceMode ? logic.traceHistory.length : logic.snList.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Sidebar Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isTraceMode ? Icons.history_rounded : Icons.view_list_rounded,
+                  size: 18,
+                  color: colors.accentCyan,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  Translations.get(
+                    isTraceMode ? 'trace_history' : 'mes_queue',
+                    logic.lang,
+                  ),
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                PillBadge(
+                  label: '$count',
+                  color: colors.accentCyan,
+                  bg: colors.accentCyan.withValues(alpha: 0.12),
+                  border: colors.accentCyan.withValues(alpha: 0.3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  fontSize: 10,
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: Icon(
+                    Icons.refresh_rounded,
+                    color: colors.textSecondary,
+                    size: 18,
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(),
+                  splashRadius: 16,
+                  onPressed: count == 0
+                      ? null
+                      : () {
+                          if (isTraceMode) {
+                            logic.refetchAllTraceSearches();
+                          } else {
+                            logic.refetchAllSns();
+                          }
+                        },
+                  tooltip: Translations.get('refresh_all', logic.lang),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_sweep_rounded,
+                    color: colors.accentRose,
+                    size: 18,
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(),
+                  splashRadius: 16,
+                  onPressed: count == 0
+                      ? null
+                      : () {
+                          if (isTraceMode) {
+                            logic.clearTraceHistory();
+                          } else {
+                            logic.clearAllSns();
+                          }
+                        },
+                  tooltip: Translations.get('clear_all', logic.lang),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Shared Pill-Shaped Input Field
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+          decoration: BoxDecoration(
+            color: colors.subCardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.subCardBorder),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 8),
+              Icon(
+                isTraceMode
+                    ? Icons.search_rounded
+                    : Icons.qr_code_scanner_rounded,
+                size: 16,
+                color: colors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _snController,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 12.5,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: Translations.get(
+                      isTraceMode ? 'component_trace_hint' : 'enter_sn',
+                      logic.lang,
+                    ),
+                    hintStyle: TextStyle(
+                      color: colors.textMuted,
+                      fontSize: 11.5,
+                    ),
+                    filled: false,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onSubmitted: (val) {
+                    if (isTraceMode) {
+                      logic.addTraceCsns(val);
+                    } else {
+                      logic.addSns(val);
+                    }
+                    _snController.clear();
+                  },
+                ),
+              ),
+              Container(
+                height: 30,
+                width: 30,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [colors.accentColor, colors.accentCyan],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    isTraceMode ? Icons.search_rounded : Icons.add_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  onPressed: () {
+                    if (isTraceMode) {
+                      logic.addTraceCsns(_snController.text);
+                    } else {
+                      logic.addSns(_snController.text);
+                    }
+                    _snController.clear();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Divider(color: colors.borderDefault, height: 1),
+        const SizedBox(height: 8),
+
+        // Scrollable Queue Items
+        Expanded(
+          child: isTraceMode
+              ? _buildTraceHistoryList(logic, theme, colors)
+              : _buildSnQueueList(logic, theme, colors),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSnQueueList(
+    AppLogic logic,
+    ThemeProvider theme,
+    AppColors colors,
+  ) {
+    if (logic.snList.isEmpty) {
+      return Center(
+        child: Text(
+          Translations.get('no_sns_in_queue', logic.lang),
+          style: TextStyle(color: colors.textMuted, fontSize: 12),
+        ),
+      );
+    }
+
+    return SelectionArea(
+      child: ListView.separated(
+        physics: const BouncingScrollPhysics(),
+        itemCount: logic.snList.length,
+        separatorBuilder: (ctx, idx) => const SizedBox(height: 6),
+        itemBuilder: (context, index) {
+          final sn = logic.snList[index];
+          final isSelected = sn == logic.selectedSn;
+          final isLoading = logic.loadingStatus[sn] == true;
+          final hasError = logic.errors[sn] != null;
+          final recordCount = logic.results[sn]?.length ?? 0;
+
+          return InkWell(
+            onTap: () => logic.selectSn(sn),
+            borderRadius: BorderRadius.circular(10),
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              curve: Motion.curveOut,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? colors.accentColor.withValues(alpha: 0.18)
+                    : colors.subCardBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? colors.accentColor : colors.subCardBorder,
+                  width: isSelected ? 1.2 : 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: colors.primaryGlow.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.tag_rounded,
+                    size: 14,
+                    color: isSelected ? colors.accentCyan : colors.textMuted,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      sn,
+                      style: TextStyle(
+                        color: hasError
+                            ? colors.accentRose
+                            : (isSelected
+                                  ? colors.textPrimary
+                                  : colors.textSecondary),
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  if (isLoading) ...[
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.accentCyan,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ] else if (hasError) ...[
+                    Icon(
+                      Icons.error_rounded,
+                      color: colors.accentRose,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                  ] else if (logic.results.containsKey(sn)) ...[
+                    AnimatedSwitcher(
+                      duration: Motion.fast,
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: PillBadge(
+                        key: ValueKey(recordCount),
+                        label: '$recordCount',
+                        color: recordCount > 0
+                            ? colors.accentEmerald
+                            : colors.textMuted,
+                        bg: recordCount > 0
+                            ? colors.accentEmerald.withValues(alpha: 0.15)
+                            : colors.subCardBg,
+                        border: recordCount > 0
+                            ? colors.accentEmerald.withValues(alpha: 0.4)
+                            : colors.subCardBorder,
+                        fontSize: 9.5,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  if (!isLoading) ...[
+                    InkWell(
+                      onTap: () => logic.refreshSn(sn),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.refresh_rounded,
+                          color: colors.textMuted,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  InkWell(
+                    onTap: () => logic.removeSn(sn),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: colors.textMuted,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTraceHistoryList(
+    AppLogic logic,
+    ThemeProvider theme,
+    AppColors colors,
+  ) {
+    if (logic.traceHistory.isEmpty) {
+      return Center(
+        child: Text(
+          Translations.get('no_trace_history', logic.lang),
+          style: TextStyle(color: colors.textMuted, fontSize: 12),
+        ),
+      );
+    }
+
+    return SelectionArea(
+      child: ListView.separated(
+        physics: const BouncingScrollPhysics(),
+        itemCount: logic.traceHistory.length,
+        separatorBuilder: (ctx, idx) => const SizedBox(height: 6),
+        itemBuilder: (context, index) {
+          final csn = logic.traceHistory[index];
+          final isSelected = csn == logic.selectedTraceCsn;
+          final isLoading = logic.traceLoadingStatus[csn] == true;
+          final hasError = logic.traceErrors[csn] != null;
+          final recordCount = logic.traceResults[csn]?.length ?? 0;
+
+          return InkWell(
+            onTap: () => logic.selectTraceCsn(csn),
+            borderRadius: BorderRadius.circular(10),
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              curve: Motion.curveOut,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? colors.accentColor.withValues(alpha: 0.18)
+                    : colors.subCardBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isSelected ? colors.accentColor : colors.subCardBorder,
+                  width: isSelected ? 1.2 : 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: colors.primaryGlow.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.memory_rounded,
+                    size: 14,
+                    color: isSelected ? colors.accentCyan : colors.textMuted,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      csn,
+                      style: TextStyle(
+                        color: hasError
+                            ? colors.accentRose
+                            : (isSelected
+                                  ? colors.textPrimary
+                                  : colors.textSecondary),
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  if (isLoading) ...[
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.accentCyan,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ] else if (hasError) ...[
+                    Icon(
+                      Icons.error_rounded,
+                      color: colors.accentRose,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                  ] else if (logic.traceResults.containsKey(csn)) ...[
+                    AnimatedSwitcher(
+                      duration: Motion.fast,
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: PillBadge(
+                        key: ValueKey(recordCount),
+                        label: '$recordCount',
+                        color: recordCount > 0
+                            ? colors.accentEmerald
+                            : colors.textMuted,
+                        bg: recordCount > 0
+                            ? colors.accentEmerald.withValues(alpha: 0.15)
+                            : colors.subCardBg,
+                        border: recordCount > 0
+                            ? colors.accentEmerald.withValues(alpha: 0.4)
+                            : colors.subCardBorder,
+                        fontSize: 9.5,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  if (!isLoading) ...[
+                    InkWell(
+                      onTap: () => logic.refreshTraceCsn(csn),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.refresh_rounded,
+                          color: colors.textMuted,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  InkWell(
+                    onTap: () => logic.removeTraceCsn(csn),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: colors.textMuted,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Detail Workspace View Router
   Widget _buildDetailView(
     BuildContext context,
     AppLogic logic,
     ThemeProvider theme,
+    AppColors colors,
   ) {
     if (logic.viewMode == ViewMode.componentTrace) {
-      return _buildComponentTraceView(context, logic, theme);
+      return _buildComponentTraceView(context, logic, theme, colors);
     }
 
     if (logic.selectedSn.isEmpty) {
       return Center(
-        child: Text(
-          Translations.get('select_sn', logic.lang),
-          style: TextStyle(color: theme.textSecondary),
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.touch_app_rounded, size: 36, color: colors.accentCyan),
+              const SizedBox(height: 12),
+              Text(
+                Translations.get('select_sn', logic.lang),
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (logic.viewMode == ViewMode.barcodeHistory) {
-      return _buildBarcodeHistoryView(context, logic, theme);
+      return _buildBarcodeHistoryView(context, logic, theme, colors);
     }
 
     if (logic.viewMode == ViewMode.wipComponents) {
-      return _buildWipComponentsView(context, logic, theme);
+      return _buildWipComponentsView(context, logic, theme, colors);
     }
 
+    // Default: Test Record View
+    return _buildTestRecordView(context, logic, theme, colors);
+  }
+
+  Widget _buildTestRecordView(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+    AppColors colors,
+  ) {
     final sn = logic.selectedSn;
     final isLoading = logic.loadingStatus[sn] == true;
     final error = logic.errors[sn];
     final records = logic.results[sn];
 
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: colors.accentColor),
+      );
     }
 
     if (error != null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '${Translations.get('error_for', logic.lang)} $sn: $error',
-          style: TextStyle(color: theme.failColor),
+      return Center(
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.all(20),
+          customBg: colors.accentRose.withValues(alpha: 0.12),
+          customBorder: colors.accentRose.withValues(alpha: 0.35),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: colors.accentRose,
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  '${Translations.get('error_for', logic.lang)} $sn: $error',
+                  style: TextStyle(
+                    color: colors.accentRose,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (records == null || records.isEmpty) {
       return Center(
-        child: Text(
-          '${Translations.get('no_records', logic.lang)} $sn',
-          style: TextStyle(color: theme.textSecondary),
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Text(
+            '${Translations.get('no_records', logic.lang)} $sn',
+            style: TextStyle(color: colors.textSecondary),
+          ),
         ),
       );
     }
@@ -843,6 +1217,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           sn: sn,
           count: records.length,
           theme: theme,
+          colors: colors,
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
           snMasterInfo: logic.snMasterInfo[sn],
@@ -874,156 +1249,213 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         if (displayRecords.isEmpty)
           Expanded(
             child: Center(
-              child: Text(
-                Translations.get('no_matches', logic.lang),
-                style: TextStyle(color: theme.textSecondary),
+              child: BentoCard(
+                colors: colors,
+                blurSigma: logic.bgBlur,
+                bgOpacity: logic.bgOpacity,
+                borderRadius: 14,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Text(
+                  Translations.get('no_matches', logic.lang),
+                  style: TextStyle(color: colors.textSecondary),
+                ),
               ),
             ),
           )
         else
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               itemCount: displayRecords.length,
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final isPass = record.testResult.toUpperCase() == 'PASS';
-
                 final itemKey =
                     '${record.stationId}_${record.testDate}_${record.testTime}_${record.internalSn}';
+
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
                   itemKey: itemKey,
                   animatedKeys: _testRecordListState.animatedItemKeys,
                   index: index,
-                  child: AnimatedContainer(
-                    duration: Motion.normal,
-                    curve: Motion.curveInOut,
-                    margin: const EdgeInsets.only(bottom: 12),
+                  child: BentoCard(
+                    colors: colors,
+                    blurSigma: logic.bgBlur,
+                    bgOpacity: logic.bgOpacity,
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardBg,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.borderTheme),
-                    ),
+                    borderRadius: 14,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Card Header Row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '${Translations.get('station', logic.lang)}: ${record.stationId}',
-                              style: TextStyle(
-                                color: theme.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isPass
-                                    ? theme.passColor
-                                    : theme.failColor,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                record.testResult,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: colors.accentCyan.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: colors.accentCyan.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.dns_rounded,
+                                    color: colors.accentCyan,
+                                    size: 16,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  '${Translations.get('station', logic.lang)}: ${record.stationId}',
+                                  style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            PillBadge(
+                              label: record.testResult.toUpperCase(),
+                              color: isPass
+                                  ? colors.accentEmerald
+                                  : colors.accentRose,
+                              bg: isPass
+                                  ? colors.accentEmerald.withValues(alpha: 0.12)
+                                  : colors.accentRose.withValues(alpha: 0.12),
+                              border: isPass
+                                  ? colors.accentEmerald.withValues(alpha: 0.4)
+                                  : colors.accentRose.withValues(alpha: 0.4),
+                              showDot: true,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 10),
+
+                        // Details Grid
                         _buildInfoRow(
                           Translations.get('product_no', logic.lang),
                           record.productNo,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('internal_sn', logic.lang),
                           record.internalSn,
-                          theme,
+                          colors,
                           highlight: true,
                         ),
                         _buildInfoRow(
                           Translations.get('customer_sn', logic.lang),
                           record.customerSn,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('process_code', logic.lang),
                           record.processCode,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('line_station_code', logic.lang),
                           record.lineStationCode,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('test_host', logic.lang),
                           record.loc,
-                          theme,
+                          colors,
                           highlight: true,
                         ),
                         _buildInfoRow(
                           Translations.get('product_series', logic.lang),
                           record.productSeries,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('work_order', logic.lang),
                           record.woNo,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('test_date', logic.lang),
                           record.testDate,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('test_time', logic.lang),
                           record.testTime,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('emp_no', logic.lang),
                           record.empNo,
-                          theme,
+                          colors,
                         ),
+
                         if (!isPass) ...[
-                          if (record.errCode.isNotEmpty)
-                            _buildInfoRow(
-                              Translations.get('error_code', logic.lang),
-                              record.errCode,
-                              theme,
-                            ),
-                          if (record.failureReason.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                '${Translations.get('failure_reason', logic.lang)}: ${record.failureReason}',
-                                style: TextStyle(color: theme.failColor),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: colors.accentRose.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colors.accentRose.withValues(
+                                  alpha: 0.25,
+                                ),
                               ),
                             ),
-                          if (record.failDesc.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                '${Translations.get('fail_desc', logic.lang)}: ${record.failDesc}',
-                                style: TextStyle(color: theme.failColor),
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (record.errCode.isNotEmpty)
+                                  _buildInfoRow(
+                                    Translations.get('error_code', logic.lang),
+                                    record.errCode,
+                                    colors,
+                                  ),
+                                if (record.failureReason.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4.0),
+                                    child: Text(
+                                      '${Translations.get('failure_reason', logic.lang)}: ${record.failureReason}',
+                                      style: TextStyle(
+                                        color: colors.accentRose,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                if (record.failDesc.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2.0),
+                                    child: Text(
+                                      '${Translations.get('fail_desc', logic.lang)}: ${record.failDesc}',
+                                      style: TextStyle(
+                                        color: colors.accentRose,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
+                          ),
                         ],
                       ],
                     ),
@@ -1040,6 +1472,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     BuildContext context,
     AppLogic logic,
     ThemeProvider theme,
+    AppColors colors,
   ) {
     final sn = logic.selectedSn;
     final isLoading = logic.processLoadingStatus[sn] == true;
@@ -1047,29 +1480,44 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     final records = logic.processResults[sn];
 
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: colors.accentColor),
+      );
     }
 
     if (error != null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '${Translations.get('error_for', logic.lang)} $sn: $error',
-          style: TextStyle(color: theme.failColor),
+      return Center(
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.all(20),
+          customBg: colors.accentRose.withValues(alpha: 0.12),
+          customBorder: colors.accentRose.withValues(alpha: 0.35),
+          child: Text(
+            '${Translations.get('error_for', logic.lang)} $sn: $error',
+            style: TextStyle(
+              color: colors.accentRose,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       );
     }
 
     if (records == null || records.isEmpty) {
       return Center(
-        child: Text(
-          '${Translations.get('no_records', logic.lang)} $sn',
-          style: TextStyle(color: theme.textSecondary),
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Text(
+            '${Translations.get('no_records', logic.lang)} $sn',
+            style: TextStyle(color: colors.textSecondary),
+          ),
         ),
       );
     }
@@ -1086,6 +1534,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           sn: sn,
           count: records.length,
           theme: theme,
+          colors: colors,
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
           snMasterInfo: logic.snMasterInfo[sn],
@@ -1117,129 +1566,163 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         if (displayRecords.isEmpty)
           Expanded(
             child: Center(
-              child: Text(
-                Translations.get('no_matches', logic.lang),
-                style: TextStyle(color: theme.textSecondary),
+              child: BentoCard(
+                colors: colors,
+                blurSigma: logic.bgBlur,
+                bgOpacity: logic.bgOpacity,
+                borderRadius: 14,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Text(
+                  Translations.get('no_matches', logic.lang),
+                  style: TextStyle(color: colors.textSecondary),
+                ),
               ),
             ),
           )
         else
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               itemCount: displayRecords.length,
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final isPass = record.result.toLowerCase() == 'pass';
-
                 final itemKey =
                     '${record.currentProcessCode}_${record.operateDt}_${record.lineStation}';
+
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
                   itemKey: itemKey,
                   animatedKeys: _barcodeListState.animatedItemKeys,
                   index: index,
-                  child: AnimatedContainer(
-                    duration: Motion.normal,
-                    curve: Motion.curveInOut,
-                    margin: const EdgeInsets.only(bottom: 12),
+                  child: BentoCard(
+                    colors: colors,
+                    blurSigma: logic.bgBlur,
+                    bgOpacity: logic.bgOpacity,
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardBg,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.borderTheme),
-                    ),
+                    borderRadius: 14,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Text(
-                                record.currentProcessName.isNotEmpty
-                                    ? record.currentProcessName
-                                    : record.currentProcessCode,
-                                style: TextStyle(
-                                  color: theme.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            if (record.result.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isPass
-                                      ? theme.passColor
-                                      : theme.failColor,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Text(
-                                  record.result.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: colors.accentPurple.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: colors.accentPurple.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.route_rounded,
+                                    color: colors.accentPurple,
+                                    size: 16,
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  record.currentProcessName.isNotEmpty
+                                      ? record.currentProcessName
+                                      : record.currentProcessCode,
+                                  style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (record.result.isNotEmpty)
+                              PillBadge(
+                                label: record.result.toUpperCase(),
+                                color: isPass
+                                    ? colors.accentEmerald
+                                    : colors.accentRose,
+                                bg: isPass
+                                    ? colors.accentEmerald.withValues(
+                                        alpha: 0.12,
+                                      )
+                                    : colors.accentRose.withValues(alpha: 0.12),
+                                border: isPass
+                                    ? colors.accentEmerald.withValues(
+                                        alpha: 0.4,
+                                      )
+                                    : colors.accentRose.withValues(alpha: 0.4),
+                                showDot: true,
                               ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 10),
+
                         _buildInfoRow(
                           Translations.get('process_time', logic.lang),
                           record.operateDt,
-                          theme,
+                          colors,
                           highlight: true,
                         ),
                         _buildInfoRow(
                           Translations.get('line_station_code', logic.lang),
                           record.lineStation,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('work_order', logic.lang),
                           record.woNo,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('product_no', logic.lang),
                           record.productNo,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('customer_sn', logic.lang),
                           record.customerSn,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('operator', logic.lang),
                           record.operatorName,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('equipment', logic.lang),
                           record.eqpId,
-                          theme,
+                          colors,
                         ),
                         if (record.errorCode.isNotEmpty)
                           _buildInfoRow(
                             Translations.get('error_code', logic.lang),
                             record.errorCode,
-                            theme,
+                            colors,
                           ),
                         if (record.testResultMsg.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
+                            padding: const EdgeInsets.only(top: 6.0),
                             child: Text(
                               '${Translations.get('failure_reason', logic.lang)}: ${record.testResultMsg}',
-                              style: TextStyle(color: theme.failColor),
+                              style: TextStyle(
+                                color: colors.accentRose,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                       ],
@@ -1257,6 +1740,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     BuildContext context,
     AppLogic logic,
     ThemeProvider theme,
+    AppColors colors,
   ) {
     final sn = logic.selectedSn;
     final isLoading = logic.wipLoadingStatus[sn] == true;
@@ -1264,29 +1748,44 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     final records = logic.wipResults[sn];
 
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: colors.accentColor),
+      );
     }
 
     if (error != null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '${Translations.get('error_for', logic.lang)} $sn: $error',
-          style: TextStyle(color: theme.failColor),
+      return Center(
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.all(20),
+          customBg: colors.accentRose.withValues(alpha: 0.12),
+          customBorder: colors.accentRose.withValues(alpha: 0.35),
+          child: Text(
+            '${Translations.get('error_for', logic.lang)} $sn: $error',
+            style: TextStyle(
+              color: colors.accentRose,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       );
     }
 
     if (records == null || records.isEmpty) {
       return Center(
-        child: Text(
-          '${Translations.get('no_records', logic.lang)} $sn',
-          style: TextStyle(color: theme.textSecondary),
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Text(
+            '${Translations.get('no_records', logic.lang)} $sn',
+            style: TextStyle(color: colors.textSecondary),
+          ),
         ),
       );
     }
@@ -1300,6 +1799,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           sn: sn,
           count: records.length,
           theme: theme,
+          colors: colors,
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
           snMasterInfo: logic.snMasterInfo[sn],
@@ -1331,121 +1831,145 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         if (displayRecords.isEmpty)
           Expanded(
             child: Center(
-              child: Text(
-                Translations.get('no_matches', logic.lang),
-                style: TextStyle(color: theme.textSecondary),
+              child: BentoCard(
+                colors: colors,
+                blurSigma: logic.bgBlur,
+                bgOpacity: logic.bgOpacity,
+                borderRadius: 14,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Text(
+                  Translations.get('no_matches', logic.lang),
+                  style: TextStyle(color: colors.textSecondary),
+                ),
               ),
             ),
           )
         else
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               itemCount: displayRecords.length,
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
-
                 final itemKey =
                     '${record.materialNo}_${record.scannedCsn}_${record.createdDt}';
+
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
                   itemKey: itemKey,
                   animatedKeys: _wipListState.animatedItemKeys,
                   index: index,
-                  child: AnimatedContainer(
-                    duration: Motion.normal,
-                    curve: Motion.curveInOut,
-                    margin: const EdgeInsets.only(bottom: 12),
+                  child: BentoCard(
+                    colors: colors,
+                    blurSigma: logic.bgBlur,
+                    bgOpacity: logic.bgOpacity,
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardBg,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.borderTheme),
-                    ),
+                    borderRadius: 14,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(
-                              child: Text(
-                                record.materialNo,
-                                style: TextStyle(
-                                  color: theme.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: colors.accentAmber.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: colors.accentAmber.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.memory_rounded,
+                                    color: colors.accentAmber,
+                                    size: 16,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  record.materialNo,
+                                  style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                              ],
                             ),
                             if (record.materialCategory.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueGrey.shade600,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Text(
-                                  record.materialCategory,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              PillBadge(
+                                label: record.materialCategory,
+                                color: colors.accentAmber,
+                                bg: colors.accentAmber.withValues(alpha: 0.12),
+                                border: colors.accentAmber.withValues(
+                                  alpha: 0.35,
                                 ),
                               ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 10),
+
                         _buildInfoRow(
                           Translations.get('manufacturer', logic.lang),
                           record.mfgName,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('mfg_pn', logic.lang),
                           record.mfgPn,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('component_sn', logic.lang),
                           record.scannedCsn,
-                          theme,
+                          colors,
                           highlight: true,
                         ),
                         _buildInfoRow(
                           Translations.get('package_id', logic.lang),
                           record.pkgId,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('date_code', logic.lang),
                           record.dateCode,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('quantity', logic.lang),
                           record.installedQty,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('line_station_code', logic.lang),
                           record.stationCode,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('process_time', logic.lang),
                           record.createdDt,
-                          theme,
+                          colors,
                         ),
                         _buildInfoRow(
                           Translations.get('operator', logic.lang),
                           record.creator,
-                          theme,
+                          colors,
                         ),
                       ],
                     ),
@@ -1458,134 +1982,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     );
   }
 
-  /// Sidebar list shown instead of the SN queue while Component Trace is
-  /// active: one row per previously searched component CSN, mirroring the
-  /// SN queue's row layout (select / loading / error / result-count badge /
-  /// refresh / remove) but keyed by CSN and backed by the trace history.
-  Widget _buildTraceHistoryList(AppLogic logic, ThemeProvider theme) {
-    if (logic.traceHistory.isEmpty) {
-      return Center(
-        child: Text(
-          Translations.get('no_trace_history', logic.lang),
-          style: TextStyle(color: theme.textSecondary),
-        ),
-      );
-    }
-
-    return SelectionArea(
-      child: ListView.builder(
-        itemCount: logic.traceHistory.length,
-        itemBuilder: (context, index) {
-          final csn = logic.traceHistory[index];
-          final isSelected = csn == logic.selectedTraceCsn;
-          final isLoading = logic.traceLoadingStatus[csn] == true;
-          final hasError = logic.traceErrors[csn] != null;
-          final recordCount = logic.traceResults[csn]?.length ?? 0;
-
-          return InkWell(
-            onTap: () => logic.selectTraceCsn(csn),
-            child: AnimatedContainer(
-              duration: Motion.fast,
-              curve: Motion.curveOut,
-              margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.blue.withValues(alpha: 0.3)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isSelected ? Colors.blue : Colors.transparent,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      csn,
-                      style: TextStyle(
-                        color: hasError ? theme.failColor : theme.textPrimary,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                  if (isLoading)
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  else if (hasError)
-                    const Icon(Icons.error, color: Colors.red, size: 16)
-                  else if (logic.traceResults.containsKey(csn))
-                    AnimatedSwitcher(
-                      duration: Motion.fast,
-                      switchInCurve: Motion.curveOut,
-                      switchOutCurve: Motion.curveIn,
-                      transitionBuilder: (child, animation) =>
-                          ScaleTransition(scale: animation, child: child),
-                      child: Container(
-                        key: ValueKey(recordCount),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: recordCount > 0
-                              ? theme.passColor
-                              : Colors.grey,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          recordCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: 4),
-                  if (!isLoading)
-                    InkWell(
-                      onTap: () => logic.refreshTraceCsn(csn),
-                      child: Icon(
-                        Icons.refresh,
-                        color: theme.textSecondary,
-                        size: 16,
-                      ),
-                    ),
-                  const SizedBox(width: 4),
-                  InkWell(
-                    onTap: () => logic.removeTraceCsn(csn),
-                    child: Icon(
-                      Icons.close,
-                      color: theme.textSecondary,
-                      size: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// Standalone reverse-lookup view: given a component CSN searched via the
-  /// shared sidebar input, shows which product SN(s) it is currently
-  /// installed into plus material/traceability detail. Unlike the other 3
-  /// tabs this isn't keyed off the SN queue/selected SN — it reads from the
-  /// trace history's currently selected CSN (selection happens in the
-  /// sidebar, same as the SN queue does for the other tabs).
   Widget _buildComponentTraceView(
     BuildContext context,
     AppLogic logic,
     ThemeProvider theme,
+    AppColors colors,
   ) {
     final selectedCsn = logic.selectedTraceCsn;
     final isLoading = logic.traceLoadingStatus[selectedCsn] == true;
@@ -1593,49 +1994,57 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     final records = logic.traceResults[selectedCsn] ?? const [];
     final hasSearched = selectedCsn.isNotEmpty;
 
-    return _buildComponentTraceResults(
-      logic,
-      theme,
-      isLoading,
-      error,
-      records,
-      hasSearched,
-    );
-  }
-
-  Widget _buildComponentTraceResults(
-    AppLogic logic,
-    ThemeProvider theme,
-    bool isLoading,
-    String? error,
-    List<QueryInfoRecord> records,
-    bool hasSearched,
-  ) {
     if (!hasSearched) {
       return Center(
-        child: Text(
-          Translations.get('trace_prompt', logic.lang),
-          textAlign: TextAlign.center,
-          style: TextStyle(color: theme.textSecondary),
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.travel_explore_rounded,
+                size: 38,
+                color: colors.accentCyan,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                Translations.get('trace_prompt', logic.lang),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.textSecondary, fontSize: 13.5),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: colors.accentColor),
+      );
     }
 
     if (error != null) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '${Translations.get('no_trace_results', logic.lang)}: ${logic.selectedTraceCsn}',
-          style: TextStyle(color: theme.failColor),
+      return Center(
+        child: BentoCard(
+          colors: colors,
+          blurSigma: logic.bgBlur,
+          bgOpacity: logic.bgOpacity,
+          borderRadius: 14,
+          padding: const EdgeInsets.all(20),
+          customBg: colors.accentRose.withValues(alpha: 0.12),
+          customBorder: colors.accentRose.withValues(alpha: 0.35),
+          child: Text(
+            '${Translations.get('no_trace_results', logic.lang)}: ${logic.selectedTraceCsn}',
+            style: TextStyle(
+              color: colors.accentRose,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       );
     }
@@ -1649,6 +2058,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           sn: logic.selectedTraceCsn,
           count: records.length,
           theme: theme,
+          colors: colors,
           lang: logic.lang,
           listState: _traceListState,
           sortOptions: [
@@ -1683,29 +2093,165 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         if (displayRecords.isEmpty)
           Expanded(
             child: Center(
-              child: Text(
-                Translations.get('no_matches', logic.lang),
-                style: TextStyle(color: theme.textSecondary),
+              child: BentoCard(
+                colors: colors,
+                blurSigma: logic.bgBlur,
+                bgOpacity: logic.bgOpacity,
+                borderRadius: 14,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Text(
+                  Translations.get('no_matches', logic.lang),
+                  style: TextStyle(color: colors.textSecondary),
+                ),
               ),
             ),
           )
         else
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
               itemCount: displayRecords.length,
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final itemKey =
                     '${record.productSn}_${record.scannedCsn}_${record.createdDt}';
+
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
                   itemKey: itemKey,
                   animatedKeys: _traceListState.animatedItemKeys,
                   index: index,
-                  child: _buildTraceResultCard(record, logic, theme),
+                  child: BentoCard(
+                    colors: colors,
+                    blurSigma: logic.bgBlur,
+                    bgOpacity: logic.bgOpacity,
+                    padding: const EdgeInsets.all(16),
+                    borderRadius: 14,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: colors.accentCyan.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: colors.accentCyan.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.devices_rounded,
+                                    color: colors.accentCyan,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  record.productSn,
+                                  style: TextStyle(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    fontFamily: 'JetBrains Mono',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (record.checkAssembled.isNotEmpty)
+                              PillBadge(
+                                label: record.checkAssembled,
+                                color: colors.accentCyan,
+                                bg: colors.accentCyan.withValues(alpha: 0.12),
+                                border: colors.accentCyan.withValues(
+                                  alpha: 0.35,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 10),
+
+                        _buildInfoRow(
+                          Translations.get('component_sn', logic.lang),
+                          record.scannedCsn,
+                          colors,
+                          highlight: true,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('material_no', logic.lang),
+                          record.materialNo,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('material_name', logic.lang),
+                          record.materialName,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('material_category', logic.lang),
+                          record.materialCategory,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('manufacturer', logic.lang),
+                          record.mfgName,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('mfg_pn', logic.lang),
+                          record.mfgPn,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('product_no', logic.lang),
+                          record.productNo,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('line_code', logic.lang),
+                          record.lineCode,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('process_code', logic.lang),
+                          record.processCode,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('work_order', logic.lang),
+                          record.woNo,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('quantity', logic.lang),
+                          record.installedQty,
+                          colors,
+                        ),
+                        _buildInfoRow(
+                          Translations.get('process_time', logic.lang),
+                          record.createdDt,
+                          colors,
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
@@ -1714,185 +2260,1865 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     );
   }
 
-  Widget _buildTraceResultCard(
-    QueryInfoRecord record,
-    AppLogic logic,
-    ThemeProvider theme,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.borderTheme),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  /// Records Header (Bento Floating Capsule: Marquee SN + Next Stage Pill + Live Search + Sort Menu)
+  Widget _buildRecordsHeader({
+    required String sn,
+    required int count,
+    required ThemeProvider theme,
+    required AppColors colors,
+    required String lang,
+    required _BaseListViewState listState,
+    required List<_SortOption> sortOptions,
+    String? resolvedSn,
+    SnMasterInfo? snMasterInfo,
+  }) {
+    final logic = context.watch<AppLogic>();
+    final snLabel =
+        (resolvedSn != null && resolvedSn.isNotEmpty && resolvedSn != sn)
+        ? '$sn → $resolvedSn'
+        : sn;
+    final nextProcessLabel = snMasterInfo == null
+        ? ''
+        : (snMasterInfo.nextProcessName.isNotEmpty
+              ? snMasterInfo.nextProcessName
+              : snMasterInfo.nextProcessCode);
+
+    return BentoCard(
+      colors: colors,
+      blurSigma: logic.bgBlur,
+      bgOpacity: logic.bgOpacity,
+      borderRadius: 14,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  record.productSn,
-                  style: TextStyle(
-                    color: theme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              if (record.checkAssembled.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade600,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    record.checkAssembled,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: _MarqueeText(
+                    key: ValueKey('records_header_$snLabel'),
+                    text: '${Translations.get('records_for', lang)}: $snLabel',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
-            ],
+                const SizedBox(width: 8),
+                PillBadge(
+                  label: '$count',
+                  color: colors.accentCyan,
+                  bg: colors.accentCyan.withValues(alpha: 0.12),
+                  border: colors.accentCyan.withValues(alpha: 0.35),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  fontSize: 10.5,
+                ),
+                if (nextProcessLabel.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  PillBadge(
+                    label: 'Next: $nextProcessLabel',
+                    color: colors.accentPurple,
+                    bg: colors.accentPurple.withValues(alpha: 0.12),
+                    border: colors.accentPurple.withValues(alpha: 0.35),
+                    fontSize: 10.5,
+                  ),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          _buildInfoRow(
-            Translations.get('component_sn', logic.lang),
-            record.scannedCsn,
-            theme,
-            highlight: true,
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 220,
+            height: 34,
+            child: TextField(
+              controller: listState.filterCtrl,
+              style: TextStyle(fontSize: 12.5, color: colors.textPrimary),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: Translations.get('search_placeholder', lang),
+                hintStyle: TextStyle(fontSize: 12, color: colors.textMuted),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 16,
+                  color: colors.textSecondary,
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 30,
+                  minHeight: 30,
+                ),
+                suffixIcon: listState.filter.isEmpty
+                    ? null
+                    : InkWell(
+                        onTap: () => setState(() {
+                          listState.filterCtrl.clear();
+                          listState.filter = '';
+                        }),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 14,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 26,
+                  minHeight: 26,
+                ),
+                filled: true,
+                fillColor: colors.subCardBg,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colors.subCardBorder),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colors.accentColor, width: 1.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onChanged: (v) => setState(() => listState.filter = v),
+            ),
           ),
-          _buildInfoRow(
-            Translations.get('material_no', logic.lang),
-            record.materialNo,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('material_name', logic.lang),
-            record.materialName,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('material_category', logic.lang),
-            record.materialCategory,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('manufacturer', logic.lang),
-            record.mfgName,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('mfg_pn', logic.lang),
-            record.mfgPn,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('product_no', logic.lang),
-            record.productNo,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('line_code', logic.lang),
-            record.lineCode,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('process_code', logic.lang),
-            record.processCode,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('work_order', logic.lang),
-            record.woNo,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('quantity', logic.lang),
-            record.installedQty,
-            theme,
-          ),
-          _buildInfoRow(
-            Translations.get('process_time', logic.lang),
-            record.createdDt,
-            theme,
-          ),
+          const SizedBox(width: 8),
+          _buildSortButton(theme, colors, lang, listState, sortOptions),
         ],
       ),
     );
   }
 
-  List<QueryInfoRecord> _filterSortTraceRecords(
-    List<QueryInfoRecord> records,
-    _ListViewState listState,
+  Widget _buildSortButton(
+    ThemeProvider theme,
+    AppColors colors,
+    String lang,
+    _BaseListViewState listState,
+    List<_SortOption> options,
   ) {
-    var result = records;
-    final q = listState.filter.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      result = result
-          .where(
-            (r) => [
-              r.productSn,
-              r.mac,
-              r.materialNo,
-              r.materialName,
-              r.materialCategory,
-              r.mfgName,
-              r.mfgPn,
-              r.productNo,
-              r.lineCode,
-              r.processCode,
-              r.woNo,
-              r.createdDt,
-              r.checkAssembled,
-              r.scannedCsn,
-              r.parsedCsn,
-            ].any((f) => f.toLowerCase().contains(q)),
-          )
-          .toList();
-    } else {
-      result = List<QueryInfoRecord>.from(result);
-    }
-    final field = listState.sortField;
-    if (field != null) {
-      result.sort((a, b) {
-        int cmp;
-        switch (field) {
-          case 'process_time':
-            cmp = a.createdDt.compareTo(b.createdDt);
-            break;
-          case 'product_sn':
-            cmp = a.productSn.compareTo(b.productSn);
-            break;
-          case 'material_no':
-            cmp = a.materialNo.compareTo(b.materialNo);
-            break;
-          case 'material_category':
-            cmp = a.materialCategory.compareTo(b.materialCategory);
-            break;
-          case 'manufacturer':
-            cmp = a.mfgName.compareTo(b.mfgName);
-            break;
-          default:
-            cmp = 0;
+    final currentLabel = listState.sortField == null
+        ? Translations.get('sort', lang)
+        : options.firstWhere((o) => o.key == listState.sortField).label;
+
+    void selectKey(String key) {
+      setState(() {
+        if (key.isEmpty) {
+          listState.sortField = null;
+        } else if (listState.sortField == key) {
+          listState.sortAsc = !listState.sortAsc;
+        } else {
+          listState.sortField = key;
+          listState.sortAsc = true;
         }
-        return listState.sortAsc ? cmp : -cmp;
       });
+      _closeSortOverlay();
     }
-    return result;
+
+    return Builder(
+      builder: (buttonContext) {
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            if (_sortOverlayEntry != null) {
+              _closeSortOverlay();
+              return;
+            }
+            final renderBox = buttonContext.findRenderObject() as RenderBox?;
+            if (renderBox == null || !renderBox.attached) return;
+            _openSortOverlay(
+              anchorContext: buttonContext,
+              anchorTopLeft: renderBox.localToGlobal(Offset.zero),
+              anchorSize: renderBox.size,
+              theme: theme,
+              colors: colors,
+              lang: lang,
+              listState: listState,
+              options: options,
+              onSelect: selectKey,
+            );
+          },
+          child: Tooltip(
+            message: Translations.get('sort', lang),
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: colors.subCardBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.subCardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    listState.sortField == null
+                        ? Icons.sort_rounded
+                        : (listState.sortAsc
+                              ? Icons.arrow_upward_rounded
+                              : Icons.arrow_downward_rounded),
+                    size: 16,
+                    color: listState.sortField != null
+                        ? colors.accentCyan
+                        : colors.textPrimary,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    currentLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: listState.sortField != null
+                          ? colors.accentCyan
+                          : colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  /// Header row shown above each record list: "Records for SN: X (N)" (the
-  /// count is omitted when there's 0 or 1 record) plus a search filter box
-  /// and a sort-by button, all on the same row.
+  void _closeSortOverlay() {
+    _sortOverlayEntry?.remove();
+    _sortOverlayEntry = null;
+  }
+
+  void _openSortOverlay({
+    required BuildContext anchorContext,
+    required Offset anchorTopLeft,
+    required Size anchorSize,
+    required ThemeProvider theme,
+    required AppColors colors,
+    required String lang,
+    required _BaseListViewState listState,
+    required List<_SortOption> options,
+    required void Function(String key) onSelect,
+  }) {
+    _closeSortOverlay();
+    final logic = context.read<AppLogic>();
+    final rawBlur = logic.dialogBlur;
+    final opacity = logic.dialogOpacity;
+    final effectiveBlur = opacity < 1.0 && rawBlur < 6.0 ? 6.0 : rawBlur;
+    final borderColor = colors.borderDefault;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final top = anchorTopLeft.dy + anchorSize.height + 4;
+    final right = screenWidth - (anchorTopLeft.dx + anchorSize.width);
+
+    final menuContent = _buildSortMenuList(
+      colors: colors,
+      lang: lang,
+      listState: listState,
+      options: options,
+      onSelect: onSelect,
+    );
+
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (overlayContext) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closeSortOverlay,
+              ),
+            ),
+            Positioned(
+              top: top,
+              right: right,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: Motion.normal,
+                curve: Motion.curveOut,
+                builder: (context, v, child) => ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(
+                      sigmaX: effectiveBlur * v,
+                      sigmaY: effectiveBlur * v,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colors.cardBg.withValues(alpha: opacity * v),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: borderColor.withValues(alpha: v),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15 * v),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      foregroundDecoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border(
+                          top: BorderSide(
+                            color: colors.glassHighlight.withValues(alpha: v),
+                          ),
+                        ),
+                      ),
+                      child: Opacity(
+                        opacity: v,
+                        child: Transform.scale(
+                          scale: 0.96 + (0.04 * v),
+                          alignment: Alignment.topRight,
+                          child: child,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                child: menuContent,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    Overlay.of(anchorContext).insert(entry);
+    _sortOverlayEntry = entry;
+  }
+
+  Widget _buildSortMenuList({
+    required AppColors colors,
+    required String lang,
+    required _BaseListViewState listState,
+    required List<_SortOption> options,
+    required void Function(String key) onSelect,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: IntrinsicWidth(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 190),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildSortMenuRow(
+                  colors: colors,
+                  icon: Icons.sort_rounded,
+                  label: Translations.get('default', lang),
+                  selected: listState.sortField == null,
+                  onTap: () => onSelect(''),
+                ),
+                ...options.map(
+                  (o) => _buildSortMenuRow(
+                    colors: colors,
+                    icon: o.icon,
+                    label: o.label,
+                    selected: listState.sortField == o.key,
+                    sortAsc: listState.sortAsc,
+                    onTap: () => onSelect(o.key),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortMenuRow({
+    required AppColors colors,
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    bool? sortAsc,
+  }) {
+    final accent = colors.accentColor;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? colors.accentCyan : colors.textSecondary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: selected ? colors.textPrimary : colors.textSecondary,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (selected && sortAsc != null) ...[
+              const SizedBox(width: 8),
+              Icon(
+                sortAsc
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                size: 14,
+                color: colors.accentCyan,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    AppColors colors, {
+    bool highlight = false,
+  }) {
+    if (value.isEmpty) return const SizedBox();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 160,
+            child: Text(
+              '$label: ',
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (highlight)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: colors.accentCyan.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: colors.accentCyan.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: colors.accentCyan,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'JetBrains Mono',
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 12.5,
+                  fontFamily: 'JetBrains Mono',
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Modern GlassDialog Settings Modal with live 4-slider Glassmorphism Controls
+  void _showSettingsDialog(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+  ) {
+    final colors = theme.colors;
+    final TextEditingController tokenCtrl = TextEditingController(
+      text: logic.token,
+    );
+    final TextEditingController langCtrl = TextEditingController(
+      text: logic.lang,
+    );
+    final TextEditingController operationIdCtrl = TextEditingController(
+      text: logic.operationId,
+    );
+    final TextEditingController uuidCtrl = TextEditingController(
+      text: logic.uuid,
+    );
+    final TextEditingController cookieCtrl = TextEditingController(
+      text: logic.cookie,
+    );
+
+    final double origBgBlur = logic.bgBlur;
+    final double origBgOpacity = logic.bgOpacity;
+    final double origDialogBlur = logic.dialogBlur;
+    final double origDialogOpacity = logic.dialogOpacity;
+
+    bool isExpanded = false;
+    int settingsTabIndex = 0;
+    bool isVerifying = false;
+    bool? verifyOk;
+    String verifyTooltip = Translations.get('verify_connection', logic.lang);
+    bool isFetchingCdp = false;
+    double bgBlur = logic.bgBlur;
+    double bgOpacity = logic.bgOpacity;
+    double dialogBlur = logic.dialogBlur;
+    double dialogOpacity = logic.dialogOpacity;
+
+    Widget buildField(
+      String label,
+      TextEditingController ctrl, {
+      int maxLines = 1,
+      String? hint,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 5),
+            TextField(
+              controller: ctrl,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 12.5,
+                fontFamily: 'JetBrains Mono',
+              ),
+              maxLines: maxLines,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(color: colors.textMuted, fontSize: 11.5),
+                filled: true,
+                fillColor: colors.subCardBg,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colors.subCardBorder),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colors.accentColor, width: 1.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildGlassSlider({
+      required String label,
+      required double value,
+      required double min,
+      required double max,
+      bool isPercent = false,
+      required ValueChanged<double> onChanged,
+    }) {
+      final display = isPercent
+          ? '${(value * 100).round()}%'
+          : '${value.toStringAsFixed(0)}px';
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  display,
+                  style: TextStyle(
+                    color: colors.accentCyan,
+                    fontSize: 11,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+              ],
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                activeTrackColor: colors.accentColor,
+                inactiveTrackColor: colors.subCardBorder,
+                thumbColor: colors.accentCyan,
+              ),
+              child: Slider(
+                value: value,
+                min: min,
+                max: max,
+                divisions: isPercent ? 19 : 40,
+                onChanged: onChanged,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildSettingsTabButton({
+      required IconData icon,
+      required String label,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              curve: Motion.curveInOut,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.accentColor.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: selected
+                    ? Border.all(
+                        color: colors.accentColor.withValues(alpha: 0.4),
+                      )
+                    : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 15,
+                    color: selected ? colors.accentCyan : colors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: selected
+                            ? colors.textPrimary
+                            : colors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget buildAboutTab() {
+      return SingleChildScrollView(
+        key: const ValueKey('about-tab'),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [colors.accentColor, colors.accentCyan],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.primaryGlow.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.settings_suggest_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    appName,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'v$appVersion • Built: ${BuildInfo.debugTimestamp}',
+                    style: TextStyle(
+                      color: colors.textMuted,
+                      fontSize: 12,
+                      fontFamily: 'JetBrains Mono',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              Translations.get('about_detail', logic.lang),
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 12.5,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '© 2026 JA Tech.\nAll rights reserved.',
+              style: TextStyle(
+                color: colors.textMuted,
+                fontSize: 11.5,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildUserGuideTab() {
+      return SingleChildScrollView(
+        key: const ValueKey('user-guide-tab'),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Text(
+          Translations.get('user_guide_detail', logic.lang),
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontSize: 12.5,
+            height: 1.5,
+          ),
+        ),
+      );
+    }
+
+    _showIosDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final effectiveBlur = (dialogOpacity < 1.0 && dialogBlur < 6.0)
+                ? 6.0
+                : dialogBlur;
+
+            return GlassDialog(
+              title: Translations.get('settings', logic.lang),
+              icon: Icons.tune_rounded,
+              isDark: theme.isDark,
+              width: 580,
+              height: 600,
+              blurSigma: effectiveBlur,
+              bgOpacity: dialogOpacity,
+              headerTrailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: (logic.isConnectionValid ?? false)
+                      ? colors.accentEmerald.withValues(alpha: 0.12)
+                      : colors.accentAmber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: (logic.isConnectionValid ?? false)
+                        ? colors.accentEmerald.withValues(alpha: 0.35)
+                        : colors.accentAmber.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: (logic.isConnectionValid ?? false)
+                            ? colors.accentEmerald
+                            : colors.accentAmber,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      (logic.isConnectionValid ?? false)
+                          ? Translations.get('status_connected', logic.lang)
+                          : Translations.get('status_check', logic.lang),
+                      style: TextStyle(
+                        color: (logic.isConnectionValid ?? false)
+                            ? colors.accentEmerald
+                            : colors.accentAmber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: isVerifying
+                          ? null
+                          : () async {
+                              setDialogState(() {
+                                isVerifying = true;
+                                verifyOk = null;
+                              });
+                              final err = await logic.verifySettings(
+                                tokenCtrl.text,
+                                langCtrl.text,
+                                operationIdCtrl.text,
+                                uuidCtrl.text,
+                                cookieCtrl.text,
+                              );
+                              if (!context.mounted) return;
+                              final ok = err == null;
+                              setDialogState(() {
+                                isVerifying = false;
+                                verifyOk = ok;
+                                verifyTooltip = ok
+                                    ? Translations.get(
+                                        'connection_valid',
+                                        logic.lang,
+                                      )
+                                    : err;
+                              });
+                              Future.delayed(const Duration(seconds: 4), () {
+                                if (context.mounted) {
+                                  setDialogState(() => verifyOk = null);
+                                }
+                              });
+                            },
+                      borderRadius: BorderRadius.circular(50),
+                      child: Tooltip(
+                        message: verifyTooltip,
+                        child: isVerifying
+                            ? SizedBox(
+                                width: 13,
+                                height: 13,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colors.accentCyan,
+                                ),
+                              )
+                            : Icon(
+                                verifyOk == null
+                                    ? Icons.shield_rounded
+                                    : (verifyOk!
+                                          ? Icons.check_circle_rounded
+                                          : Icons.cancel_rounded),
+                                size: 15,
+                                color: verifyOk == null
+                                    ? colors.textSecondary
+                                    : (verifyOk!
+                                          ? colors.accentEmerald
+                                          : colors.accentRose),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // Revert live preview to previous values
+                    logic.setLiveGlassmorphism(
+                      bgBlur: origBgBlur,
+                      bgOpacity: origBgOpacity,
+                      dialogBlur: origDialogBlur,
+                      dialogOpacity: origDialogOpacity,
+                    );
+                    Navigator.pop(ctx);
+                  },
+                  child: Text(
+                    Translations.get('cancel', logic.lang),
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GlowingActionButton(
+                  height: 38,
+                  colors: colors,
+                  icon: Icons.save_rounded,
+                  label: Translations.get('save', logic.lang),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await logic.updateSettings(
+                      token: tokenCtrl.text,
+                      lang: langCtrl.text,
+                      operationId: operationIdCtrl.text,
+                      uuid: uuidCtrl.text,
+                      cookie: cookieCtrl.text,
+                      bgBlur: bgBlur,
+                      bgOpacity: bgOpacity,
+                      dialogBlur: dialogBlur,
+                      dialogOpacity: dialogOpacity,
+                    );
+                  },
+                ),
+              ],
+              child: Column(
+                children: [
+                  // Tab Navigation Bar
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: colors.subCardBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.subCardBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        buildSettingsTabButton(
+                          icon: Icons.tune_rounded,
+                          label: Translations.get(
+                            'advanced_settings',
+                            logic.lang,
+                          ),
+                          selected: settingsTabIndex == 0,
+                          onTap: () =>
+                              setDialogState(() => settingsTabIndex = 0),
+                        ),
+                        buildSettingsTabButton(
+                          icon: Icons.menu_book_rounded,
+                          label: Translations.get('user_guide', logic.lang),
+                          selected: settingsTabIndex == 1,
+                          onTap: () =>
+                              setDialogState(() => settingsTabIndex = 1),
+                        ),
+                        buildSettingsTabButton(
+                          icon: Icons.info_outline_rounded,
+                          label: Translations.get('about', logic.lang),
+                          selected: settingsTabIndex == 2,
+                          onTap: () =>
+                              setDialogState(() => settingsTabIndex = 2),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Tab Content Area
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: Motion.normal,
+                      child: settingsTabIndex == 1
+                          ? buildUserGuideTab()
+                          : settingsTabIndex == 2
+                          ? buildAboutTab()
+                          : SingleChildScrollView(
+                              key: const ValueKey('advanced-tab'),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Smart 2-Step Auto Sync Card
+                                  BentoCard(
+                                    colors: colors,
+                                    blurSigma: logic.bgBlur,
+                                    bgOpacity: logic.bgOpacity,
+                                    isFeatured: true,
+                                    padding: const EdgeInsets.all(14),
+                                    borderRadius: 14,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.bolt_rounded,
+                                              color: colors.accentCyan,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              Translations.get(
+                                                'cdp_sync_title',
+                                                logic.lang,
+                                              ),
+                                              style: TextStyle(
+                                                color: colors.textPrimary,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 13.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          Translations.get(
+                                            'cdp_sync_desc',
+                                            logic.lang,
+                                          ),
+                                          style: TextStyle(
+                                            color: colors.textMuted,
+                                            fontSize: 11.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: GlowingActionButton(
+                                                height: 38,
+                                                colors: colors,
+                                                icon: Icons
+                                                    .open_in_browser_rounded,
+                                                label: Translations.get(
+                                                  'btn_open_browser',
+                                                  logic.lang,
+                                                ),
+                                                onPressed: () async {
+                                                  await BrowserHelper.launchBrowser();
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: GlowingActionButton(
+                                                height: 38,
+                                                colors: colors,
+                                                customStartColor:
+                                                    colors.accentEmerald,
+                                                customEndColor:
+                                                    colors.accentCyan,
+                                                icon: isFetchingCdp
+                                                    ? Icons.sync_rounded
+                                                    : Icons
+                                                          .cloud_download_rounded,
+                                                label: isFetchingCdp
+                                                    ? Translations.get(
+                                                        'status_fetching',
+                                                        logic.lang,
+                                                      )
+                                                    : Translations.get(
+                                                        'btn_sync_credentials',
+                                                        logic.lang,
+                                                      ),
+                                                onPressed: isFetchingCdp
+                                                    ? null
+                                                    : () async {
+                                                        setDialogState(
+                                                          () => isFetchingCdp =
+                                                              true,
+                                                        );
+                                                        final creds =
+                                                            await BrowserHelper.fetchCredentialsFromBrowser();
+                                                        if (!context.mounted) {
+                                                          return;
+                                                        }
+                                                        setDialogState(
+                                                          () => isFetchingCdp =
+                                                              false,
+                                                        );
+
+                                                        if (creds != null) {
+                                                          if (creds.token !=
+                                                                  null &&
+                                                              creds
+                                                                  .token!
+                                                                  .isNotEmpty)
+                                                            tokenCtrl.text =
+                                                                creds.token!;
+                                                          if (creds.operationId !=
+                                                                  null &&
+                                                              creds
+                                                                  .operationId!
+                                                                  .isNotEmpty)
+                                                            operationIdCtrl
+                                                                .text = creds
+                                                                .operationId!;
+                                                          if (creds.uuid !=
+                                                                  null &&
+                                                              creds
+                                                                  .uuid!
+                                                                  .isNotEmpty)
+                                                            uuidCtrl.text =
+                                                                creds.uuid!;
+                                                          if (creds.cookie !=
+                                                                  null &&
+                                                              creds
+                                                                  .cookie!
+                                                                  .isNotEmpty)
+                                                            cookieCtrl.text =
+                                                                creds.cookie!;
+
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                Translations.get(
+                                                                  'fetched_success',
+                                                                  logic.lang,
+                                                                ),
+                                                              ),
+                                                              backgroundColor:
+                                                                  colors
+                                                                      .accentEmerald,
+                                                            ),
+                                                          );
+                                                        } else {
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                Translations.get(
+                                                                  'fetched_fail',
+                                                                  logic.lang,
+                                                                ),
+                                                              ),
+                                                              backgroundColor:
+                                                                  colors
+                                                                      .accentRose,
+                                                            ),
+                                                          );
+                                                        }
+                                                      },
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Expandable Advanced Configuration
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () => setDialogState(
+                                        () => isExpanded = !isExpanded,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colors.subCardBg,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: isExpanded
+                                                ? colors.accentColor
+                                                : colors.subCardBorder,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.tune_rounded,
+                                              size: 18,
+                                              color: isExpanded
+                                                  ? colors.accentCyan
+                                                  : colors.textSecondary,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                isExpanded
+                                                    ? Translations.get(
+                                                        'hide_advanced',
+                                                        logic.lang,
+                                                      )
+                                                    : Translations.get(
+                                                        'show_advanced',
+                                                        logic.lang,
+                                                      ),
+                                                style: TextStyle(
+                                                  color: isExpanded
+                                                      ? colors.accentCyan
+                                                      : colors.textPrimary,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 12.5,
+                                                ),
+                                              ),
+                                            ),
+                                            Icon(
+                                              isExpanded
+                                                  ? Icons
+                                                        .keyboard_arrow_up_rounded
+                                                  : Icons
+                                                        .keyboard_arrow_down_rounded,
+                                              color: isExpanded
+                                                  ? colors.accentCyan
+                                                  : colors.textSecondary,
+                                              size: 18,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Expanded Section Details
+                                  AnimatedCrossFade(
+                                    firstChild: const SizedBox.shrink(),
+                                    secondChild: Padding(
+                                      padding: const EdgeInsets.only(top: 10.0),
+                                      child: BentoCard(
+                                        colors: colors,
+                                        blurSigma: logic.bgBlur,
+                                        bgOpacity: logic.bgOpacity,
+                                        padding: const EdgeInsets.all(14),
+                                        borderRadius: 12,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: OutlinedButton.icon(
+                                                icon: Icon(
+                                                  Icons.content_paste_rounded,
+                                                  size: 16,
+                                                  color: colors.accentCyan,
+                                                ),
+                                                label: Text(
+                                                  Translations.get(
+                                                    'paste_raw_http',
+                                                    logic.lang,
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: colors.accentCyan,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                style: OutlinedButton.styleFrom(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 10,
+                                                      ),
+                                                  side: BorderSide(
+                                                    color: colors.accentCyan
+                                                        .withValues(alpha: 0.4),
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  final pasteCtrl =
+                                                      TextEditingController();
+                                                  _showIosDialog(
+                                                    context: context,
+                                                    builder: (ctx) => AlertDialog(
+                                                      backgroundColor:
+                                                          colors.cardBg,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              14,
+                                                            ),
+                                                      ),
+                                                      title: Text(
+                                                        Translations.get(
+                                                          'paste_raw_http',
+                                                          logic.lang,
+                                                        ),
+                                                        style: TextStyle(
+                                                          color: colors
+                                                              .textPrimary,
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                        ),
+                                                      ),
+                                                      content: SizedBox(
+                                                        width: 450,
+                                                        child: TextField(
+                                                          controller: pasteCtrl,
+                                                          maxLines: 10,
+                                                          style: TextStyle(
+                                                            color: colors
+                                                                .textPrimary,
+                                                            fontSize: 12,
+                                                            fontFamily:
+                                                                'JetBrains Mono',
+                                                          ),
+                                                          decoration: InputDecoration(
+                                                            hintText:
+                                                                'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
+                                                            hintStyle: TextStyle(
+                                                              color: colors
+                                                                  .textMuted,
+                                                            ),
+                                                            filled: true,
+                                                            fillColor: colors
+                                                                .subCardBg,
+                                                            border: OutlineInputBorder(
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                ctx,
+                                                              ),
+                                                          child: Text(
+                                                            Translations.get(
+                                                              'cancel',
+                                                              logic.lang,
+                                                            ),
+                                                            style: TextStyle(
+                                                              color: colors
+                                                                  .textSecondary,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        ElevatedButton(
+                                                          onPressed: () {
+                                                            final creds =
+                                                                BrowserHelper.parseRawHttpRequest(
+                                                                  pasteCtrl
+                                                                      .text,
+                                                                );
+                                                            if (creds.token !=
+                                                                    null &&
+                                                                creds
+                                                                    .token!
+                                                                    .isNotEmpty)
+                                                              tokenCtrl.text =
+                                                                  creds.token!;
+                                                            if (creds.lang !=
+                                                                    null &&
+                                                                creds
+                                                                    .lang!
+                                                                    .isNotEmpty)
+                                                              langCtrl.text =
+                                                                  creds.lang!;
+                                                            if (creds.operationId !=
+                                                                    null &&
+                                                                creds
+                                                                    .operationId!
+                                                                    .isNotEmpty)
+                                                              operationIdCtrl
+                                                                  .text = creds
+                                                                  .operationId!;
+                                                            if (creds.uuid !=
+                                                                    null &&
+                                                                creds
+                                                                    .uuid!
+                                                                    .isNotEmpty)
+                                                              uuidCtrl.text =
+                                                                  creds.uuid!;
+                                                            if (creds.cookie !=
+                                                                    null &&
+                                                                creds
+                                                                    .cookie!
+                                                                    .isNotEmpty)
+                                                              cookieCtrl.text =
+                                                                  creds.cookie!;
+                                                            Navigator.pop(ctx);
+                                                          },
+                                                          child: Text(
+                                                            Translations.get(
+                                                              'parse_http',
+                                                              logic.lang,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            buildField(
+                                              Translations.get(
+                                                'mes_token',
+                                                logic.lang,
+                                              ),
+                                              tokenCtrl,
+                                              maxLines: 2,
+                                            ),
+                                            buildField(
+                                              Translations.get(
+                                                'cookie',
+                                                logic.lang,
+                                              ),
+                                              cookieCtrl,
+                                              maxLines: 2,
+                                            ),
+                                            buildField(
+                                              Translations.get(
+                                                'operation_id',
+                                                logic.lang,
+                                              ),
+                                              operationIdCtrl,
+                                            ),
+                                            buildField(
+                                              Translations.get(
+                                                'uuid',
+                                                logic.lang,
+                                              ),
+                                              uuidCtrl,
+                                            ),
+                                            buildField(
+                                              Translations.get(
+                                                'language',
+                                                logic.lang,
+                                              ),
+                                              langCtrl,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    crossFadeState: isExpanded
+                                        ? CrossFadeState.showSecond
+                                        : CrossFadeState.showFirst,
+                                    duration: Motion.normal,
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Glassmorphism Sliders with 4 Live-Adjustable Controls
+                                  BentoCard(
+                                    colors: colors,
+                                    blurSigma: logic.bgBlur,
+                                    bgOpacity: logic.bgOpacity,
+                                    padding: const EdgeInsets.all(14),
+                                    borderRadius: 12,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.blur_on_rounded,
+                                                  size: 18,
+                                                  color: colors.accentPurple,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  Translations.get(
+                                                    'glass_settings_title',
+                                                    logic.lang,
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: colors.textPrimary,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            InkWell(
+                                              onTap: () {
+                                                setDialogState(() {
+                                                  bgBlur = 20.0;
+                                                  bgOpacity = 0.25;
+                                                  dialogBlur = 20.0;
+                                                  dialogOpacity = 0.85;
+                                                });
+                                                logic.setLiveGlassmorphism(
+                                                  bgBlur: 20.0,
+                                                  bgOpacity: 0.25,
+                                                  dialogBlur: 20.0,
+                                                  dialogOpacity: 0.85,
+                                                );
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                child: Text(
+                                                  Translations.get(
+                                                    'default',
+                                                    logic.lang,
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: colors.accentCyan,
+                                                    fontSize: 11.5,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+
+                                        // 1. Card Blur Slider
+                                        buildGlassSlider(
+                                          label: Translations.get(
+                                            'card_blur_label',
+                                            logic.lang,
+                                          ),
+                                          value: bgBlur,
+                                          min: 0,
+                                          max: 40,
+                                          onChanged: (v) {
+                                            setDialogState(() => bgBlur = v);
+                                            logic.setLiveGlassmorphism(
+                                              bgBlur: v,
+                                            );
+                                          },
+                                        ),
+
+                                        // 2. Card Opacity Slider
+                                        buildGlassSlider(
+                                          label: Translations.get(
+                                            'card_opacity_label',
+                                            logic.lang,
+                                          ),
+                                          value: bgOpacity,
+                                          min: 0.05,
+                                          max: 1.0,
+                                          isPercent: true,
+                                          onChanged: (v) {
+                                            setDialogState(() => bgOpacity = v);
+                                            logic.setLiveGlassmorphism(
+                                              bgOpacity: v,
+                                            );
+                                          },
+                                        ),
+
+                                        const SizedBox(height: 6),
+                                        Divider(
+                                          color: colors.subCardBorder,
+                                          height: 1,
+                                        ),
+                                        const SizedBox(height: 6),
+
+                                        // 3. Dialog Blur Slider
+                                        buildGlassSlider(
+                                          label: Translations.get(
+                                            'dialog_blur',
+                                            logic.lang,
+                                          ),
+                                          value: dialogBlur,
+                                          min: 0,
+                                          max: 40,
+                                          onChanged: (v) {
+                                            setDialogState(
+                                              () => dialogBlur = v,
+                                            );
+                                            logic.setLiveGlassmorphism(
+                                              dialogBlur: v,
+                                            );
+                                          },
+                                        ),
+
+                                        // 4. Dialog Opacity Slider
+                                        buildGlassSlider(
+                                          label: Translations.get(
+                                            'dialog_opacity',
+                                            logic.lang,
+                                          ),
+                                          value: dialogOpacity,
+                                          min: 0.1,
+                                          max: 1.0,
+                                          isPercent: true,
+                                          onChanged: (v) {
+                                            setDialogState(
+                                              () => dialogOpacity = v,
+                                            );
+                                            logic.setLiveGlassmorphism(
+                                              dialogOpacity: v,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Token Expired Warning Modal
+  void _showTokenExpiredWarningDialog(BuildContext context, AppLogic logic) {
+    final theme = context.read<ThemeProvider>();
+    final colors = theme.colors;
+    bool isSyncing = false;
+
+    _showIosDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return GlassDialog(
+              title: Translations.get('token_expired_title', logic.lang),
+              icon: Icons.warning_amber_rounded,
+              isDark: theme.isDark,
+              width: 520,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    Translations.get('cancel', logic.lang),
+                    style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GlowingActionButton(
+                  height: 36,
+                  colors: colors,
+                  icon: Icons.settings_rounded,
+                  label: Translations.get('open_settings', logic.lang),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showSettingsDialog(context, logic, theme);
+                  },
+                ),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Translations.get('token_expired_desc', logic.lang),
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    BentoCard(
+                      colors: colors,
+                      blurSigma: logic.bgBlur,
+                      bgOpacity: logic.bgOpacity,
+                      padding: const EdgeInsets.all(14),
+                      borderRadius: 14,
+                      isFeatured: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.bolt_rounded,
+                                color: colors.accentAmber,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                Translations.get('cdp_sync_title', logic.lang),
+                                style: TextStyle(
+                                  color: colors.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            Translations.get('cdp_sync_desc', logic.lang),
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GlowingActionButton(
+                                  height: 38,
+                                  colors: colors,
+                                  icon: Icons.open_in_browser_rounded,
+                                  label: Translations.get(
+                                    'btn_open_browser',
+                                    logic.lang,
+                                  ),
+                                  onPressed: () async {
+                                    await BrowserHelper.launchBrowser();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: GlowingActionButton(
+                                  height: 38,
+                                  colors: colors,
+                                  customStartColor: colors.accentEmerald,
+                                  customEndColor: colors.accentCyan,
+                                  icon: isSyncing
+                                      ? Icons.sync_rounded
+                                      : Icons.cloud_download_rounded,
+                                  label: isSyncing
+                                      ? Translations.get(
+                                          'status_fetching',
+                                          logic.lang,
+                                        )
+                                      : Translations.get(
+                                          'btn_sync_credentials',
+                                          logic.lang,
+                                        ),
+                                  onPressed: isSyncing
+                                      ? null
+                                      : () async {
+                                          setDialogState(
+                                            () => isSyncing = true,
+                                          );
+                                          final creds =
+                                              await BrowserHelper.fetchCredentialsFromBrowser();
+                                          if (!context.mounted) return;
+                                          setDialogState(
+                                            () => isSyncing = false,
+                                          );
+
+                                          if (creds != null) {
+                                            await logic.updateSettings(
+                                              token: creds.token ?? logic.token,
+                                              lang: logic.lang,
+                                              operationId:
+                                                  creds.operationId ??
+                                                  logic.operationId,
+                                              uuid: creds.uuid ?? logic.uuid,
+                                              cookie:
+                                                  creds.cookie ?? logic.cookie,
+                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    Translations.get(
+                                                      'fetched_success',
+                                                      logic.lang,
+                                                    ),
+                                                  ),
+                                                  backgroundColor:
+                                                      colors.accentEmerald,
+                                                ),
+                                              );
+                                              Navigator.pop(ctx);
+                                            }
+                                          } else {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    Translations.get(
+                                                      'fetched_fail',
+                                                      logic.lang,
+                                                    ),
+                                                  ),
+                                                  backgroundColor:
+                                                      colors.accentRose,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Filter & Sorting helper methods
   List<TestRecord> _filterSortTestRecords(
     List<TestRecord> records,
     _ListViewState listState,
@@ -1952,7 +4178,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
   List<SnProcessRecord> _filterSortBarcodeRecords(
     List<SnProcessRecord> records,
-    _ListViewState listState,
+    _BarcodeListViewState listState,
   ) {
     var result = records;
     final q = listState.filter.trim().toLowerCase();
@@ -2014,7 +4240,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
   List<WipComponentRecord> _filterSortWipRecords(
     List<WipComponentRecord> records,
-    _ListViewState listState,
+    _WipListViewState listState,
   ) {
     var result = records;
     final q = listState.filter.trim().toLowerCase();
@@ -2065,2294 +4291,127 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     return result;
   }
 
-  /// Small tinted pill for at-a-glance SN Master info (error code / next
-  /// process) next to the records header title — same visual language as
-  /// the connection-health pill in Settings (tinted bg, no border).
-  Widget _buildInfoChip({required String label, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecordsHeader({
-    required String sn,
-    required int count,
-    required ThemeProvider theme,
-    required String lang,
-    required _ListViewState listState,
-    required List<_SortOption> sortOptions,
-    String? resolvedSn,
-    SnMasterInfo? snMasterInfo,
-  }) {
-    final countSuffix = count > 1 ? ' ($count)' : '';
-    final snLabel =
-        (resolvedSn != null && resolvedSn.isNotEmpty && resolvedSn != sn)
-        ? '$sn → $resolvedSn'
-        : sn;
-    final nextProcessLabel = snMasterInfo == null
-        ? ''
-        : (snMasterInfo.nextProcessName.isNotEmpty
-              ? snMasterInfo.nextProcessName
-              : snMasterInfo.nextProcessCode);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              Flexible(
-                child: _MarqueeText(
-                  key: ValueKey('records_header_$snLabel'),
-                  text:
-                      '${Translations.get('records_for', lang)}: $snLabel$countSuffix',
-                  style: TextStyle(
-                    color: theme.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        color: theme.isDark ? Colors.black87 : Colors.white70,
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (nextProcessLabel.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                _buildInfoChip(
-                  label: 'Next: $nextProcessLabel',
-                  color: Colors.blue.shade600,
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 210,
-          height: 34,
-          child: TextField(
-            controller: listState.filterCtrl,
-            style: TextStyle(fontSize: 12.5, color: theme.textPrimary),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: Translations.get('search_placeholder', lang),
-              hintStyle: TextStyle(fontSize: 12.5, color: theme.textSecondary),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                size: 16,
-                color: theme.textSecondary,
-              ),
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 30,
-                minHeight: 30,
-              ),
-              suffixIcon: listState.filter.isEmpty
-                  ? null
-                  : InkWell(
-                      onTap: () => setState(() {
-                        listState.filterCtrl.clear();
-                        listState.filter = '';
-                      }),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 14,
-                        color: theme.textSecondary,
-                      ),
-                    ),
-              suffixIconConstraints: const BoxConstraints(
-                minWidth: 26,
-                minHeight: 26,
-              ),
-              filled: true,
-              fillColor: theme.cardBg,
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              border: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(
-                  color: theme.isDark ? Colors.white24 : Colors.black12,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blue.shade600, width: 1.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onChanged: (v) => setState(() => listState.filter = v),
-          ),
-        ),
-        const SizedBox(width: 8),
-        _buildSortButton(theme, lang, listState, sortOptions),
-      ],
-    );
-  }
-
-  Widget _buildSortButton(
-    ThemeProvider theme,
-    String lang,
-    _ListViewState listState,
-    List<_SortOption> options,
+  List<QueryInfoRecord> _filterSortTraceRecords(
+    List<QueryInfoRecord> records,
+    _TraceListViewState listState,
   ) {
-    final currentLabel = listState.sortField == null
-        ? Translations.get('sort', lang)
-        : options.firstWhere((o) => o.key == listState.sortField).label;
-
-    void selectKey(String key) {
-      setState(() {
-        if (key.isEmpty) {
-          listState.sortField = null;
-        } else if (listState.sortField == key) {
-          listState.sortAsc = !listState.sortAsc;
-        } else {
-          listState.sortField = key;
-          listState.sortAsc = true;
+    var result = records;
+    final q = listState.filter.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      result = result
+          .where(
+            (r) => [
+              r.productSn,
+              r.mac,
+              r.materialNo,
+              r.materialName,
+              r.materialCategory,
+              r.mfgName,
+              r.mfgPn,
+              r.productNo,
+              r.lineCode,
+              r.processCode,
+              r.woNo,
+              r.createdDt,
+              r.checkAssembled,
+              r.scannedCsn,
+              r.parsedCsn,
+            ].any((f) => f.toLowerCase().contains(q)),
+          )
+          .toList();
+    } else {
+      result = List<QueryInfoRecord>.from(result);
+    }
+    final field = listState.sortField;
+    if (field != null) {
+      result.sort((a, b) {
+        int cmp;
+        switch (field) {
+          case 'process_time':
+            cmp = a.createdDt.compareTo(b.createdDt);
+            break;
+          case 'product_sn':
+            cmp = a.productSn.compareTo(b.productSn);
+            break;
+          case 'material_no':
+            cmp = a.materialNo.compareTo(b.materialNo);
+            break;
+          case 'material_category':
+            cmp = a.materialCategory.compareTo(b.materialCategory);
+            break;
+          case 'manufacturer':
+            cmp = a.mfgName.compareTo(b.mfgName);
+            break;
+          default:
+            cmp = 0;
         }
+        return listState.sortAsc ? cmp : -cmp;
       });
-      _closeSortOverlay();
     }
-
-    // Builder gives this exact instance of the button its own BuildContext,
-    // so its position can be measured at tap-time via RenderBox. This avoids
-    // any shared Key/LayerLink, which would collide (Flutter throws) when
-    // AnimatedSwitcher briefly mounts the outgoing and incoming tab/SN view
-    // together during a crossfade — both would otherwise render a Sort
-    // button for the same _ListViewState at the same time.
-    return Builder(
-      builder: (buttonContext) {
-        return InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            if (_sortOverlayEntry != null) {
-              _closeSortOverlay();
-              return;
-            }
-            final renderBox = buttonContext.findRenderObject() as RenderBox?;
-            if (renderBox == null || !renderBox.attached) return;
-            _openSortOverlay(
-              anchorContext: buttonContext,
-              anchorTopLeft: renderBox.localToGlobal(Offset.zero),
-              anchorSize: renderBox.size,
-              theme: theme,
-              lang: lang,
-              listState: listState,
-              options: options,
-              onSelect: selectKey,
-            );
-          },
-          child: Tooltip(
-            message: Translations.get('sort', lang),
-            child: AnimatedContainer(
-              duration: Motion.normal,
-              curve: Motion.curveInOut,
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: theme.cardBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: theme.isDark ? Colors.white24 : Colors.black12,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    listState.sortField == null
-                        ? Icons.sort_rounded
-                        : (listState.sortAsc
-                              ? Icons.arrow_upward_rounded
-                              : Icons.arrow_downward_rounded),
-                    size: 16,
-                    color: theme.textPrimary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    currentLabel,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: theme.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _closeSortOverlay() {
-    _sortOverlayEntry?.remove();
-    _sortOverlayEntry = null;
-  }
-
-  /// Custom anchored dropdown for the Sort button, built on a plain
-  /// OverlayEntry instead of PopupMenuButton, because the standard
-  /// PopupMenuButton route has no hook to inject a BackdropFilter behind its
-  /// content. Position is computed once at open-time from the button's
-  /// RenderBox (right-aligned to the button so it never overflows the
-  /// window edge) rather than followed live via CompositedTransformFollower,
-  /// since the latter requires a LayerLink unique to one mounted widget at a
-  /// time — a constraint AnimatedSwitcher's transient dual-mount during a
-  /// crossfade would violate.
-  ///
-  /// The blur/opacity here follow the user's "Popup Blur/Opacity" Advanced
-  /// Settings (logic.dialogBlur/dialogOpacity). This app's modal dialogs are
-  /// deliberately kept solid-opaque (see CHANGELOG v2.1.0: glass dialogs
-  /// previously caused see-through overlapping text), so only this
-  /// lightweight anchored dropdown uses the setting for now.
-  void _openSortOverlay({
-    required BuildContext anchorContext,
-    required Offset anchorTopLeft,
-    required Size anchorSize,
-    required ThemeProvider theme,
-    required String lang,
-    required _ListViewState listState,
-    required List<_SortOption> options,
-    required void Function(String key) onSelect,
-  }) {
-    _closeSortOverlay();
-    final logic = context.read<AppLogic>();
-    // Floor the blur whenever the panel isn't fully solid — an unblurred,
-    // translucent panel over the live scrolling record list is exactly the
-    // "see-through overlapping text" glitch CHANGELOG v2.1.0 deliberately
-    // eliminated from dialogs; the two Advanced Settings sliders are
-    // independent, so this has to be enforced here rather than in the UI.
-    final rawBlur = logic.dialogBlur;
-    final opacity = logic.dialogOpacity;
-    final effectiveBlur = opacity < 1.0 && rawBlur < 6.0 ? 6.0 : rawBlur;
-    final borderColor = theme.isDark ? Colors.white24 : Colors.black12;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final top = anchorTopLeft.dy + anchorSize.height + 4;
-    final right = screenWidth - (anchorTopLeft.dx + anchorSize.width);
-
-    final menuContent = _buildSortMenuList(
-      theme: theme,
-      lang: lang,
-      listState: listState,
-      options: options,
-      onSelect: onSelect,
-    );
-
-    late final OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (overlayContext) {
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _closeSortOverlay,
-              ),
-            ),
-            Positioned(
-              top: top,
-              right: right,
-              // The blur sigma and container alpha are animated as their own
-              // native parameters (not by wrapping the finished BackdropFilter
-              // in an outer Opacity/Transform), since animating opacity/scale
-              // directly around a live BackdropFilter is a known source of
-              // stale/ghosted backdrop sampling mid-transition — plausibly
-              // the very defect CHANGELOG v2.1.0 hit with the old glass
-              // dialogs. Only the inner content fades/scales, safely after
-              // the backdrop sampling has already happened for this frame.
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: Motion.normal,
-                curve: Motion.curveOut,
-                builder: (context, v, child) => ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(
-                      sigmaX: effectiveBlur * v,
-                      sigmaY: effectiveBlur * v,
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.cardBg.withValues(alpha: opacity * v),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: borderColor.withValues(alpha: v),
-                        ),
-                      ),
-                      child: Opacity(
-                        opacity: v,
-                        child: Transform.scale(
-                          scale: 0.96 + (0.04 * v),
-                          alignment: Alignment.topRight,
-                          child: child,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                child: menuContent,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-    Overlay.of(anchorContext).insert(entry);
-    _sortOverlayEntry = entry;
-  }
-
-  /// The Sort dropdown's row list (Default + each field), sized to its
-  /// content and wrapped for InkWell ink support — extracted so the
-  /// animated glass shell in _openSortOverlay doesn't nest past the
-  /// project's 4-level widget guideline.
-  Widget _buildSortMenuList({
-    required ThemeProvider theme,
-    required String lang,
-    required _ListViewState listState,
-    required List<_SortOption> options,
-    required void Function(String key) onSelect,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: IntrinsicWidth(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 180),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildSortMenuRow(
-                theme: theme,
-                icon: Icons.sort_rounded,
-                label: Translations.get('default', lang),
-                selected: listState.sortField == null,
-                onTap: () => onSelect(''),
-              ),
-              ...options.map(
-                (o) => _buildSortMenuRow(
-                  theme: theme,
-                  icon: o.icon,
-                  label: o.label,
-                  selected: listState.sortField == o.key,
-                  sortAsc: listState.sortAsc,
-                  onTap: () => onSelect(o.key),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// A single row inside the sort dropdown, styled to match the rest of the
-  /// app's selectable-chip language (rounded blue-tinted highlight when
-  /// active, e.g. the sidebar's selected SN row or the view-mode tab pills)
-  /// instead of Flutter's plain default PopupMenuItem look.
-  Widget _buildSortMenuRow({
-    required ThemeProvider theme,
-    required IconData icon,
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-    bool? sortAsc,
-  }) {
-    final accent = theme.isDark ? Colors.blue.shade300 : Colors.blue.shade700;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected ? accent : theme.textSecondary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: selected ? accent : theme.textPrimary,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ),
-            if (selected && sortAsc != null) ...[
-              const SizedBox(width: 8),
-              Icon(
-                sortAsc
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                size: 14,
-                color: accent,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(
-    String label,
-    String value,
-    ThemeProvider theme, {
-    bool highlight = false,
-  }) {
-    if (value.isEmpty) return const SizedBox();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0),
-      child: Row(
-        children: [
-          Text(
-            '$label: ',
-            style: TextStyle(color: theme.textSecondary, fontSize: 13),
-          ),
-          if (highlight)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: theme.isDark
-                    ? Colors.blue.withValues(alpha: 0.2)
-                    : Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: theme.isDark
-                      ? Colors.blue.shade200
-                      : Colors.blue.shade700,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: Text(
-                value,
-                style: TextStyle(color: theme.textPrimary, fontSize: 13),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showSettingsDialog(
-    BuildContext context,
-    AppLogic logic,
-    ThemeProvider theme,
-  ) {
-    final TextEditingController tokenCtrl = TextEditingController(
-      text: logic.token,
-    );
-    final TextEditingController langCtrl = TextEditingController(
-      text: logic.lang,
-    );
-    final TextEditingController operationIdCtrl = TextEditingController(
-      text: logic.operationId,
-    );
-    final TextEditingController uuidCtrl = TextEditingController(
-      text: logic.uuid,
-    );
-    final TextEditingController cookieCtrl = TextEditingController(
-      text: logic.cookie,
-    );
-
-    bool isExpanded = false;
-    int settingsTabIndex = 0;
-    bool isVerifying = false;
-    // null = idle, true = last verify succeeded, false = last verify failed.
-    // Drives the verify-connection icon's check/cross animation; auto-reverts
-    // to null a few seconds after a result lands (see onPressed below).
-    bool? verifyOk;
-    String verifyTooltip = Translations.get('verify_connection', logic.lang);
-    bool isFetchingCdp = false;
-    bool isGlassExpanded = true;
-    double bgBlur = logic.bgBlur;
-    double bgOpacity = logic.bgOpacity;
-    double dialogBlur = logic.dialogBlur;
-    double dialogOpacity = logic.dialogOpacity;
-
-    Widget buildField(
-      String label,
-      TextEditingController ctrl, {
-      int maxLines = 1,
-      String? hint,
-    }) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: theme.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 5),
-            TextField(
-              controller: ctrl,
-              style: TextStyle(color: theme.textPrimary, fontSize: 13),
-              maxLines: maxLines,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(
-                  color: theme.textSecondary.withValues(alpha: 0.5),
-                  fontSize: 12,
-                ),
-                filled: true,
-                fillColor: theme.isDark
-                    ? const Color(0xFF1E1F22)
-                    : const Color(0xFFF2F4F7),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: theme.isDark
-                        ? Colors.white10
-                        : Colors.black.withValues(alpha: 0.05),
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.blue.shade600,
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // One row inside the "Customize blur & transparency" section: a
-    // label + live value on top, a Slider below — mirrors the JA_Compare
-    // reference app's Advanced Settings layout (Main background blur/
-    // opacity, Dialog blur/opacity).
-    Widget buildGlassSlider({
-      required String label,
-      required double value,
-      required double min,
-      required double max,
-      bool isPercent = false,
-      required ValueChanged<double> onChanged,
-    }) {
-      final display = isPercent
-          ? '${(value * 100).round()}%'
-          : '${value.toStringAsFixed(0)}px';
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(color: theme.textPrimary, fontSize: 12),
-                  ),
-                ),
-                Text(
-                  display,
-                  style: TextStyle(color: theme.textSecondary, fontSize: 11),
-                ),
-              ],
-            ),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-              ),
-              child: Slider(
-                value: value,
-                min: min,
-                max: max,
-                divisions: isPercent ? 18 : 30,
-                activeColor: Colors.blue.shade600,
-                onChanged: onChanged,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    Widget buildSettingsTabButton({
-      required IconData icon,
-      required String label,
-      required bool selected,
-      required VoidCallback onTap,
-    }) {
-      return Expanded(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: onTap,
-            child: AnimatedContainer(
-              duration: Motion.fast,
-              curve: Motion.curveInOut,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-              decoration: BoxDecoration(
-                color: selected
-                    ? Colors.blue.withValues(alpha: 0.12)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 16,
-                    color: selected
-                        ? Colors.blue.shade600
-                        : theme.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: selected
-                            ? Colors.blue.shade600
-                            : theme.textSecondary,
-                        fontSize: 12,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    Widget buildAboutTab() {
-      return SingleChildScrollView(
-        key: const ValueKey('about-tab'),
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      Icons.settings_suggest_rounded,
-                      color: Colors.blue.shade600,
-                      size: 30,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    appName,
-                    style: TextStyle(
-                      color: theme.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'v$appVersion',
-                    style: TextStyle(color: theme.textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              Translations.get('about_detail', logic.lang),
-              style: TextStyle(
-                color: theme.textPrimary,
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '© 2026 JA Tech.\nAll rights reserved.',
-              style: TextStyle(
-                color: theme.textSecondary,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    Widget buildUserGuideTab() {
-      return SingleChildScrollView(
-        key: const ValueKey('user-guide-tab'),
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-        child: Text(
-          Translations.get('user_guide_detail', logic.lang),
-          style: TextStyle(color: theme.textPrimary, fontSize: 13, height: 1.5),
-        ),
-      );
-    }
-
-    _showIosDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            // Live-preview the dialogBlur/dialogOpacity sliders on this very
-            // dialog (matches JA_Compare's GlassDialog behavior). Floor of
-            // 6px blur whenever opacity < 1.0 prevents the see-through
-            // overlapping-text glitch fixed in CHANGELOG v2.1.0.
-            final effectiveBlur = (dialogOpacity < 1.0 && dialogBlur < 6.0)
-                ? 6.0
-                : dialogBlur;
-            final settingsContentHeight = settingsTabIndex == 0 && !isExpanded
-                ? 190.0
-                : 430.0;
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(
-                      sigmaX: effectiveBlur,
-                      sigmaY: effectiveBlur,
-                    ),
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-                AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  backgroundColor:
-                      (theme.isDark ? const Color(0xFF2B2D30) : Colors.white)
-                          .withValues(alpha: dialogOpacity),
-                  titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  title: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.settings_suggest_rounded,
-                          color: Colors.blue.shade600,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        Translations.get('settings', logic.lang),
-                        style: TextStyle(
-                          color: theme.textPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      const Spacer(),
-                      // Connection Health Pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (logic.isConnectionValid ?? false)
-                              ? Colors.green.withValues(alpha: 0.12)
-                              : Colors.amber.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: (logic.isConnectionValid ?? false)
-                                ? Colors.green.withValues(alpha: 0.3)
-                                : Colors.amber.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: (logic.isConnectionValid ?? false)
-                                    ? Colors.green
-                                    : Colors.amber.shade700,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              (logic.isConnectionValid ?? false)
-                                  ? Translations.get(
-                                      'status_connected',
-                                      logic.lang,
-                                    )
-                                  : Translations.get(
-                                      'status_check',
-                                      logic.lang,
-                                    ),
-                              style: TextStyle(
-                                color: (logic.isConnectionValid ?? false)
-                                    ? Colors.green.shade700
-                                    : Colors.amber.shade800,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  content: SizedBox(
-                    width: 480,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: theme.sidebarBg,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              buildSettingsTabButton(
-                                icon: Icons.tune_rounded,
-                                label: Translations.get(
-                                  'advanced_settings',
-                                  logic.lang,
-                                ),
-                                selected: settingsTabIndex == 0,
-                                onTap: () =>
-                                    setDialogState(() => settingsTabIndex = 0),
-                              ),
-                              buildSettingsTabButton(
-                                icon: Icons.menu_book_rounded,
-                                label: Translations.get(
-                                  'user_guide',
-                                  logic.lang,
-                                ),
-                                selected: settingsTabIndex == 1,
-                                onTap: () =>
-                                    setDialogState(() => settingsTabIndex = 1),
-                              ),
-                              buildSettingsTabButton(
-                                icon: Icons.info_outline_rounded,
-                                label: Translations.get('about', logic.lang),
-                                selected: settingsTabIndex == 2,
-                                onTap: () =>
-                                    setDialogState(() => settingsTabIndex = 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        AnimatedSize(
-                          duration: Motion.normal,
-                          curve: Motion.curveInOut,
-                          child: SizedBox(
-                            height: settingsContentHeight,
-                            child: AnimatedSwitcher(
-                              duration: Motion.normal,
-                              switchInCurve: Motion.curveOut,
-                              switchOutCurve: Motion.curveIn,
-                              layoutBuilder: (currentChild, previousChildren) =>
-                                  Stack(
-                                    alignment: Alignment.topCenter,
-                                    children: [
-                                      ...previousChildren,
-                                      ?currentChild,
-                                    ],
-                                  ),
-                              child: settingsTabIndex == 1
-                                  ? buildUserGuideTab()
-                                  : settingsTabIndex == 2
-                                  ? buildAboutTab()
-                                  : SingleChildScrollView(
-                                      key: const ValueKey('advanced-tab'),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: 10),
-
-                                          // Smart 2-Step Auto Sync Card
-                                          Container(
-                                            padding: const EdgeInsets.all(14),
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                colors: theme.isDark
-                                                    ? [
-                                                        const Color(0xFF1E2638),
-                                                        const Color(0xFF1A2130),
-                                                      ]
-                                                    : [
-                                                        const Color(0xFFEBF3FE),
-                                                        const Color(0xFFF4F8FE),
-                                                      ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: Colors.blue.withValues(
-                                                  alpha: 0.2,
-                                                ),
-                                              ),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.bolt_rounded,
-                                                      color:
-                                                          Colors.blue.shade600,
-                                                      size: 20,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      Translations.get(
-                                                        'cdp_sync_title',
-                                                        logic.lang,
-                                                      ),
-                                                      style: TextStyle(
-                                                        color:
-                                                            theme.textPrimary,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  Translations.get(
-                                                    'cdp_sync_desc',
-                                                    logic.lang,
-                                                  ),
-                                                  style: TextStyle(
-                                                    color: theme.textSecondary,
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 12),
-                                                Row(
-                                                  children: [
-                                                    Expanded(
-                                                      child: ElevatedButton.icon(
-                                                        icon: const Icon(
-                                                          Icons
-                                                              .open_in_browser_rounded,
-                                                          size: 16,
-                                                        ),
-                                                        label: Text(
-                                                          Translations.get(
-                                                            'btn_open_browser',
-                                                            logic.lang,
-                                                          ),
-                                                        ),
-                                                        style: ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .blue
-                                                                  .shade600,
-                                                          foregroundColor:
-                                                              Colors.white,
-                                                          elevation: 0,
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                vertical: 10,
-                                                              ),
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          textStyle:
-                                                              const TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
-                                                        ),
-                                                        onPressed: () async {
-                                                          await BrowserHelper.launchBrowser();
-                                                        },
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    Expanded(
-                                                      child: ElevatedButton.icon(
-                                                        icon: isFetchingCdp
-                                                            ? const SizedBox(
-                                                                width: 14,
-                                                                height: 14,
-                                                                child: CircularProgressIndicator(
-                                                                  strokeWidth:
-                                                                      2,
-                                                                  color: Colors
-                                                                      .white,
-                                                                ),
-                                                              )
-                                                            : const Icon(
-                                                                Icons
-                                                                    .sync_rounded,
-                                                                size: 16,
-                                                              ),
-                                                        label: Text(
-                                                          isFetchingCdp
-                                                              ? Translations.get(
-                                                                  'status_fetching',
-                                                                  logic.lang,
-                                                                )
-                                                              : Translations.get(
-                                                                  'btn_sync_credentials',
-                                                                  logic.lang,
-                                                                ),
-                                                        ),
-                                                        style: ElevatedButton.styleFrom(
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .teal
-                                                                  .shade600,
-                                                          foregroundColor:
-                                                              Colors.white,
-                                                          elevation: 0,
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                vertical: 10,
-                                                              ),
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          textStyle:
-                                                              const TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
-                                                        ),
-                                                        onPressed: isFetchingCdp
-                                                            ? null
-                                                            : () async {
-                                                                setDialogState(
-                                                                  () =>
-                                                                      isFetchingCdp =
-                                                                          true,
-                                                                );
-                                                                final creds =
-                                                                    await BrowserHelper.fetchCredentialsFromBrowser();
-                                                                setDialogState(
-                                                                  () =>
-                                                                      isFetchingCdp =
-                                                                          false,
-                                                                );
-
-                                                                if (!context
-                                                                    .mounted) {
-                                                                  return;
-                                                                }
-                                                                if (creds !=
-                                                                    null) {
-                                                                  if (creds.token !=
-                                                                          null &&
-                                                                      creds
-                                                                          .token!
-                                                                          .isNotEmpty) {
-                                                                    tokenCtrl
-                                                                        .text = creds
-                                                                        .token!;
-                                                                  }
-                                                                  if (creds.operationId !=
-                                                                          null &&
-                                                                      creds
-                                                                          .operationId!
-                                                                          .isNotEmpty) {
-                                                                    operationIdCtrl
-                                                                        .text = creds
-                                                                        .operationId!;
-                                                                  }
-                                                                  if (creds.uuid !=
-                                                                          null &&
-                                                                      creds
-                                                                          .uuid!
-                                                                          .isNotEmpty) {
-                                                                    uuidCtrl
-                                                                        .text = creds
-                                                                        .uuid!;
-                                                                  }
-                                                                  if (creds.cookie !=
-                                                                          null &&
-                                                                      creds
-                                                                          .cookie!
-                                                                          .isNotEmpty) {
-                                                                    cookieCtrl
-                                                                        .text = creds
-                                                                        .cookie!;
-                                                                  }
-
-                                                                  ScaffoldMessenger.of(
-                                                                    context,
-                                                                  ).showSnackBar(
-                                                                    SnackBar(
-                                                                      content: Text(
-                                                                        Translations.get(
-                                                                          'fetched_success',
-                                                                          logic
-                                                                              .lang,
-                                                                        ),
-                                                                      ),
-                                                                      backgroundColor:
-                                                                          Colors
-                                                                              .green,
-                                                                    ),
-                                                                  );
-                                                                } else {
-                                                                  ScaffoldMessenger.of(
-                                                                    context,
-                                                                  ).showSnackBar(
-                                                                    SnackBar(
-                                                                      content: Text(
-                                                                        Translations.get(
-                                                                          'fetched_fail',
-                                                                          logic
-                                                                              .lang,
-                                                                        ),
-                                                                      ),
-                                                                      backgroundColor:
-                                                                          Colors
-                                                                              .red,
-                                                                    ),
-                                                                  );
-                                                                }
-                                                              },
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 12),
-
-                                          // Sleek Toggle Button for Advanced Options
-                                          Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: () {
-                                                setDialogState(() {
-                                                  isExpanded = !isExpanded;
-                                                });
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 14,
-                                                      vertical: 12,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: theme.isDark
-                                                      ? const Color(0xFF1E1F22)
-                                                      : const Color(0xFFF7F9FC),
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  border: Border.all(
-                                                    color: isExpanded
-                                                        ? Colors.blue.shade600
-                                                        : (theme.isDark
-                                                              ? Colors.white10
-                                                              : Colors.black
-                                                                    .withValues(
-                                                                      alpha:
-                                                                          0.08,
-                                                                    )),
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.tune_rounded,
-                                                      size: 18,
-                                                      color: isExpanded
-                                                          ? Colors.blue.shade600
-                                                          : theme.textSecondary,
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    Expanded(
-                                                      child: Text(
-                                                        isExpanded
-                                                            ? Translations.get(
-                                                                'hide_advanced',
-                                                                logic.lang,
-                                                              )
-                                                            : Translations.get(
-                                                                'show_advanced',
-                                                                logic.lang,
-                                                              ),
-                                                        style: TextStyle(
-                                                          color: isExpanded
-                                                              ? Colors
-                                                                    .blue
-                                                                    .shade600
-                                                              : theme
-                                                                    .textPrimary,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          fontSize: 13,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    Icon(
-                                                      isExpanded
-                                                          ? Icons
-                                                                .keyboard_arrow_up_rounded
-                                                          : Icons
-                                                                .keyboard_arrow_down_rounded,
-                                                      color: isExpanded
-                                                          ? Colors.blue.shade600
-                                                          : theme.textSecondary,
-                                                      size: 20,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-
-                                          // Expandable Section
-                                          AnimatedCrossFade(
-                                            firstChild: const SizedBox.shrink(),
-                                            secondChild: Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 12.0,
-                                              ),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(
-                                                  14,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: theme.isDark
-                                                      ? const Color(0xFF1E1F22)
-                                                      : const Color(0xFFF8FAFC),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: theme.isDark
-                                                        ? Colors.white10
-                                                        : Colors.black
-                                                              .withValues(
-                                                                alpha: 0.06,
-                                                              ),
-                                                  ),
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    // Parse Raw Header Button
-                                                    SizedBox(
-                                                      width: double.infinity,
-                                                      child: OutlinedButton.icon(
-                                                        icon: const Icon(
-                                                          Icons
-                                                              .content_paste_rounded,
-                                                          size: 16,
-                                                        ),
-                                                        label: Text(
-                                                          Translations.get(
-                                                            'paste_raw_http',
-                                                            logic.lang,
-                                                          ),
-                                                        ),
-                                                        style: OutlinedButton.styleFrom(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                vertical: 10,
-                                                              ),
-                                                          side: BorderSide(
-                                                            color: Colors
-                                                                .blue
-                                                                .shade600
-                                                                .withValues(
-                                                                  alpha: 0.4,
-                                                                ),
-                                                          ),
-                                                          foregroundColor:
-                                                              Colors
-                                                                  .blue
-                                                                  .shade600,
-                                                          shape: RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  8,
-                                                                ),
-                                                          ),
-                                                          textStyle:
-                                                              const TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
-                                                        ),
-                                                        onPressed: () {
-                                                          final TextEditingController
-                                                          pasteCtrl =
-                                                              TextEditingController();
-                                                          _showIosDialog(
-                                                            context: context,
-                                                            builder: (ctx) => AlertDialog(
-                                                              shape: RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                      14,
-                                                                    ),
-                                                              ),
-                                                              backgroundColor:
-                                                                  theme.isDark
-                                                                  ? const Color(
-                                                                      0xFF2B2D30,
-                                                                    )
-                                                                  : Colors
-                                                                        .white,
-                                                              title: Text(
-                                                                Translations.get(
-                                                                  'paste_raw_http',
-                                                                  logic.lang,
-                                                                ),
-                                                                style: TextStyle(
-                                                                  color: theme
-                                                                      .textPrimary,
-                                                                  fontSize: 16,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                ),
-                                                              ),
-                                                              content: SizedBox(
-                                                                width: 450,
-                                                                child: TextField(
-                                                                  controller:
-                                                                      pasteCtrl,
-                                                                  maxLines: 10,
-                                                                  style: TextStyle(
-                                                                    color: theme
-                                                                        .textPrimary,
-                                                                    fontSize:
-                                                                        12,
-                                                                  ),
-                                                                  decoration: InputDecoration(
-                                                                    hintText:
-                                                                        'GET /api/... HTTP/1.1\nAuthorization: bearer ...\nCookie: ...',
-                                                                    hintStyle: TextStyle(
-                                                                      color: theme
-                                                                          .textSecondary
-                                                                          .withValues(
-                                                                            alpha:
-                                                                                0.6,
-                                                                          ),
-                                                                    ),
-                                                                    filled:
-                                                                        true,
-                                                                    fillColor: theme
-                                                                        .sidebarBg,
-                                                                    border: OutlineInputBorder(
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                            8,
-                                                                          ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              actions: [
-                                                                TextButton(
-                                                                  onPressed: () =>
-                                                                      Navigator.pop(
-                                                                        ctx,
-                                                                      ),
-                                                                  child: Text(
-                                                                    Translations.get(
-                                                                      'cancel',
-                                                                      logic
-                                                                          .lang,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                ElevatedButton(
-                                                                  onPressed: () {
-                                                                    final creds =
-                                                                        BrowserHelper.parseRawHttpRequest(
-                                                                          pasteCtrl
-                                                                              .text,
-                                                                        );
-                                                                    if (creds.token !=
-                                                                            null &&
-                                                                        creds
-                                                                            .token!
-                                                                            .isNotEmpty) {
-                                                                      tokenCtrl
-                                                                          .text = creds
-                                                                          .token!;
-                                                                    }
-                                                                    if (creds.lang !=
-                                                                            null &&
-                                                                        creds
-                                                                            .lang!
-                                                                            .isNotEmpty) {
-                                                                      langCtrl
-                                                                          .text = creds
-                                                                          .lang!;
-                                                                    }
-                                                                    if (creds.operationId !=
-                                                                            null &&
-                                                                        creds
-                                                                            .operationId!
-                                                                            .isNotEmpty) {
-                                                                      operationIdCtrl
-                                                                          .text = creds
-                                                                          .operationId!;
-                                                                    }
-                                                                    if (creds.uuid !=
-                                                                            null &&
-                                                                        creds
-                                                                            .uuid!
-                                                                            .isNotEmpty) {
-                                                                      uuidCtrl
-                                                                          .text = creds
-                                                                          .uuid!;
-                                                                    }
-                                                                    if (creds.cookie !=
-                                                                            null &&
-                                                                        creds
-                                                                            .cookie!
-                                                                            .isNotEmpty) {
-                                                                      cookieCtrl
-                                                                          .text = creds
-                                                                          .cookie!;
-                                                                    }
-
-                                                                    Navigator.pop(
-                                                                      ctx,
-                                                                    );
-                                                                    ScaffoldMessenger.of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      SnackBar(
-                                                                        content: Text(
-                                                                          Translations.get(
-                                                                            'fetched_success',
-                                                                            logic.lang,
-                                                                          ),
-                                                                        ),
-                                                                        backgroundColor:
-                                                                            Colors.green,
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                  style: ElevatedButton.styleFrom(
-                                                                    backgroundColor:
-                                                                        Colors
-                                                                            .blue
-                                                                            .shade600,
-                                                                  ),
-                                                                  child: Text(
-                                                                    Translations.get(
-                                                                      'parse_http',
-                                                                      logic
-                                                                          .lang,
-                                                                    ),
-                                                                    style: const TextStyle(
-                                                                      color: Colors
-                                                                          .white,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 14),
-                                                    buildField(
-                                                      Translations.get(
-                                                        'mes_token',
-                                                        logic.lang,
-                                                      ),
-                                                      tokenCtrl,
-                                                      maxLines: 2,
-                                                      hint:
-                                                          'Bearer token string',
-                                                    ),
-                                                    buildField(
-                                                      Translations.get(
-                                                        'cookie',
-                                                        logic.lang,
-                                                      ),
-                                                      cookieCtrl,
-                                                      maxLines: 2,
-                                                      hint:
-                                                          'cultureName=...; CloudMES_Token=...',
-                                                    ),
-                                                    Row(
-                                                      children: [
-                                                        Expanded(
-                                                          child: buildField(
-                                                            Translations.get(
-                                                              'operation_id',
-                                                              logic.lang,
-                                                            ),
-                                                            operationIdCtrl,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 10,
-                                                        ),
-                                                        Expanded(
-                                                          child: buildField(
-                                                            Translations.get(
-                                                              'uuid',
-                                                              logic.lang,
-                                                            ),
-                                                            uuidCtrl,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    buildField(
-                                                      Translations.get(
-                                                        'language',
-                                                        logic.lang,
-                                                      ),
-                                                      langCtrl,
-                                                      hint:
-                                                          'en / vi-VN / zh-CN',
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      Translations.get(
-                                                        'glass_settings_title',
-                                                        logic.lang,
-                                                      ),
-                                                      style: TextStyle(
-                                                        color:
-                                                            theme.textPrimary,
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                    Theme(
-                                                      data: Theme.of(context)
-                                                          .copyWith(
-                                                            dividerColor: Colors
-                                                                .transparent,
-                                                          ),
-                                                      child: ExpansionTile(
-                                                        initiallyExpanded:
-                                                            isGlassExpanded,
-                                                        tilePadding:
-                                                            EdgeInsets.zero,
-                                                        childrenPadding:
-                                                            EdgeInsets.zero,
-                                                        collapsedIconColor:
-                                                            theme.textSecondary,
-                                                        iconColor: Colors
-                                                            .blue
-                                                            .shade600,
-                                                        onExpansionChanged:
-                                                            (
-                                                              v,
-                                                            ) => setDialogState(
-                                                              () =>
-                                                                  isGlassExpanded =
-                                                                      v,
-                                                            ),
-                                                        title: Text(
-                                                          Translations.get(
-                                                            'glass_customize',
-                                                            logic.lang,
-                                                          ),
-                                                          style: TextStyle(
-                                                            color: theme
-                                                                .textSecondary,
-                                                            fontSize: 12,
-                                                          ),
-                                                        ),
-                                                        children: [
-                                                          buildGlassSlider(
-                                                            label:
-                                                                Translations.get(
-                                                                  'bg_blur_label',
-                                                                  logic.lang,
-                                                                ),
-                                                            value: bgBlur,
-                                                            min: 0,
-                                                            max: 30,
-                                                            onChanged: (v) =>
-                                                                setDialogState(
-                                                                  () => bgBlur =
-                                                                      v,
-                                                                ),
-                                                          ),
-                                                          buildGlassSlider(
-                                                            label: Translations.get(
-                                                              'bg_opacity_label',
-                                                              logic.lang,
-                                                            ),
-                                                            value: bgOpacity,
-                                                            min: 0.1,
-                                                            max: 1.0,
-                                                            isPercent: true,
-                                                            onChanged: (v) =>
-                                                                setDialogState(
-                                                                  () =>
-                                                                      bgOpacity =
-                                                                          v,
-                                                                ),
-                                                          ),
-                                                          buildGlassSlider(
-                                                            label:
-                                                                Translations.get(
-                                                                  'dialog_blur',
-                                                                  logic.lang,
-                                                                ),
-                                                            value: dialogBlur,
-                                                            min: 0,
-                                                            max: 30,
-                                                            onChanged: (v) =>
-                                                                setDialogState(
-                                                                  () =>
-                                                                      dialogBlur =
-                                                                          v,
-                                                                ),
-                                                          ),
-                                                          buildGlassSlider(
-                                                            label: Translations.get(
-                                                              'dialog_opacity',
-                                                              logic.lang,
-                                                            ),
-                                                            value:
-                                                                dialogOpacity,
-                                                            min: 0.3,
-                                                            max: 1.0,
-                                                            isPercent: true,
-                                                            onChanged: (v) =>
-                                                                setDialogState(
-                                                                  () =>
-                                                                      dialogOpacity =
-                                                                          v,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            crossFadeState: isExpanded
-                                                ? CrossFadeState.showSecond
-                                                : CrossFadeState.showFirst,
-                                            duration: const Duration(
-                                              milliseconds: 200,
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 10),
-                                        ],
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actionsAlignment: MainAxisAlignment.spaceBetween,
-                  actions: [
-                    // Left aligned items
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'v$appVersion',
-                          style: TextStyle(
-                            color: theme.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Tooltip(
-                          message: verifyTooltip,
-                          child: IconButton(
-                            icon: AnimatedSwitcher(
-                              duration: Motion.normal,
-                              transitionBuilder: (child, anim) =>
-                                  ScaleTransition(
-                                    scale: anim,
-                                    child: FadeTransition(
-                                      opacity: anim,
-                                      child: child,
-                                    ),
-                                  ),
-                              child: isVerifying
-                                  ? const SizedBox(
-                                      key: ValueKey('verifying'),
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : verifyOk == true
-                                  ? Icon(
-                                      Icons.check_circle,
-                                      key: const ValueKey('ok'),
-                                      size: 18,
-                                      color: theme.passColor,
-                                    )
-                                  : verifyOk == false
-                                  ? Icon(
-                                      Icons.cancel,
-                                      key: const ValueKey('fail'),
-                                      size: 18,
-                                      color: theme.failColor,
-                                    )
-                                  : Icon(
-                                      Icons.verified_outlined,
-                                      key: const ValueKey('idle'),
-                                      size: 18,
-                                      color: Colors.blue.shade600,
-                                    ),
-                            ),
-                            onPressed: isVerifying
-                                ? null
-                                : () async {
-                                    setDialogState(() {
-                                      isVerifying = true;
-                                      verifyOk = null;
-                                    });
-                                    final res = await logic.verifySettings(
-                                      tokenCtrl.text,
-                                      langCtrl.text,
-                                      operationIdCtrl.text,
-                                      uuidCtrl.text,
-                                      cookieCtrl.text,
-                                    );
-                                    if (!context.mounted) return;
-                                    setDialogState(() {
-                                      isVerifying = false;
-                                      verifyOk = res == null;
-                                      verifyTooltip = res == null
-                                          ? Translations.get(
-                                              'connection_valid',
-                                              logic.lang,
-                                            )
-                                          : 'Invalid: $res';
-                                    });
-                                    // Auto-revert the icon back to idle a few
-                                    // seconds after the result lands, since
-                                    // ScaffoldMessenger SnackBars anchor to
-                                    // the main window's Scaffold and render
-                                    // BEHIND this dialog's modal barrier —
-                                    // invisible to the user. The icon itself
-                                    // (plus its tooltip) is the only reliably
-                                    // visible feedback while this dialog is open.
-                                    Future.delayed(
-                                      const Duration(seconds: 3),
-                                      () {
-                                        if (!context.mounted) return;
-                                        setDialogState(() {
-                                          verifyOk = null;
-                                          verifyTooltip = Translations.get(
-                                            'verify_connection',
-                                            logic.lang,
-                                          );
-                                        });
-                                      },
-                                    );
-                                  },
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Right aligned buttons
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            tokenCtrl.text = defaultToken;
-                            operationIdCtrl.text = defaultOperationId;
-                            uuidCtrl.text = defaultUuid;
-                            cookieCtrl.text = defaultCookie;
-                            langCtrl.text = 'en';
-                            setDialogState(() {
-                              bgBlur = 10.0;
-                              bgOpacity = 0.6;
-                              dialogBlur = 12.0;
-                              dialogOpacity = 0.75;
-                            });
-                          },
-                          child: Text(
-                            Translations.get('default', logic.lang),
-                            style: TextStyle(
-                              color: theme.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            Translations.get('cancel', logic.lang),
-                            style: TextStyle(
-                              color: theme.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        ElevatedButton(
-                          onPressed: () {
-                            logic.updateSettings(
-                              token: tokenCtrl.text,
-                              lang: langCtrl.text,
-                              operationId: operationIdCtrl.text,
-                              uuid: uuidCtrl.text,
-                              cookie: cookieCtrl.text,
-                              bgBlur: bgBlur,
-                              bgOpacity: bgOpacity,
-                              dialogBlur: dialogBlur,
-                              dialogOpacity: dialogOpacity,
-                            );
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue.shade600,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            Translations.get('save', logic.lang),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showTokenExpiredWarningDialog(BuildContext context, AppLogic logic) {
-    final theme = context.read<ThemeProvider>();
-    bool isSyncing = false;
-
-    _showIosDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              backgroundColor: theme.isDark
-                  ? const Color(0xFF2B2D30)
-                  : Colors.white,
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.amber.shade900,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      Translations.get('token_expired_title', logic.lang),
-                      style: TextStyle(
-                        color: theme.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              content: SizedBox(
-                width: 480,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      Translations.get('token_expired_desc', logic.lang),
-                      style: TextStyle(
-                        color: theme.textSecondary,
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 2-Step Sync Wizard Card
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: theme.isDark
-                            ? Colors.blue.withValues(alpha: 0.08)
-                            : Colors.blue.shade50.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: theme.isDark
-                              ? Colors.blue.withValues(alpha: 0.2)
-                              : Colors.blue.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.bolt,
-                                color: Colors.blue.shade700,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                Translations.get('cdp_sync_title', logic.lang),
-                                style: TextStyle(
-                                  color: theme.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            Translations.get('cdp_sync_desc', logic.lang),
-                            style: TextStyle(
-                              color: theme.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () async {
-                                    await BrowserHelper.launchBrowser();
-                                  },
-                                  icon: const Icon(
-                                    Icons.open_in_browser,
-                                    size: 16,
-                                  ),
-                                  label: Text(
-                                    Translations.get(
-                                      'btn_open_browser',
-                                      logic.lang,
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue.shade600,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: isSyncing
-                                      ? null
-                                      : () async {
-                                          setDialogState(
-                                            () => isSyncing = true,
-                                          );
-                                          final creds =
-                                              await BrowserHelper.fetchCredentialsFromBrowser();
-                                          setDialogState(
-                                            () => isSyncing = false,
-                                          );
-
-                                          if (creds != null) {
-                                            await logic.updateSettings(
-                                              token:
-                                                  (creds.token != null &&
-                                                      creds.token!.isNotEmpty)
-                                                  ? creds.token!
-                                                  : logic.token,
-                                              lang: logic.lang,
-                                              operationId:
-                                                  (creds.operationId != null &&
-                                                      creds
-                                                          .operationId!
-                                                          .isNotEmpty)
-                                                  ? creds.operationId!
-                                                  : logic.operationId,
-                                              uuid:
-                                                  (creds.uuid != null &&
-                                                      creds.uuid!.isNotEmpty)
-                                                  ? creds.uuid!
-                                                  : logic.uuid,
-                                              cookie:
-                                                  (creds.cookie != null &&
-                                                      creds.cookie!.isNotEmpty)
-                                                  ? creds.cookie!
-                                                  : logic.cookie,
-                                            );
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    Translations.get(
-                                                      'fetched_success',
-                                                      logic.lang,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      color: Colors.greenAccent,
-                                                    ),
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 2,
-                                                  ),
-                                                ),
-                                              );
-                                              Navigator.pop(ctx);
-                                            }
-                                          } else {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    Translations.get(
-                                                      'fetched_fail',
-                                                      logic.lang,
-                                                    ),
-                                                    style: TextStyle(
-                                                      color: theme.failColor,
-                                                    ),
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 3,
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        },
-                                  icon: isSyncing
-                                      ? const SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Icon(
-                                          Icons.sync_rounded,
-                                          size: 16,
-                                        ),
-                                  label: Text(
-                                    isSyncing
-                                        ? Translations.get(
-                                            'status_fetching',
-                                            logic.lang,
-                                          )
-                                        : Translations.get(
-                                            'btn_sync_credentials',
-                                            logic.lang,
-                                          ),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal.shade700,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _showSettingsDialog(context, logic, theme);
-                  },
-                  icon: const Icon(Icons.settings, size: 15),
-                  label: Text(
-                    Translations.get('open_settings', logic.lang),
-                    style: TextStyle(color: Colors.blue.shade600, fontSize: 12),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(
-                    Translations.get('cancel', logic.lang),
-                    style: TextStyle(color: theme.textSecondary, fontSize: 12),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    return result;
   }
 }
 
-/// A compact icon-only chip that expands to reveal its label on hover.
-/// When [keepExpanded] is true (item selected, or window maximized), the
-/// label stays shown permanently and hover has no further effect —
-/// Dynamic-Island-style reveal animation otherwise.
-/// Per-tab search filter + sort field/direction, kept as plain mutable state
-/// (not persisted) since it's a pure display convenience per list view.
-class _ListViewState {
+abstract class _BaseListViewState {
+  TextEditingController get filterCtrl;
+  String get filter;
+  set filter(String value);
+  String? get sortField;
+  set sortField(String? value);
+  bool get sortAsc;
+  set sortAsc(bool value);
+  Set<String> get animatedItemKeys;
+}
+
+class _ListViewState implements _BaseListViewState {
+  @override
   final TextEditingController filterCtrl = TextEditingController();
+  @override
   String filter = '';
+  @override
   String? sortField;
+  @override
   bool sortAsc = true;
-  // Item identities that have already played their stagger entrance
-  // animation, so scrolling an item out of the cacheExtent and back in
-  // (which disposes and recreates its Element) doesn't replay it.
+  @override
+  final Set<String> animatedItemKeys = {};
+}
+
+class _BarcodeListViewState implements _BaseListViewState {
+  @override
+  final TextEditingController filterCtrl = TextEditingController();
+  @override
+  String filter = '';
+  @override
+  String? sortField;
+  @override
+  bool sortAsc = true;
+  @override
+  final Set<String> animatedItemKeys = {};
+}
+
+class _WipListViewState implements _BaseListViewState {
+  @override
+  final TextEditingController filterCtrl = TextEditingController();
+  @override
+  String filter = '';
+  @override
+  String? sortField;
+  @override
+  bool sortAsc = true;
+  @override
+  final Set<String> animatedItemKeys = {};
+}
+
+class _TraceListViewState implements _BaseListViewState {
+  @override
+  final TextEditingController filterCtrl = TextEditingController();
+  @override
+  String filter = '';
+  @override
+  String? sortField;
+  @override
+  bool sortAsc = true;
+  @override
   final Set<String> animatedItemKeys = {};
 }
 
@@ -4367,15 +4426,6 @@ class _SortOption {
   });
 }
 
-/// Cascades list items in on first appearance (iOS table-view style):
-/// each item's fade/slide-in duration grows slightly with its index, so
-/// later items visibly settle after earlier ones. [itemKey] identifies the
-/// record (stable content-based id, not raw index) — once an id has played
-/// its entrance animation it's recorded in [animatedKeys] (owned by the
-/// tab's _ListViewState, so it survives filter/sort rebuilds), and any
-/// later Element recreated for that same id — e.g. after scrolling it out
-/// of the ListView's cacheExtent and back into view — renders directly at
-/// its resting state instead of replaying the animation.
 class _StaggeredItem extends StatefulWidget {
   final String itemKey;
   final int index;
@@ -4464,17 +4514,17 @@ class _HoverChipState extends State<_HoverChip> {
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
           margin: const EdgeInsets.symmetric(horizontal: 2),
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(17),
+            borderRadius: BorderRadius.circular(100),
             border: widget.border,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, size: 16, color: widget.foreground),
+              Icon(widget.icon, size: 15, color: widget.foreground),
               ClipRect(
                 child: AnimatedAlign(
                   duration: const Duration(milliseconds: 250),
@@ -4490,8 +4540,8 @@ class _HoverChipState extends State<_HoverChip> {
                       overflow: TextOverflow.clip,
                       style: TextStyle(
                         color: widget.foreground,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11.5,
                       ),
                     ),
                   ),
@@ -4505,14 +4555,6 @@ class _HoverChipState extends State<_HoverChip> {
   }
 }
 
-/// Horizontally auto-scrolls [text] when it overflows the space given to
-/// this widget, instead of clipping it with an ellipsis — per the
-/// `dart-build-pro` skill's Marquee spec: a slow, readable scroll out to
-/// the end, then a quick snap back to the start (asymmetric, not a
-/// symmetric back-and-forth). Relies on
-/// `SingleChildScrollView.position.maxScrollExtent` (computed by Flutter
-/// from the real layout) rather than manually measuring text width, which
-/// has repeatedly proven unreliable for this exact use case.
 class _MarqueeText extends StatefulWidget {
   final String text;
   final TextStyle style;
@@ -4537,12 +4579,8 @@ class _MarqueeTextState extends State<_MarqueeText> {
     if (!mounted || !_scrollController.hasClients) return;
 
     final maxScrollExtent = _scrollController.position.maxScrollExtent;
-    if (maxScrollExtent <= 0) return; // fits within the box, nothing to do
+    if (maxScrollExtent <= 0) return;
 
-    // Asymmetric on purpose: slow, readable linear scroll out to the end,
-    // then a quick easeOut snap back to the start — not a symmetric back-
-    // and-forth. Forward duration scales with text length so longer labels
-    // don't fly by; the return trip is a fixed short duration regardless.
     while (mounted) {
       await _scrollController.animateTo(
         maxScrollExtent,

@@ -1,12 +1,12 @@
-# 🤖 JA MES Tool v2.7.0 - 中文说明
+# 🤖 JA MES Tool v2.8.0 - 中文说明
 
 <p align="center">
   <br>
-  <i><b>基于 Dart & Flutter 开发的高性能 Windows 桌面应用程序，用于自动化查询、检查和导出 Foxconn CloudMES 系统的测试记录、工序/条码历史与 BOM 组件追溯数据。</b></i>
+  <i><b>基于 Dart & Flutter 开发的高性能 Windows 桌面应用程序，搭载全新 Bento 毛玻璃架构，用于自动化查询、检查和导出 Foxconn CloudMES 系统的测试记录、工序/条码历史与 BOM 组件追溯数据。</b></i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.7.0-blue.svg" alt="版本 2.7.0">
+  <img src="https://img.shields.io/badge/banben-2.8.0-blue.svg" alt="版本 2.8.0">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -23,25 +23,19 @@
 
 **JA MES Tool** 是一款专为优化 **Foxconn CloudMES** API 平台测试记录查询、工序历史提取、BOM 组件追溯和 SN 验证、测试报告导出而设计的专业工具。
 
-专为测试工程师和 QA 团队打造，支持每个 SN 三种数据视图外加一个组件反向追溯视图 (Component Trace) 的极速异步并行查询、浏览器 CDP 自动同步 Token 凭据，以及带 Excel 风格搜索与排序的现代化交互界面。
+专为测试工程师和 QA 团队打造，支持每个 SN 三种数据视图外加一个组件反向追溯视图 (Component Trace) 的极速异步并行查询、浏览器 CDP 自动同步 Token 凭据，以及搭载 Bento Glassmorphism、Liquid Glass、Dynamic Island 状态胶囊和带 Excel 风格搜索与排序的现代化交互界面。
 
 ---
 
-## 💡 主要功能 (v2.7.0)
+## 💡 主要功能 (v2.8.0)
 
-### 📊 数据视图
-- 🗂️ **每个 SN 三种数据视图**：在 **测试记录** (Pass/Fail 结果)、**条码历史** (完整工序/工站流程) 与 **组件清单** (WIP BOM/物料追溯 — 制造商、料号、生产日期码、批次/包装号) 之间切换。
-- 🧭 **Component Trace（反向追溯）**：第四种视图，方向相反 — 扫描或输入组件自身的序列号 (`report/queryInfoList`)，即可查出它当前安装在哪个成品序列号中，并附带完整物料追溯详情。侧边栏保留独立的已查询序列号历史 (关闭重开应用也不会丢失，与 SN 队列一样)，并与 SN 队列共用同一个添加/搜索输入框 — 占位文字、图标与行为会随当前标签自动切换，无需额外的输入框。
-- 🔗 **自动 SN 主档解析**：输入内部 SN 时，程序会在查询前通过 `snMaster/getSnMasterProcess` 自动解析为标准产品 SN — 标题栏显示为 `输入 SN → 解析后 SN` (空间不足时自动滚动显示)，并在有下一工序时附带 **"Next" 徽章**。按会话缓存并在解析失败时自动回退。
-- 🔍 **Excel 风格搜索筛选**：每个记录列表都有即时搜索框（Component Trace 也不例外），输入时匹配任意字段。
-- ⬍ **点击排序**：排序按钮可选择字段并切换升序/降序，四种视图均支持 — 每个字段都有专属图标，当前选中字段以圆角强调色徽章高亮，风格与标签/侧边栏选中状态一致。
-- 📋 **可选取并复制数据**：任意记录数值 — 包括侧边栏 SN 队列 — 均可通过拖动选取或双击选中，并复制 (Ctrl+C)，如同电子表格。
-- 🔄 **单个 SN 刷新与全部刷新**：队列中每个 SN 都有独立的刷新图标，可单独重新查询该 SN (三种视图 + SN 主档解析)；侧边栏顶部另有 "全部刷新" 按钮可重新查询整个队列 — 无需重启应用即可获取最新数据。
-- 🔢 **智能记录数量**："SN 记录" 会自动显示 `(N)` 数量，当只有 0 或 1 条记录时自动隐藏。
-
-### 🎨 界面
-- ✨ **iOS 风格流畅过渡动画**：标签/SN 切换带有淡入滑动动画，记录列表以级联效果依次出现并支持弹性滚动，对话框采用缩放淡入淡出效果，侧边栏选中项与记录数量徽章带有平滑动画，明暗主题切换时背景色平滑渐变 — 全部基于统一的动画时长/曲线配置 (`lib/modules/ui/motion.dart`)。
-- 🏝️ **Dynamic Island 风格悬停工具栏**：3 个视图标签与模板/导入/导出/语言/主题按钮默认收起为图标，悬停时展开为文字标签 — 避免工具栏溢出。窗口最大化时所有按钮自动保持展开状态。
+### 🎨 Bento 毛玻璃视觉架构
+- 🌟 **Bento Grid & Liquid Glass 体系**：悬浮式 Bento 卡片设计，配备 1px 顶置光感反射边框，20-24px BackdropFilter 深度毛玻璃模糊以及 GPU 硬件加速的流动 Mesh Orbs 动态光效。
+- 🎛️ **4 轴毛玻璃实时调节面板**：设置中提供卡片模糊度 (0-40px)、卡片不透明度 (5-100%)、对话框模糊度 (0-40px)、对话框不透明度 (10-100%) 四大实时调节滑块，支持实时效果预览、一键默认与取消还原。
+- 🌓 **单击直切主题 (Light ⇄ Dark)**：一键顺畅切换明暗模式。
+- ⏱️ **精准自动 Build 时间戳读取**：自动读取 compiled `data/app.so` 和 exe 二进制修改时间，于 Header 与关于页展示。
+- ✨ **iOS 风格流畅过渡动画**：标签/SN 切换带有淡入滑动动画，记录列表以级联效果依次出现并支持弹性滚动，对话框采用缩放淡入淡出效果。
+- 🏝️ **Dynamic Island 状态胶囊**：动态波形指示 MES 实时连接状态，集成快速操作工具栏。
 - 🪟 **可调节毛玻璃效果**：设置 → 高级 中的"自定义模糊与透明度"面板提供 4 个实时预览滑块 (主背景模糊度/不透明度、对话框模糊度/不透明度)。排序下拉菜单与设置窗口本身都会随拖动滑块实时重新模糊 — 内置安全下限，无论不透明度调多低都能防止文字重叠透视的问题。
 - 🎨 **多语言与实心主题**：支持暗黑/亮色主题及 **英文**、**越南文**、**中文** 三语切换。
 
@@ -128,7 +122,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord、WipComponentRecord 与 QueryInfoRecord
 │       ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │       ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│       ├── constants.dart         # 全局常量与默认配置 (v2.7.0)
+│       ├── constants.dart         # 全局常量与默认配置 (v2.8.0)
 │       ├── logger_service.dart    # 日志服务与 7 天自动清理
 │       ├── logic.dart             # 状态管理：SN 队列、追溯历史、四种记录列表、ViewMode、SN 解析缓存
 │       ├── translations.dart      # 多语言字典 (EN, VN, CN)
@@ -155,7 +149,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.7.0+12)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.8.0+13)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -196,6 +190,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.8.0]** — **Bento 毛玻璃与 Liquid Glass 架构全面升级**：全界面重构为悬浮式 Bento 卡片与 GPU 加速 Mesh Orbs 动态光效，高级设置新增 4 轴毛玻璃实时预览滑块与取消还原，单击即时切换明暗主题，以及精准自动读取编译时间戳。
 - **[2.7.0]** — 新增 **Component Trace** 视图：反向查询组件自身序列号安装在哪个成品序列号中，侧边栏保留独立且可持久化的查询历史，支持搜索/排序与 CSV 模板/导入/导出 — 与 SN 队列共用同一个添加/搜索输入框，无需新增输入框。
 - **[2.6.4]** — SN 主档现在获取完整 API 数据 (下一工序、错误代码、路由、产线代码)；记录列表标题栏新增 "Next" 徽章显示下一工序，SN 标签在空间不足时改为自动滚动，不再截断。
 - **[2.6.3]** — Chrome 与 Microsoft Edge 现在使用可持久化的独立配置，支持旧配置迁移与有界 CDP 就绪检查，避免登录窗口卡死。

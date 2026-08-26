@@ -1,12 +1,12 @@
-# 🤖 JA MES Tool v2.7.0
+# 🤖 JA MES Tool v2.8.0
 
 <p align="center">
   <br>
-  <i><b>A high-performance Windows desktop application developed in Dart & Flutter for automated Foxconn CloudMES test record, process history, and BOM traceability querying.</b></i>
+  <i><b>A high-performance Windows desktop application developed in Dart & Flutter for automated Foxconn CloudMES test record, process history, and BOM traceability querying with Bento Glassmorphism UI.</b></i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.7.0-blue.svg" alt="Version 2.7.0">
+  <img src="https://img.shields.io/badge/version-2.8.0-blue.svg" alt="Version 2.8.0">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -37,26 +37,20 @@
 
 **JA MES Tool** is a specialized desktop application engineered to streamline serial number (SN) verification, test/process history extraction, BOM component traceability, and result reporting from the **Foxconn CloudMES** API platform.
 
-Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN plus a fourth reverse component-lookup view (Component Trace), automated token credential synchronization via browser CDP, and an intuitive modern interface with Excel-style search & sort.
+Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN plus a fourth reverse component-lookup view (Component Trace), automated token credential synchronization via browser CDP, and an intuitive modern interface with Bento Glassmorphism, Liquid Glass, Dynamic Island status capsule, and Excel-style search & sort.
 
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.7.0)
+## 💡 Key Features (v2.8.0)
 
-### 📊 Data Views
-- 🗂️ **Three Views per SN**: Switch between **Test Record** (pass/fail results), **Barcode History** (full process/station routing), and **Component List** (WIP BOM / material traceability — manufacturer, part no, date code, package/lot ID) for every queried SN.
-- 🧭 **Component Trace (reverse lookup)**: A fourth view for the opposite direction — scan or type a *component's own* CSN (`report/queryInfoList`) to find which product SN it is currently installed into, with full material/traceability detail per match. It keeps its own searched-CSN history in the sidebar (persisted across restarts, just like the SN queue), sharing the same add/search input box — the box's placeholder, icon, and behavior switch automatically with the active tab instead of showing a second input.
-- 🔗 **Automatic SN Master Resolution**: Typing an internal/alias SN auto-resolves it to the canonical product SN (`snMaster/getSnMasterProcess`) before fetching any of the 3 views — the header shows `typed SN → resolved SN` whenever they differ (auto-scrolling if it doesn't fit), plus a **"Next" chip** with the SN's next process when one is reported. Cached per-session with automatic fallback if resolution fails.
-- 🔍 **Excel-style Search Filter**: A live search box on every record list — including Component Trace — matches against any visible field as you type.
-- ⬍ **Click-to-sort**: A sort-by button lets you pick a field and toggle ascending/descending, on all four views — each field has its own icon and the active field is highlighted as a rounded accent pill, matching the app's tab/sidebar selection style.
-- 📋 **Selectable & Copyable Data**: Every record value — including the SN queue sidebar — can be selected with a click-drag or double-click and copied (Ctrl+C), just like a spreadsheet.
-- 🔄 **Per-SN & Refresh-All**: Each SN in the queue has its own refresh icon to re-fetch just that SN (all 3 views + its SN Master resolution), plus a "Refresh All" button in the sidebar header to re-fetch the entire queue — no more closing and reopening the app to force fresh data.
-- 🔢 **Smart Record Counts**: "Records for SN" shows a `(N)` count automatically, hidden when there are 0 or 1 records.
-
-### 🎨 Interface
-- ✨ **iOS-style Smooth Transitions**: Fade+slide animation when switching tabs or SN, cascading fade/slide-in entrance for record lists with bouncing scroll, scale+fade dialog presentation, animated sidebar selection & record-count badge, and crossfaded Light/Dark theme switching — all driven by a shared timing/easing spec (`lib/modules/ui/motion.dart`).
-- 🏝️ **Dynamic-Island Hover Toolbar**: The 3 view tabs and the Template/Import/Export/Language/Theme actions collapse into compact icon chips, expanding to full labels on hover — keeps the toolbar from overflowing. When the window is maximized, every chip stays fully expanded.
+### 🎨 Bento Glassmorphism Interface
+- 🌟 **Bento Grid & Liquid Glass Architecture**: Modern floating Bento cards with 1px top reflective highlight edges, 20-24px BackdropFilter blur, and GPU-composited drifting Mesh Orbs.
+- 🎛️ **Live-Preview 4-Slider Glassmorphism Tuning**: Interactive sliders in Settings (Card Blur, Card Opacity, Dialog Blur, Dialog Opacity) with instant real-time live preview across all UI surfaces, Default reset, and Cancel rollback.
+- 🌓 **1-Click Direct Theme Switcher**: Instant toggle between Light and Dark mode on every click.
+- ⏱️ **Automatic Build Timestamping**: Automatically extracts accurate compilation date/time from `data/app.so` or executable, displayed in Header and About tabs.
+- ✨ **iOS-style Smooth Transitions**: Fade+slide animation when switching tabs or SN, cascading fade/slide-in entrance for record lists with bouncing scroll, scale+fade dialog presentation, and animated badges.
+- 🏝️ **Dynamic-Island Status Capsule**: Live MES connection status wave and quick actions toolbar.
 - 🪟 **Adjustable Glassmorphism**: Settings → Advanced has a "Customize blur & transparency" panel with 4 live-preview sliders (Main background blur/opacity, Dialog blur/opacity). The Sort dropdown and the Settings dialog itself both re-blur in real time as you drag — with a built-in legibility floor that prevents the see-through overlapping-text glitch regardless of how low opacity is set.
 - 🎨 **Glassmorphic Multi-Language UI**: Light & Dark themes with multi-language switching (**English**, **Vietnamese**, **Chinese**).
 
@@ -146,7 +140,7 @@ ja_mes_tool/
 │       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
 │       ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │       ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│       ├── constants.dart         # Global app constants & defaults (v2.7.0)
+│       ├── constants.dart         # Global app constants & defaults (v2.8.0)
 │       ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │       ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │       ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
@@ -173,7 +167,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.7.0+12)
+├── pubspec.yaml                   # Flutter package manifest (v2.8.0+13)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -228,6 +222,7 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.8.0]** — **Bento Glassmorphism & Liquid Glass Engine**: Complete modern visual upgrade with floating Bento cards, GPU-accelerated drifting mesh orbs, live 4-slider glass tuning (Card Blur/Opacity, Dialog Blur/Opacity with live preview & cancel rollback), 1-click Light/Dark theme switch, and accurate auto-detected build timestamping.
 - **[2.7.0]** — New **Component Trace** view: reverse-lookup a component's own CSN to the product SN it's installed into, with its own persisted sidebar history, search/sort, and CSV template/import/export — sharing the SN queue's add/search input box instead of adding a second one.
 - **[2.6.4]** — SN Master resolution now captures its full API response (next process, error code, route, line code); a "Next" chip surfaces the next process on the records header, whose SN label now auto-scrolls instead of truncating when space is tight.
 - **[2.6.3]** — Chrome and Edge now use persistent, browser-specific profiles with legacy-profile migration and bounded CDP readiness checks to prevent login hangs.
