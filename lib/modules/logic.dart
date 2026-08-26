@@ -89,17 +89,30 @@ class AppLogic extends ChangeNotifier {
   // Sort dropdown's glass panel; modal dialogs themselves stay solid opaque
   // (see CHANGELOG v2.1.0: transparency there previously caused see-through
   // overlapping text glitches).
-  double _bgBlur = 10.0;
+  double _bgBlur = 20.0;
   double get bgBlur => _bgBlur;
 
-  double _bgOpacity = 0.6;
+  double _bgOpacity = 0.25;
   double get bgOpacity => _bgOpacity;
 
-  double _dialogBlur = 12.0;
+  double _dialogBlur = 20.0;
   double get dialogBlur => _dialogBlur;
 
-  double _dialogOpacity = 0.75;
+  double _dialogOpacity = 0.85;
   double get dialogOpacity => _dialogOpacity;
+
+  void setLiveGlassmorphism({
+    double? bgBlur,
+    double? bgOpacity,
+    double? dialogBlur,
+    double? dialogOpacity,
+  }) {
+    if (bgBlur != null) _bgBlur = bgBlur;
+    if (bgOpacity != null) _bgOpacity = bgOpacity;
+    if (dialogBlur != null) _dialogBlur = dialogBlur;
+    if (dialogOpacity != null) _dialogOpacity = dialogOpacity;
+    notifyListeners();
+  }
 
   List<String> _snList = [];
   List<String> get snList => _snList;
@@ -142,10 +155,10 @@ class AppLogic extends ChangeNotifier {
     _operationId = config['operationId'] ?? defaultOperationId;
     _uuid = config['uuid'] ?? defaultUuid;
     _cookie = config['cookie'] ?? '';
-    _bgBlur = _parseDouble(config['bgBlur'], 10.0);
-    _bgOpacity = _parseDouble(config['bgOpacity'], 0.6);
-    _dialogBlur = _parseDouble(config['dialogBlur'], 12.0);
-    _dialogOpacity = _parseDouble(config['dialogOpacity'], 0.75);
+    _bgBlur = _parseDouble(config['bgBlur'], 20.0);
+    _bgOpacity = _parseDouble(config['bgOpacity'], 0.25);
+    _dialogBlur = _parseDouble(config['dialogBlur'], 20.0);
+    _dialogOpacity = _parseDouble(config['dialogOpacity'], 0.85);
 
     if (config['sns'] != null) {
       _snList = List<String>.from(config['sns']);
