@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.8.0 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.0 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.8.0-blue.svg" alt="Phiên bản 2.8.0">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.0-blue.svg" alt="Phiên bản 2.9.0">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -23,13 +23,14 @@
 
 **JA MES Tool** là phần mềm chuyên dụng được thiết kế nhằm tối ưu hóa quy trình kiểm tra số Serial Number (SN), trích xuất lịch sử test/công đoạn, truy vết linh kiện BOM và xuất báo cáo từ nền tảng API **Foxconn CloudMES**.
 
-Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc trên 3 chế độ xem dữ liệu theo SN cộng thêm chế độ tra cứu ngược Component Trace, tự động đồng bộ Token qua trình duyệt (CDP Interception), cùng giao diện Bento Glassmorphism, Liquid Glass, Dynamic Island status capsule và tìm kiếm & sắp xếp kiểu Excel.
+Được thiết kế tối ưu cho kỹ sư kiểm thử và đội ngũ QA, ứng dụng mang đến khả năng tra cứu song song siêu tốc trên 3 chế độ xem dữ liệu theo SN cộng thêm chế độ tra cứu ngược Component Trace, Bảng Lệnh Nhanh (Ctrl+K) để nhảy tới mọi tab/tác vụ/cài đặt, tự động đồng bộ Token qua trình duyệt (CDP Interception), cùng giao diện Bento Glassmorphism, Liquid Glass, Dynamic Island status capsule và tìm kiếm & sắp xếp kiểu Excel.
 
 ---
 
-## 💡 Tính năng nổi bật (v2.8.0)
+## 💡 Tính năng nổi bật (v2.9.0)
 
 ### 🎨 Giao diện Bento Glassmorphism
+- ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy.
 - 🌟 **Kiến trúc Bento Grid & Liquid Glass**: Thẻ Bento bồng bềnh với viền phản chiếu ánh sáng 1px trên đỉnh, độ mờ 20-24px BackdropFilter và nền quả cầu Mesh Orbs khuếch tán ánh sáng trên GPU.
 - 🎛️ **Bộ 4 thanh trượt Glassmorphism Live-Preview**: Tùy chỉnh trực tiếp Độ mờ khối Bento (0-40px), Độ đục khối (5-100%), Độ mờ Hộp thoại (0-40px), Độ đục Hộp thoại (10-100%) với chế độ xem trước thời gian thực, nút Mặc định và Hủy hoàn tác.
 - 🌓 **Đổi Theme 1-Click**: Chuyển đổi trực tiếp Sáng/Tối mượt mà tức thì mỗi lần nhấn.
@@ -76,11 +77,15 @@
 
 ## 🖥️ Hướng dẫn sử dụng chi tiết
 
-### 1. Thêm danh sách SN
+### 1. Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)
+* Bấm **Ctrl+K** (hoặc **Cmd+K** trên bàn phím macOS) ở bất kỳ đâu trong app để mở ô tìm kiếm kiểu spotlight cho mọi tab, tác vụ và cài đặt.
+* Gõ để lọc theo tên hoặc từ khoá, dùng **↑/↓** để chọn kết quả, bấm **Enter** hoặc click để chạy. Bấm **Esc** hoặc click ra ngoài để đóng.
+
+### 2. Thêm danh sách SN
 * **Thêm đơn lẻ**: Nhập SN vào ô ở cột bên trái rồi ấn **Enter** hoặc bấm nút **[+]**.
 * **Nhập theo lô (CSV)**: Bấm nút **[Tải Mẫu]** để lấy file mẫu. Điền SN vào file rồi bấm **[Nhập (Import)]**. Dòng tiêu đề chứa chữ `"SN"` sẽ tự động bị bỏ qua.
 
-### 2. Xem 3 chế độ dữ liệu
+### 3. Xem 3 chế độ dữ liệu
 * Hover chuột vào thanh icon cạnh **"Chi tiết Kết quả"** để hiện tên, hoặc bấm trực tiếp — không cần hover trước:
   - 📋 **Kết quả Test**: kết quả Pass/Fail theo từng trạm.
   - 🔳 **Lịch sử Barcode**: toàn bộ lộ trình công đoạn/trạm của SN.
@@ -89,21 +94,21 @@
 * Kéo chuột hoặc double-click vào giá trị bất kỳ để chọn, rồi **Ctrl+C** để copy — như bảng tính.
 * Bấm **[Xuất (Export)]** để lưu toàn bộ dữ liệu Kết quả Test ra file CSV.
 
-### 3. Component Trace (tra cứu ngược linh kiện)
+### 4. Component Trace (tra cứu ngược linh kiện)
 * Bấm tab **🧭 Component Trace** — sidebar chuyển từ hàng đợi SN sang danh sách **Lịch sử Tra cứu**, và ô nhập vẫn ở vị trí cũ nhưng giờ dùng để tra cứu SN linh kiện thay vì thêm SN.
 * Gõ hoặc quét SN linh kiện rồi ấn **Enter** (hoặc **[+]/🔍**) — có thể dán nhiều SN cùng lúc (mỗi dòng 1 cái, hoặc cách nhau bằng dấu phẩy) để tra hết trong 1 lần.
 * Mỗi SN đã tra trở thành 1 dòng trong Lịch sử Tra cứu ở sidebar (bấm để xem lại kết quả cũ, 🔄 để tra lại, ✕ để xoá) và **được lưu xuống đĩa**, nên tắt/mở lại app vẫn còn nguyên lịch sử.
 * Khung kết quả hiện toàn bộ SN sản phẩm mà linh kiện đó đang lắp vào, kèm thanh **tìm kiếm/sắp xếp** giống hệt 3 chế độ xem còn lại.
 * **[Tải Mẫu]/[Nhập]/[Xuất]** tự động thao tác trên SN linh kiện khi đang ở tab này.
 
-### 4. Tự động lấy Token từ Trình duyệt (Quy trình 2 bước CDP)
+### 5. Tự động lấy Token từ Trình duyệt (Quy trình 2 bước CDP)
 1. Mở **Cài đặt ⚙️** (hoặc thông qua Cửa sổ Popup cảnh báo Token hết hạn tự động khi vừa khởi động).
 2. **Bước 1**: Nhấn nút **[1. Mở trình duyệt]** để mở Chrome hoặc Microsoft Edge.
 3. Đăng nhập tài khoản MES của bạn trên trang web.
 4. **Bước 2**: Nhấn nút **[2. Lấy Token]**. Phần mềm sẽ dùng cơ chế CDP Network Interception để bắt chính xác 100% **Token**, **UUID**, **Operation-ID** và **Cookie**.
 5. Nhấn **Lưu** để tự động dọn dẹp màn hình lỗi cũ và tra cứu lại toàn bộ danh sách SN trong hàng đợi (kèm cả lịch sử Component Trace, nếu có).
 
-### 5. Kiểm tra kết nối
+### 6. Kiểm tra kết nối
 * Đèn báo trạng thái bên cạnh tiêu đề **"Cài đặt"**:
   - 🟢 **Đã kết nối**: Token hợp lệ và kết nối tới máy chủ MES thành công.
   - 🟡 **Kiểm tra**: Token hết hạn hoặc chưa được cấp quyền (401).
@@ -118,20 +123,32 @@
 ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # Điểm khởi chạy ứng dụng, Provider & khởi tạo window_manager
-│   └── modules/
-│       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
-│       ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
-│       ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│       ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.8.0)
-│       ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
-│       ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
-│       ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
-│       └── ui/
-│           ├── main_window.dart   # Tab, tìm kiếm/sắp xếp, hover chip, hộp thoại (WindowListener)
-│           ├── motion.dart        # Cấu hình Duration/Curve animation dùng chung
-│           ├── styles.dart        # Bộ điều phối theme (Dark/Light)
-│           ├── styles_win10.dart  # Theme trong suốt cho Windows 10
-│           └── styles_win11.dart  # Theme acrylic cho Windows 11
+│   ├── modules/
+│   │   ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
+│   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
+│   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
+│   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.0)
+│   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
+│   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
+│   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
+│   │   └── ui/
+│   │       ├── main_window.dart   # Tab, tìm kiếm/sắp xếp, hộp thoại, kết nối Command Palette (WindowListener)
+│   │       ├── motion.dart        # Cấu hình Duration/Curve animation dùng chung
+│   │       ├── styles.dart        # Re-export lib/theme/* (giữ tương thích ngược cho import cũ)
+│   │       ├── styles_win10.dart  # Theme Win10 cũ, đã thay thế bởi lib/theme/styles_win10.dart
+│   │       └── styles_win11.dart  # Theme Win11 cũ, đã thay thế bởi lib/theme/styles_win11.dart
+│   ├── theme/                     # Hệ thống theme Bento Glassmorphism
+│   │   ├── app_colors.dart        # Bộ token màu AppColors theo từng theme
+│   │   ├── styles_win10.dart      # Tinh chỉnh màu/độ mờ kính cho Windows 10 (Aero)
+│   │   ├── styles_win11.dart      # Tinh chỉnh màu/độ mờ kính cho Windows 11 (Acrylic/Mica)
+│   │   └── theme_provider.dart    # ThemeProvider: chế độ sáng/tối/theo hệ thống, theo dõi đổi theme OS
+│   └── widgets/                   # Component giao diện kính mờ tái sử dụng
+│       ├── app_toast.dart         # Toast thông báo kính mờ, tự biến mất
+│       ├── command_palette.dart   # Bảng Lệnh Nhanh Ctrl+K / Cmd+K
+│       ├── filter_search_dock.dart# Ô tìm kiếm + pill lọc (giao diện kính)
+│       ├── glass_dialog.dart      # Khung hộp thoại kính mờ
+│       └── glass_widgets.dart     # BentoCard, MeshBackground, SlidingPillTabBar, KbdTag,...
 │
 ├── windows/
 │   └── runner/                    # Native Win32 runner (đa phần do Flutter tự sinh)
@@ -149,7 +166,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.8.0+13)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.9.0+14)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -193,12 +210,11 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
-- **[2.8.0]** — **Đại tu Giao diện Bento Glassmorphism & Liquid Glass**: Nâng cấp toàn diện giao diện với thẻ Bento bồng bềnh, hiệu ứng Mesh Orbs chuyển động trên GPU, bộ 4 slider điều chỉnh độ mờ/đục kính mờ có Live Preview thời gian thực & Hủy hoàn tác, chuyển đổi Theme Sáng/Tối 1-Click và đọc ngày giờ build chính xác từ file compiled.
+- **[2.9.0]** — Thêm **Bảng Lệnh Nhanh** (Ctrl+K / Cmd+K): ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt, lọc theo từ khoá và điều hướng bằng phím mũi tên, cùng hệ thống toast thông báo kính mờ. Đồng thời sửa lỗi leak `FocusNode` trong bảng lệnh và bỏ tham chiếu font `fontFamily` chưa được khai báo.
+- **[2.8.0]** — **Đại tu Giao diện Bento Glassmorphism & Liquid Glass**: Nâng cấp toàn diện giao diện với thẻ Bento bồng bềnh, hiệu ứng Mesh Orbs chuyển động trên GPU, bộ 4 slider điều chỉnh độ mờ/đục kính mờ có Live Preview thời gian thực & Hủy hoàn tác, chuyển đổi Theme Sáng/Tối 1-Click và đọc ngày giờ build chính xác từ file compiled. Đồng thời sửa lỗi giá trị mặc định glassmorphism lần đầu mở app không khớp nút "Mặc định", rủi ro crash khi đóng dialog giữa lúc đồng bộ token, và theme không tự cập nhật khi đổi theme hệ điều hành.
 - **[2.7.0]** — Thêm chế độ xem **Component Trace**: tra cứu ngược SN linh kiện để biết nó đang lắp trong sản phẩm nào, có lịch sử tra cứu riêng được lưu lại ở sidebar, tìm kiếm/sắp xếp và hỗ trợ CSV template/nhập/xuất — dùng chung ô nhập/tìm kiếm với hàng đợi SN thay vì thêm ô riêng.
 - **[2.6.4]** — SN Master giờ lấy đủ dữ liệu từ API (công đoạn kế tiếp, mã lỗi, route, mã line); chip "Next" hiện công đoạn kế tiếp trên header danh sách bản ghi, label SN tự cuộn thay vì bị cắt khi hết chỗ.
 - **[2.6.3]** — Chrome và Microsoft Edge dùng profile riêng có thể giữ lại, hỗ trợ chuyển profile cũ và kiểm tra CDP có giới hạn thời gian để tránh treo cửa sổ đăng nhập.
 - **[2.6.2]** — Cài đặt được tách thành các tab Cài đặt nâng cao, Hướng dẫn sử dụng và Giới thiệu; chiều cao dialog tự điều chỉnh theo tab đang chọn.
-- **[2.6.1]** — Sửa lỗi thông báo Verify Connection bị ẩn phía sau lớp modal của cửa sổ Cài đặt; giờ icon tự chuyển động báo kết quả (dấu tích/dấu X) thay vì dựa vào SnackBar bị che khuất.
-- **[2.6.0]** — Cài đặt Glassmorphism nâng cao có thể tùy chỉnh (4 slider live-preview blur/opacity), dropdown Sắp xếp dựng lại bằng `BackdropFilter` blur thật, cửa sổ Cài đặt live-preview, kèm sàn an toàn chống lỗi chữ chồng xuyên thấu.
 
 Xem đầy đủ lịch sử phiên bản tại [**CHANGELOG.md**](../CHANGELOG.md).

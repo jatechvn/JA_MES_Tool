@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.8.0
-Release Date : 2026-08-26
+Version      : v2.9.0
+Release Date : 2026-08-27
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,8 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Command Palette (Ctrl+K / Cmd+K): spotlight-style search over every tab,
+  action, and setting, with keyword filtering and arrow-key navigation.
 - Bento Glassmorphism Architecture: Modern layout inspired by Apple Liquid
   Glass, Bento Grid, Dynamic Island, and GPU-composited drifting Mesh Orbs.
 - Four Data Views: Test Record, Barcode History (process routing), Component

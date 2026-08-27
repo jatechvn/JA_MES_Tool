@@ -366,7 +366,7 @@ class AppLogic extends ChangeNotifier {
     if (dialogBlur != null) _dialogBlur = dialogBlur;
     if (dialogOpacity != null) _dialogOpacity = dialogOpacity;
     await ConfigService.saveConfig(_exportConfigMap());
-    _validateNow();
+    await _validateNow();
     notifyListeners();
     if (_snList.isNotEmpty || _traceHistory.isNotEmpty) {
       refetchAllSns();
