@@ -10,6 +10,8 @@ import '../translations.dart';
 import '../browser_helper.dart';
 import '../../widgets/glass_widgets.dart';
 import '../../widgets/glass_dialog.dart';
+import '../../widgets/command_palette.dart';
+import '../../widgets/app_toast.dart';
 import 'styles.dart';
 import 'motion.dart';
 
@@ -133,173 +135,289 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       _hasCheckedInitialToken = false;
     }
 
-    return Scaffold(
-      backgroundColor: colors.bgPrimary,
-      body: Stack(
-        children: [
-          // 1. Mesh Gradient Base Tint (Translucent)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colors.bgSecondary,
-                    colors.bgSecondary.withValues(alpha: 0.5),
-                    colors.bgSecondary.withValues(alpha: 0.2),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // 2. GPU Composited Floating Ambient Mesh Orbs
-          Positioned.fill(child: MeshBackground(colors: colors)),
-
-          // 3. Main Scaffold Layout: Top Header + Bento Body
-          Column(
-            children: [
-              _buildTopHeader(context, logic, theme, colors),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Bento Sidebar with custom live blur & opacity
-                      SizedBox(
-                        width: 320,
-                        child: BentoCard(
-                          colors: colors,
-                          blurSigma: logic.bgBlur,
-                          bgOpacity: logic.bgOpacity,
-                          padding: const EdgeInsets.all(14),
-                          child: _buildSidebarContent(
-                            context,
-                            logic,
-                            theme,
-                            colors,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-
-                      // Main Floating Workspace Detail (Individual floating glass components)
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (logic.globalError.isNotEmpty) ...[
-                              Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      logic.globalError.contains('successfully')
-                                      ? colors.accentEmerald.withValues(
-                                          alpha: 0.12,
-                                        )
-                                      : colors.accentRose.withValues(
-                                          alpha: 0.12,
-                                        ),
-                                  border: Border.all(
-                                    color:
-                                        logic.globalError.contains(
-                                          'successfully',
-                                        )
-                                        ? colors.accentEmerald.withValues(
-                                            alpha: 0.4,
-                                          )
-                                        : colors.accentRose.withValues(
-                                            alpha: 0.4,
-                                          ),
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      logic.globalError.contains('successfully')
-                                          ? Icons.check_circle_rounded
-                                          : Icons.error_outline_rounded,
-                                      size: 18,
-                                      color:
-                                          logic.globalError.contains(
-                                            'successfully',
-                                          )
-                                          ? colors.accentEmerald
-                                          : colors.accentRose,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        logic.globalError,
-                                        style: TextStyle(
-                                          color:
-                                              logic.globalError.contains(
-                                                'successfully',
-                                              )
-                                              ? colors.accentEmerald
-                                              : colors.accentRose,
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            Expanded(
-                              child: SelectionArea(
-                                child: AnimatedSwitcher(
-                                  duration: Motion.normal,
-                                  switchInCurve: Motion.curveOut,
-                                  switchOutCurve: Motion.curveIn,
-                                  transitionBuilder: (child, animation) {
-                                    final slide = Tween<Offset>(
-                                      begin: const Offset(0.02, 0),
-                                      end: Offset.zero,
-                                    ).animate(animation);
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: SlideTransition(
-                                        position: slide,
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  child: KeyedSubtree(
-                                    key: ValueKey(
-                                      '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}',
-                                    ),
-                                    child: _buildDetailView(
-                                      context,
-                                      logic,
-                                      theme,
-                                      colors,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+    return CommandPaletteShortcut(
+      colors: colors,
+      searchHint: Translations.get('command_search_hint', logic.lang),
+      noResultsText: Translations.get('no_commands_found', logic.lang),
+      items: () => _buildCommandPaletteItems(context, logic, theme, colors),
+      child: Scaffold(
+        backgroundColor: colors.bgPrimary,
+        body: Stack(
+          children: [
+            // 1. Mesh Gradient Base Tint (Translucent)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      colors.bgSecondary,
+                      colors.bgSecondary.withValues(alpha: 0.5),
+                      colors.bgSecondary.withValues(alpha: 0.2),
                     ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+
+            // 2. GPU Composited Floating Ambient Mesh Orbs
+            Positioned.fill(
+              child: RepaintBoundary(child: MeshBackground(colors: colors)),
+            ),
+
+            // 3. Main Scaffold Layout: Top Header + Bento Body
+            Column(
+              children: [
+                _buildTopHeader(context, logic, theme, colors),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Bento Sidebar with custom live blur, opacity & mouse spotlight
+                        SizedBox(
+                          width: 320,
+                          child: SpotlightGlow(
+                            colors: colors,
+                            borderRadius: 18,
+                            child: BentoCard(
+                              colors: colors,
+                              blurSigma: logic.bgBlur,
+                              bgOpacity: logic.bgOpacity,
+                              padding: const EdgeInsets.all(14),
+                              child: _buildSidebarContent(
+                                context,
+                                logic,
+                                theme,
+                                colors,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Main Floating Workspace Detail (Individual floating glass components)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (logic.globalError.isNotEmpty) ...[
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colors.accentRose.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: colors.accentRose.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline_rounded,
+                                        color: colors.accentRose,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          logic.globalError,
+                                          style: TextStyle(
+                                            color: colors.accentRose,
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              Expanded(
+                                child: SelectionArea(
+                                  child: AnimatedSwitcher(
+                                    duration: Motion.normal,
+                                    switchInCurve: Motion.curveOut,
+                                    switchOutCurve: Motion.curveIn,
+                                    transitionBuilder: (child, animation) {
+                                      final slide = Tween<Offset>(
+                                        begin: const Offset(0.02, 0),
+                                        end: Offset.zero,
+                                      ).animate(animation);
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: SlideTransition(
+                                          position: slide,
+                                          child: child,
+                                        ),
+                                      );
+                                    },
+                                    child: KeyedSubtree(
+                                      key: ValueKey(
+                                        '${logic.viewMode}_${logic.selectedSn}_${logic.selectedTraceCsn}',
+                                      ),
+                                      child: _buildDetailView(
+                                        context,
+                                        logic,
+                                        theme,
+                                        colors,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  List<CommandPaletteItem> _buildCommandPaletteItems(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+    AppColors colors,
+  ) {
+    final lang = logic.lang;
+    final isTraceMode = logic.viewMode == ViewMode.componentTrace;
+
+    return [
+      // Navigation
+      CommandPaletteItem(
+        label: Translations.get('tab_test_record', lang),
+        subtitle: 'Switch view to Test Record',
+        category: Translations.get('category_navigation', lang),
+        icon: Icons.fact_check_rounded,
+        keywords: ['test', 'record', 'ket qua', 'kiem thu'],
+        onSelect: () => logic.setViewMode(ViewMode.testRecord),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('tab_barcode_history', lang),
+        subtitle: 'Switch view to Barcode History',
+        category: Translations.get('category_navigation', lang),
+        icon: Icons.qr_code_2_rounded,
+        keywords: ['barcode', 'history', 'lich su', 'cong doan'],
+        onSelect: () => logic.setViewMode(ViewMode.barcodeHistory),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('tab_wip_components', lang),
+        subtitle: 'Switch view to WIP Component List',
+        category: Translations.get('category_navigation', lang),
+        icon: Icons.memory_rounded,
+        keywords: ['wip', 'component', 'linh kien', 'bom'],
+        onSelect: () => logic.setViewMode(ViewMode.wipComponents),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('tab_component_trace', lang),
+        subtitle: 'Switch view to Component Trace',
+        category: Translations.get('category_navigation', lang),
+        icon: Icons.travel_explore_rounded,
+        keywords: ['trace', 'truy vet', 'nguoc'],
+        onSelect: () => logic.setViewMode(ViewMode.componentTrace),
+      ),
+
+      // Actions
+      CommandPaletteItem(
+        label: Translations.get('cmd_refresh_all', lang),
+        subtitle: 'Re-fetch all records in queue',
+        category: Translations.get('category_actions', lang),
+        icon: Icons.refresh_rounded,
+        keywords: ['refresh', 'lam moi', 'reload', 'sync'],
+        onSelect: () => isTraceMode
+            ? logic.refetchAllTraceSearches()
+            : logic.refetchAllSns(),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('cmd_clear_all', lang),
+        subtitle: 'Remove all SNs from queue',
+        category: Translations.get('category_actions', lang),
+        icon: Icons.delete_sweep_rounded,
+        keywords: ['clear', 'xoa', 'empty', 'reset'],
+        onSelect: () =>
+            isTraceMode ? logic.clearTraceHistory() : logic.clearAllSns(),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('cmd_import_csv', lang),
+        subtitle: 'Import SNs from a CSV file',
+        category: Translations.get('category_actions', lang),
+        icon: Icons.file_upload_rounded,
+        keywords: ['import', 'nhap', 'csv', 'file'],
+        onSelect: () =>
+            isTraceMode ? logic.importTraceCsv() : logic.importCsv(),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('cmd_export_csv', lang),
+        subtitle: 'Export records to a CSV file',
+        category: Translations.get('category_actions', lang),
+        icon: Icons.file_download_rounded,
+        keywords: ['export', 'xuat', 'csv', 'save'],
+        onSelect: () =>
+            isTraceMode ? logic.exportTraceCsv() : logic.exportCsv(),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('cmd_download_template', lang),
+        subtitle: 'Download template CSV sample file',
+        category: Translations.get('category_actions', lang),
+        icon: Icons.file_present_rounded,
+        keywords: ['template', 'mau', 'csv', 'sample'],
+        onSelect: () => isTraceMode
+            ? logic.downloadTraceTemplateCsv()
+            : logic.downloadTemplateCsv(),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('cmd_fetch_cdp', lang),
+        subtitle: 'Automatically sync Token & Cookie from Chrome/Edge',
+        category: Translations.get('category_actions', lang),
+        icon: Icons.sync_lock_rounded,
+        keywords: [
+          'cdp',
+          'token',
+          'cookie',
+          'browser',
+          'trinh duyet',
+          'dong bo',
+        ],
+        onSelect: () => _showSettingsDialog(context, logic, theme),
+      ),
+
+      // View & Theme
+      CommandPaletteItem(
+        label: Translations.get('cmd_toggle_theme', lang),
+        subtitle: theme.isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+        category: Translations.get('category_view', lang),
+        icon: theme.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+        keywords: ['theme', 'dark', 'light', 'giao dien', 'sang', 'toi'],
+        onSelect: () => theme.toggleTheme(),
+      ),
+      CommandPaletteItem(
+        label: Translations.get('cmd_open_settings', lang),
+        subtitle: 'Open full MES configurations & glass adjustments',
+        category: Translations.get('category_system', lang),
+        icon: Icons.settings_rounded,
+        keywords: ['settings', 'cai dat', 'config', 'glass', 'blur', 'opacity'],
+        onSelect: () => _showSettingsDialog(context, logic, theme),
+      ),
+    ];
   }
 
   /// Top Modern Bento Header Bar
@@ -530,6 +648,26 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             onTap: () => logic.viewMode == ViewMode.componentTrace
                 ? logic.exportTraceCsv()
                 : logic.exportCsv(),
+          ),
+
+          const SizedBox(width: 4),
+
+          // Command Palette Trigger (Ctrl+K)
+          _HoverChip(
+            icon: Icons.bolt_rounded,
+            label: 'Ctrl+K',
+            background: colors.subCardBg,
+            foreground: colors.accentCyan,
+            border: Border.all(color: colors.subCardBorder),
+            hoverBackground: colors.accentCyan.withValues(alpha: 0.15),
+            keepExpanded: _isMaximized,
+            onTap: () => showCommandPalette(
+              context,
+              items: _buildCommandPaletteItems(context, logic, theme, colors),
+              colors: colors,
+              searchHint: Translations.get('command_search_hint', logic.lang),
+              noResultsText: Translations.get('no_commands_found', logic.lang),
+            ),
           ),
 
           const SizedBox(width: 6),
@@ -1151,7 +1289,38 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
     if (isLoading) {
       return Center(
-        child: CircularProgressIndicator(color: colors.accentColor),
+        child: BorderBeam(
+          borderRadius: 16,
+          child: BentoCard(
+            colors: colors,
+            blurSigma: logic.bgBlur,
+            bgOpacity: logic.bgOpacity,
+            borderRadius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: colors.accentCyan,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  '${Translations.get('status_fetching', logic.lang)} $sn...',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -1481,7 +1650,38 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
     if (isLoading) {
       return Center(
-        child: CircularProgressIndicator(color: colors.accentColor),
+        child: BorderBeam(
+          borderRadius: 16,
+          child: BentoCard(
+            colors: colors,
+            blurSigma: logic.bgBlur,
+            bgOpacity: logic.bgOpacity,
+            borderRadius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: colors.accentCyan,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  '${Translations.get('status_fetching', logic.lang)} $sn...',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -1749,7 +1949,38 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
     if (isLoading) {
       return Center(
-        child: CircularProgressIndicator(color: colors.accentColor),
+        child: BorderBeam(
+          borderRadius: 16,
+          child: BentoCard(
+            colors: colors,
+            blurSigma: logic.bgBlur,
+            bgOpacity: logic.bgOpacity,
+            borderRadius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: colors.accentCyan,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  '${Translations.get('status_fetching', logic.lang)} $sn...',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -2024,7 +2255,38 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
     if (isLoading) {
       return Center(
-        child: CircularProgressIndicator(color: colors.accentColor),
+        child: BorderBeam(
+          borderRadius: 16,
+          child: BentoCard(
+            colors: colors,
+            blurSigma: logic.bgBlur,
+            bgOpacity: logic.bgOpacity,
+            borderRadius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: colors.accentCyan,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  '${Translations.get('status_fetching', logic.lang)} $selectedCsn...',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -2908,23 +3170,53 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
+            hoverColor: colors.glassHighlight.withValues(alpha: 0.15),
             onTap: onTap,
             child: AnimatedContainer(
               duration: Motion.fast,
               curve: Motion.curveInOut,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
               decoration: BoxDecoration(
-                color: selected
-                    ? colors.accentColor.withValues(alpha: 0.15)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: selected
-                    ? Border.all(
-                        color: colors.accentColor.withValues(alpha: 0.4),
+                gradient: selected
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          colors.accentColor.withValues(alpha: 0.22),
+                          colors.accentCyan.withValues(alpha: 0.12),
+                        ],
                       )
                     : null,
+                color: selected ? null : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: selected
+                      ? colors.accentColor.withValues(alpha: 0.5)
+                      : colors.subCardBorder.withValues(alpha: 0.4),
+                  width: 1.0,
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: colors.primaryGlow.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
+              foregroundDecoration: selected
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border(
+                        top: BorderSide(
+                          color: colors.glassHighlight.withValues(alpha: 0.8),
+                          width: 1.2,
+                        ),
+                      ),
+                    )
+                  : null,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -3124,6 +3416,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                               );
                               if (!context.mounted) return;
                               final ok = err == null;
+                              logic.isConnectionValid = ok;
+                              logic.connectionError = err;
                               setDialogState(() {
                                 isVerifying = false;
                                 verifyOk = ok;
@@ -3373,63 +3667,89 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                                                   null &&
                                                               creds
                                                                   .token!
-                                                                  .isNotEmpty)
+                                                                  .isNotEmpty) {
                                                             tokenCtrl.text =
                                                                 creds.token!;
+                                                          }
                                                           if (creds.operationId !=
                                                                   null &&
                                                               creds
                                                                   .operationId!
-                                                                  .isNotEmpty)
+                                                                  .isNotEmpty) {
                                                             operationIdCtrl
                                                                 .text = creds
                                                                 .operationId!;
+                                                          }
                                                           if (creds.uuid !=
                                                                   null &&
                                                               creds
                                                                   .uuid!
-                                                                  .isNotEmpty)
+                                                                  .isNotEmpty) {
                                                             uuidCtrl.text =
                                                                 creds.uuid!;
+                                                          }
                                                           if (creds.cookie !=
                                                                   null &&
                                                               creds
                                                                   .cookie!
-                                                                  .isNotEmpty)
+                                                                  .isNotEmpty) {
                                                             cookieCtrl.text =
                                                                 creds.cookie!;
+                                                          }
 
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                Translations.get(
-                                                                  'fetched_success',
-                                                                  logic.lang,
-                                                                ),
-                                                              ),
-                                                              backgroundColor:
-                                                                  colors
-                                                                      .accentEmerald,
-                                                            ),
+                                                          // Auto-save and immediately validate connection
+                                                          await logic.updateSettings(
+                                                            token:
+                                                                creds.token ??
+                                                                tokenCtrl.text,
+                                                            lang: logic.lang,
+                                                            operationId:
+                                                                creds
+                                                                    .operationId ??
+                                                                operationIdCtrl
+                                                                    .text,
+                                                            uuid:
+                                                                creds.uuid ??
+                                                                uuidCtrl.text,
+                                                            cookie:
+                                                                creds.cookie ??
+                                                                cookieCtrl.text,
                                                           );
+
+                                                          if (context.mounted) {
+                                                            showAppToast(
+                                                              context,
+                                                              message:
+                                                                  Translations.get(
+                                                                    'fetched_success',
+                                                                    logic.lang,
+                                                                  ),
+                                                              colors: colors,
+                                                              accentColor: colors
+                                                                  .accentEmerald,
+                                                              icon: Icons
+                                                                  .check_circle_rounded,
+                                                            );
+                                                            Navigator.of(
+                                                              context,
+                                                            ).pop();
+                                                          }
                                                         } else {
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                Translations.get(
-                                                                  'fetched_fail',
-                                                                  logic.lang,
-                                                                ),
-                                                              ),
-                                                              backgroundColor:
-                                                                  colors
-                                                                      .accentRose,
-                                                            ),
-                                                          );
+                                                          if (context.mounted) {
+                                                            showAppToast(
+                                                              context,
+                                                              message:
+                                                                  Translations.get(
+                                                                    'fetched_fail',
+                                                                    logic.lang,
+                                                                  ),
+                                                              colors: colors,
+                                                              accentColor: colors
+                                                                  .accentRose,
+                                                              icon: Icons
+                                                                  .error_outline_rounded,
+                                                            );
+                                                          }
                                                         }
                                                       },
                                               ),
@@ -3648,38 +3968,43 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                                                     null &&
                                                                 creds
                                                                     .token!
-                                                                    .isNotEmpty)
+                                                                    .isNotEmpty) {
                                                               tokenCtrl.text =
                                                                   creds.token!;
+                                                            }
                                                             if (creds.lang !=
                                                                     null &&
                                                                 creds
                                                                     .lang!
-                                                                    .isNotEmpty)
+                                                                    .isNotEmpty) {
                                                               langCtrl.text =
                                                                   creds.lang!;
+                                                            }
                                                             if (creds.operationId !=
                                                                     null &&
                                                                 creds
                                                                     .operationId!
-                                                                    .isNotEmpty)
+                                                                    .isNotEmpty) {
                                                               operationIdCtrl
                                                                   .text = creds
                                                                   .operationId!;
+                                                            }
                                                             if (creds.uuid !=
                                                                     null &&
                                                                 creds
                                                                     .uuid!
-                                                                    .isNotEmpty)
+                                                                    .isNotEmpty) {
                                                               uuidCtrl.text =
                                                                   creds.uuid!;
+                                                            }
                                                             if (creds.cookie !=
                                                                     null &&
                                                                 creds
                                                                     .cookie!
-                                                                    .isNotEmpty)
+                                                                    .isNotEmpty) {
                                                               cookieCtrl.text =
                                                                   creds.cookie!;
+                                                            }
                                                             Navigator.pop(ctx);
                                                           },
                                                           child: Text(
@@ -4066,37 +4391,32 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                                   creds.cookie ?? logic.cookie,
                                             );
                                             if (context.mounted) {
-                                              ScaffoldMessenger.of(
+                                              showAppToast(
                                                 context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    Translations.get(
-                                                      'fetched_success',
-                                                      logic.lang,
-                                                    ),
-                                                  ),
-                                                  backgroundColor:
-                                                      colors.accentEmerald,
+                                                message: Translations.get(
+                                                  'fetched_success',
+                                                  logic.lang,
                                                 ),
+                                                colors: colors,
+                                                accentColor:
+                                                    colors.accentEmerald,
+                                                icon:
+                                                    Icons.check_circle_rounded,
                                               );
                                               Navigator.pop(ctx);
                                             }
                                           } else {
                                             if (context.mounted) {
-                                              ScaffoldMessenger.of(
+                                              showAppToast(
                                                 context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    Translations.get(
-                                                      'fetched_fail',
-                                                      logic.lang,
-                                                    ),
-                                                  ),
-                                                  backgroundColor:
-                                                      colors.accentRose,
+                                                message: Translations.get(
+                                                  'fetched_fail',
+                                                  logic.lang,
                                                 ),
+                                                colors: colors,
+                                                accentColor: colors.accentRose,
+                                                icon:
+                                                    Icons.error_outline_rounded,
                                               );
                                             }
                                           }

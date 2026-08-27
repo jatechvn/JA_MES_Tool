@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.8.0 - 中文说明
+# 🤖 JA MES Tool v2.9.0 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.8.0-blue.svg" alt="版本 2.8.0">
+  <img src="https://img.shields.io/badge/banben-2.9.0-blue.svg" alt="版本 2.9.0">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -23,13 +23,14 @@
 
 **JA MES Tool** 是一款专为优化 **Foxconn CloudMES** API 平台测试记录查询、工序历史提取、BOM 组件追溯和 SN 验证、测试报告导出而设计的专业工具。
 
-专为测试工程师和 QA 团队打造，支持每个 SN 三种数据视图外加一个组件反向追溯视图 (Component Trace) 的极速异步并行查询、浏览器 CDP 自动同步 Token 凭据，以及搭载 Bento Glassmorphism、Liquid Glass、Dynamic Island 状态胶囊和带 Excel 风格搜索与排序的现代化交互界面。
+专为测试工程师和 QA 团队打造，支持每个 SN 三种数据视图外加一个组件反向追溯视图 (Component Trace)、可跳转至任意标签/操作/设置的命令面板 (Ctrl+K) 的极速异步并行查询、浏览器 CDP 自动同步 Token 凭据，以及搭载 Bento Glassmorphism、Liquid Glass、Dynamic Island 状态胶囊和带 Excel 风格搜索与排序的现代化交互界面。
 
 ---
 
-## 💡 主要功能 (v2.8.0)
+## 💡 主要功能 (v2.9.0)
 
 ### 🎨 Bento 毛玻璃视觉架构
+- ⚡ **命令面板 (Ctrl+K / Cmd+K)**：聚光灯式搜索覆盖层，列出所有标签、操作与设置 — 输入即按名称/关键词筛选，↑/↓ 导航，回车或点击执行。
 - 🌟 **Bento Grid & Liquid Glass 体系**：悬浮式 Bento 卡片设计，配备 1px 顶置光感反射边框，20-24px BackdropFilter 深度毛玻璃模糊以及 GPU 硬件加速的流动 Mesh Orbs 动态光效。
 - 🎛️ **4 轴毛玻璃实时调节面板**：设置中提供卡片模糊度 (0-40px)、卡片不透明度 (5-100%)、对话框模糊度 (0-40px)、对话框不透明度 (10-100%) 四大实时调节滑块，支持实时效果预览、一键默认与取消还原。
 - 🌓 **单击直切主题 (Light ⇄ Dark)**：一键顺畅切换明暗模式。
@@ -76,11 +77,15 @@
 
 ## 🖥️ 使用说明
 
-### 1. 添加 SN 序列号
+### 1. 命令面板 (Ctrl+K / Cmd+K)
+* 在应用内任意位置按 **Ctrl+K**（macOS 键盘为 **Cmd+K**）打开聚光灯式搜索，覆盖所有标签、操作与设置。
+* 输入名称或关键词进行筛选，使用 **↑/↓** 选中结果，按 **回车** 或点击执行；按 **Esc** 或点击外部区域关闭。
+
+### 2. 添加 SN 序列号
 * **单条添加**：在左侧输入框中输入 SN，按 **Enter** 键或点击 **[+]** 按钮。
 * **批量导入**：点击 **[模板]** 下载 CSV 示例文件。填入 SN 后点击 **[导入]**。包含 `"SN"` 的标题行将被自动跳过。
 
-### 2. 浏览三种数据视图
+### 3. 浏览三种数据视图
 * 将鼠标悬停在 "结果详细信息" 旁的图标工具栏上可显示名称，或直接点击 — 无需先悬停：
   - 📋 **测试记录**：各工站的 Pass/Fail 测试结果。
   - 🔳 **条码历史**：SN 的完整工序/工站流程历史。
@@ -89,21 +94,21 @@
 * 拖动选取或双击任意数值即可选中，然后按 **Ctrl+C** 复制 — 如同电子表格操作。
 * 点击 **[导出]** 将所有已获取的测试记录数据保存为结构化 CSV 文件。
 
-### 3. Component Trace（组件反向追溯）
+### 4. Component Trace（组件反向追溯）
 * 点击 **🧭 Component Trace** 标签 — 侧边栏会从 SN 队列切换为 **追溯历史** 列表，输入框位置不变，但改为查询组件序列号，而不是添加 SN。
 * 输入或扫描组件序列号后按 **Enter**（或点击 **[+]/🔍**）— 也可一次粘贴多个序列号（每行一个，或用逗号分隔），一次性查询完毕。
 * 每个查询过的序列号都会成为侧边栏 **追溯历史** 中的一行（点击可查看已缓存的结果，🔄 重新查询，✕ 删除），并会**保存到本地**，因此关闭重开应用后历史记录依然保留。
 * 结果面板会列出该组件当前安装的所有成品序列号，并配有与其他三个视图完全一致的 **搜索/排序** 工具栏。
 * 位于该标签时，**[模板]/[导入]/[导出]** 会自动针对组件序列号操作。
 
-### 4. 从浏览器自动同步 Token (2 步 CDP 向导)
+### 5. 从浏览器自动同步 Token (2 步 CDP 向导)
 1. 点击 **设置 ⚙️** (或通过启动时的 Token 过期自动警告弹窗)。
 2. **步骤 1**：点击 **[1. 打开浏览器]** 启动 Chrome 或 Microsoft Edge。
 3. 在网页上登录您的 MES 账号。
 4. **步骤 2**：点击 **[2. 同步凭据]**，程序将通过 CDP 网络拦截自动提取正确的 **Token**、**UUID**、**Operation-ID** 和 **Cookie**。
 5. 点击 **保存** 即可自动清除历史错误界面并重新查询队列中的所有 SN（以及 Component Trace 历史，若有）。
 
-### 5. 监控连接状态
+### 6. 监控连接状态
 * 标题栏 **"设置"** 旁边的指示灯：
   - 🟢 **已连接**：Token 有效且连接正常。
   - 🟡 **检查状态**：Token 已过期或未授权 (401)。
@@ -118,20 +123,32 @@
 ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # 应用入口、Provider 与 window_manager 初始化
-│   └── modules/
-│       ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord、WipComponentRecord 与 QueryInfoRecord
-│       ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
-│       ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│       ├── constants.dart         # 全局常量与默认配置 (v2.8.0)
-│       ├── logger_service.dart    # 日志服务与 7 天自动清理
-│       ├── logic.dart             # 状态管理：SN 队列、追溯历史、四种记录列表、ViewMode、SN 解析缓存
-│       ├── translations.dart      # 多语言字典 (EN, VN, CN)
-│       └── ui/
-│           ├── main_window.dart   # 标签页、搜索/排序、悬停图标、对话框 (WindowListener)
-│           ├── motion.dart        # 统一动画时长/曲线配置
-│           ├── styles.dart        # 主题调度器 (暗黑/亮色)
-│           ├── styles_win10.dart  # Windows 10 半透明主题
-│           └── styles_win11.dart  # Windows 11 亚克力主题
+│   ├── modules/
+│   │   ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord、WipComponentRecord 与 QueryInfoRecord
+│   │   ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
+│   │   ├── build_info.dart        # 从 data/app.so 或可执行文件读取真实编译时间戳
+│   │   ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
+│   │   ├── constants.dart         # 全局常量与默认配置 (v2.9.0)
+│   │   ├── logger_service.dart    # 日志服务与 7 天自动清理
+│   │   ├── logic.dart             # 状态管理：SN 队列、追溯历史、四种记录列表、ViewMode、SN 解析缓存
+│   │   ├── translations.dart      # 多语言字典 (EN, VN, CN)
+│   │   └── ui/
+│   │       ├── main_window.dart   # 标签页、搜索/排序、对话框、命令面板接入 (WindowListener)
+│   │       ├── motion.dart        # 统一动画时长/曲线配置
+│   │       ├── styles.dart        # 转发导出 lib/theme/*（保留旧版 import 兼容）
+│   │       ├── styles_win10.dart  # 旧版 Win10 主题，已由 lib/theme/styles_win10.dart 取代
+│   │       └── styles_win11.dart  # 旧版 Win11 主题，已由 lib/theme/styles_win11.dart 取代
+│   ├── theme/                     # Bento 毛玻璃主题系统
+│   │   ├── app_colors.dart        # AppColors 颜色令牌集（各主题调色板）
+│   │   ├── styles_win10.dart      # Windows 10 (Aero) 毛玻璃颜色/透明度调优
+│   │   ├── styles_win11.dart      # Windows 11 (Acrylic/Mica) 毛玻璃颜色/透明度调优
+│   │   └── theme_provider.dart    # ThemeProvider：明暗/跟随系统模式，监听 OS 主题变化
+│   └── widgets/                   # 可复用毛玻璃 UI 组件
+│       ├── app_toast.dart         # 短暂显示的毛玻璃 Toast 通知
+│       ├── command_palette.dart   # Ctrl+K / Cmd+K 聚光灯式命令搜索
+│       ├── filter_search_dock.dart# 搜索框 + 筛选胶囊组合（毛玻璃风格）
+│       ├── glass_dialog.dart      # 毛玻璃模态对话框外壳
+│       └── glass_widgets.dart     # BentoCard、MeshBackground、SlidingPillTabBar、KbdTag 等
 │
 ├── windows/
 │   └── runner/                    # 原生 Win32 运行器 (大部分由 Flutter 自动生成)
@@ -149,7 +166,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.8.0+13)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.9.0+14)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -190,12 +207,11 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
-- **[2.8.0]** — **Bento 毛玻璃与 Liquid Glass 架构全面升级**：全界面重构为悬浮式 Bento 卡片与 GPU 加速 Mesh Orbs 动态光效，高级设置新增 4 轴毛玻璃实时预览滑块与取消还原，单击即时切换明暗主题，以及精准自动读取编译时间戳。
+- **[2.9.0]** — 新增 **命令面板** (Ctrl+K / Cmd+K)：聚光灯式搜索覆盖所有标签、操作与设置，支持关键词筛选与方向键导航，并新增毛玻璃 Toast 通知系统。同时修复命令面板中的 `FocusNode` 内存泄漏，并移除未注册字体的 `fontFamily` 引用。
+- **[2.8.0]** — **Bento 毛玻璃与 Liquid Glass 架构全面升级**：全界面重构为悬浮式 Bento 卡片与 GPU 加速 Mesh Orbs 动态光效，高级设置新增 4 轴毛玻璃实时预览滑块与取消还原，单击即时切换明暗主题，以及精准自动读取编译时间戳。同时修复首次启动毛玻璃默认值与设置中"默认"按钮不一致、对话框在同步凭据过程中关闭可能崩溃、以及主题不随系统明暗切换实时更新的问题。
 - **[2.7.0]** — 新增 **Component Trace** 视图：反向查询组件自身序列号安装在哪个成品序列号中，侧边栏保留独立且可持久化的查询历史，支持搜索/排序与 CSV 模板/导入/导出 — 与 SN 队列共用同一个添加/搜索输入框，无需新增输入框。
 - **[2.6.4]** — SN 主档现在获取完整 API 数据 (下一工序、错误代码、路由、产线代码)；记录列表标题栏新增 "Next" 徽章显示下一工序，SN 标签在空间不足时改为自动滚动，不再截断。
 - **[2.6.3]** — Chrome 与 Microsoft Edge 现在使用可持久化的独立配置，支持旧配置迁移与有界 CDP 就绪检查，避免登录窗口卡死。
 - **[2.6.2]** — 设置界面拆分为高级设置、使用说明和关于三个标签页；对话框高度会根据当前标签页自动调整。
-- **[2.6.1]** — 修复"验证连接"结果提示被设置窗口的模态遮罩挡住无法看见的问题；图标现会直接播放对/错动画反馈，不再依赖被遮挡的 SnackBar。
-- **[2.6.0]** — 可调节毛玻璃高级设置 (4 个实时预览模糊/不透明度滑块)，排序下拉菜单改用真实 `BackdropFilter` 模糊重新构建，设置窗口支持实时预览，并内置安全下限防止文字重叠透视问题。
 
 完整版本历史请见 [**CHANGELOG.md**](../CHANGELOG.md)。

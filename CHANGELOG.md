@@ -5,6 +5,20 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-08-27
+
+### 🚀 Major Features & Enhancements
+- **⚡ Command Palette (Ctrl+K / Cmd+K)**: A spotlight-style search overlay (`lib/widgets/command_palette.dart`) listing every tab, action, and setting — type to filter by name/keyword, navigate with ↑/↓, run with Enter or a click, dismiss with Esc or a click outside. Wired up as a global shortcut via `CommandPaletteShortcut` wrapping the whole app.
+- **🔔 Glass Toast Notifications**: New `showAppToast()` (`lib/widgets/app_toast.dart`) — a transient, auto-dismissing glass-styled notification used for CDP credential-sync feedback in place of the earlier SnackBar-based messages.
+- **🎞️ New reusable glass widgets**: `SlidingPillTabBar`, `AsymmetricMarqueeText`, `KbdTag`, `BorderBeam` (rotating gradient border sweep), and `SpotlightGlow` (mouse-follow radial highlight) added to `lib/widgets/glass_widgets.dart`.
+
+### 🐛 Bug Fixes
+- **🧠 `FocusNode` leak in the Command Palette**: A new `FocusNode()` was instantiated inline in `build()` for the palette's `KeyboardListener` on every rebuild (each keystroke, hover, or arrow-key press) and never disposed. It's now a single `State`-owned field, created once and disposed with the widget.
+- **⌨️ Misleading shortcut badges removed**: Command palette entries displayed `1`/`2`/`3`/`4`/`Ctrl+,` shortcut badges that weren't bound to any actual key handler — pressing them did nothing. The badges have been removed rather than shipping a false affordance.
+- **🔤 Removed reference to an unbundled font**: `KbdTag` set `fontFamily: 'JetBrains Mono'`, but no such font asset is registered in `pubspec.yaml`, so it silently fell back to the default font. The dead reference has been removed.
+
+---
+
 ## [2.8.0] - 2026-08-26
 
 ### 🎨 Major UI/UX Overhaul & Bento Glassmorphism Architecture

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
@@ -387,7 +389,7 @@ class _WaveIndicatorState extends State<WaveIndicator>
   }
 }
 
-/// Dynamic Island Status Capsule for the top header.
+/// Dynamic Island Status Capsule for the top header with Asymmetric Marquee text.
 class DynamicIslandCapsule extends StatelessWidget {
   final AppColors colors;
   final bool isRunning;
@@ -416,7 +418,7 @@ class DynamicIslandCapsule extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(100),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: colors.subCardBg,
             borderRadius: BorderRadius.circular(100),
@@ -460,32 +462,36 @@ class DynamicIslandCapsule extends StatelessWidget {
                 ),
               ],
               const SizedBox(width: 6),
-              Text(
-                statusText,
-                style: TextStyle(
-                  color: isRunning ? activeColor : colors.textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'JetBrains Mono',
-                  letterSpacing: 0.4,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 100),
+                child: AsymmetricMarqueeText(
+                  text: statusText,
+                  style: TextStyle(
+                    color: isRunning ? activeColor : colors.textMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'JetBrains Mono',
+                    letterSpacing: 0.35,
+                  ),
                 ),
               ),
               if (subText != null && subText!.isNotEmpty) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 Container(
+                  constraints: const BoxConstraints(maxWidth: 90),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 5,
-                    vertical: 1,
+                    vertical: 1.5,
                   ),
                   decoration: BoxDecoration(
                     color: colors.subCardBorder.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(
-                    subText!,
+                  child: AsymmetricMarqueeText(
+                    text: subText!,
                     style: TextStyle(
                       color: colors.textSecondary,
-                      fontSize: 10,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'JetBrains Mono',
                     ),
@@ -500,13 +506,18 @@ class DynamicIslandCapsule extends StatelessWidget {
   }
 }
 
-/// Sliding Magnetic Pill Tab Bar with smooth sliding indicator animation.
-class SlidingPillTabBar extends StatelessWidget {
+/// Intelligent Adaptive Sliding Magnetic Pill Tab Bar with Mirror Glass Specular Hover Effect.
+/// - When window is wide / maximized: displays all tabs with full icons and labels.
+/// - When window is narrow / compact: expands active tab, collapses unselected tabs with hover preview.
+/// - Supports Specular Mirror Glass hover reflection with top reflective bevel highlight.
+/// - Supports Asymmetric Marquee text for long tab titles.
+class SlidingPillTabBar extends StatefulWidget {
   final AppColors colors;
   final int currentIndex;
   final List<String> tabs;
   final List<IconData> icons;
   final ValueChanged<int> onTabSelected;
+  final bool adaptiveCollapse;
 
   const SlidingPillTabBar({
     super.key,
@@ -515,71 +526,358 @@ class SlidingPillTabBar extends StatelessWidget {
     required this.tabs,
     required this.icons,
     required this.onTabSelected,
+    this.adaptiveCollapse = true,
   });
 
   @override
+  State<SlidingPillTabBar> createState() => _SlidingPillTabBarState();
+}
+
+class _SlidingPillTabBarState extends State<SlidingPillTabBar> {
+  int? _hoveredIndex;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: colors.subCardBg,
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: colors.subCardBorder),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(tabs.length, (index) {
-            final isSelected = currentIndex == index;
-            return GestureDetector(
-              onTap: () => onTabSelected(index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? colors.accentColor : Colors.transparent,
-                  borderRadius: BorderRadius.circular(100),
-                  boxShadow: isSelected
-                      ? [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isWideScreen = screenWidth >= 1150 || constraints.maxWidth >= 720;
+        final shouldCollapse = widget.adaptiveCollapse && !isWideScreen;
+
+        return Container(
+          padding: const EdgeInsets.all(3.5),
+          decoration: BoxDecoration(
+            color: widget.colors.subCardBg,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: widget.colors.subCardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(widget.tabs.length, (index) {
+                final isSelected = widget.currentIndex == index;
+                final isHovered = _hoveredIndex == index;
+                final showLabel = isSelected || isHovered || !shouldCollapse;
+
+                // Specular Mirror Glass Hover & Selected Gradient Decoration
+                final decoration = isSelected
+                    ? BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            widget.colors.accentColor,
+                            widget.colors.accentCyan.withValues(alpha: 0.88),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 1.0,
+                        ),
+                        boxShadow: [
                           BoxShadow(
-                            color: colors.primaryGlow,
-                            blurRadius: 12,
-                            offset: const Offset(0, 2),
+                            color: widget.colors.primaryGlow.withValues(
+                              alpha: 0.45,
+                            ),
+                            blurRadius: 14,
+                            offset: const Offset(0, 3),
                           ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icons[index],
-                      size: 14,
-                      color: isSelected ? Colors.white : colors.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      tabs[index],
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : colors.textSecondary,
-                        fontSize: 11.5,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w600,
+                        ],
+                      )
+                    : (isHovered
+                          ? BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: const Alignment(-0.8, -1.0),
+                                end: const Alignment(0.8, 1.0),
+                                colors: [
+                                  widget.colors.glassHighlight.withValues(
+                                    alpha: 0.32,
+                                  ),
+                                  widget.colors.cardHoverBg.withValues(
+                                    alpha: 0.65,
+                                  ),
+                                  widget.colors.glassHighlight.withValues(
+                                    alpha: 0.08,
+                                  ),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(100),
+                              border: Border.all(
+                                color: widget.colors.accentColor.withValues(
+                                  alpha: 0.45,
+                                ),
+                                width: 1.0,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: widget.colors.accentColor.withValues(
+                                    alpha: 0.16,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                                BoxShadow(
+                                  color: widget.colors.glassHighlight
+                                      .withValues(alpha: 0.30),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, -1),
+                                ),
+                              ],
+                            )
+                          : const BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(100),
+                              ),
+                            ));
+
+                // Specular Mirror Top Reflection Line
+                final foregroundDeco = isSelected
+                    ? BoxDecoration(
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border(
+                          top: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
+                        ),
+                      )
+                    : (isHovered
+                          ? BoxDecoration(
+                              borderRadius: BorderRadius.circular(100),
+                              border: Border(
+                                top: BorderSide(
+                                  color: widget.colors.glassHighlight
+                                      .withValues(alpha: 0.95),
+                                  width: 1.2,
+                                ),
+                              ),
+                            )
+                          : null);
+
+                return MouseRegion(
+                  onEnter: (_) => setState(() => _hoveredIndex = index),
+                  onExit: (_) => setState(() => _hoveredIndex = null),
+                  child: Tooltip(
+                    message: widget.tabs[index],
+                    waitDuration: const Duration(milliseconds: 600),
+                    child: GestureDetector(
+                      onTap: () => widget.onTabSelected(index),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: showLabel ? 12 : 9,
+                          vertical: 5.5,
+                        ),
+                        decoration: decoration,
+                        foregroundDecoration: foregroundDeco,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              widget.icons[index],
+                              size: 14.5,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isHovered
+                                        ? widget.colors.textPrimary
+                                        : widget.colors.textSecondary),
+                            ),
+                            if (showLabel) ...[
+                              const SizedBox(width: 5.5),
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: isWideScreen ? 145 : 115,
+                                ),
+                                child: isSelected
+                                    ? AsymmetricMarqueeText(
+                                        text: widget.tabs[index],
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      )
+                                    : Text(
+                                        widget.tabs[index],
+                                        style: TextStyle(
+                                          color: isHovered
+                                              ? widget.colors.textPrimary
+                                              : widget.colors.textSecondary,
+                                          fontSize: 12,
+                                          fontWeight: isHovered
+                                              ? FontWeight.w700
+                                              : FontWeight.w600,
+                                          letterSpacing: 0.2,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Asymmetric Ping-Pong Marquee Text widget:
+/// - Only scrolls if text overflows the container constraints.
+/// - Hold at start for [pauseStart] (e.g. 1400ms).
+/// - Smoothly scrolls forward to the end.
+/// - Hold at end for [pauseEnd] (e.g. 1400ms).
+/// - Smoothly scrolls back to start.
+/// - Zero performance overhead when text fits within bounds.
+class AsymmetricMarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final Duration pauseStart;
+  final Duration pauseEnd;
+  final double velocity; // px/sec
+  final Curve forwardCurve;
+  final Curve returnCurve;
+
+  const AsymmetricMarqueeText({
+    super.key,
+    required this.text,
+    this.style,
+    this.pauseStart = const Duration(milliseconds: 1400),
+    this.pauseEnd = const Duration(milliseconds: 1400),
+    this.velocity = 35.0,
+    this.forwardCurve = Curves.easeInOutCubic,
+    this.returnCurve = Curves.easeInOutCubic,
+  });
+
+  @override
+  State<AsymmetricMarqueeText> createState() => _AsymmetricMarqueeTextState();
+}
+
+class _AsymmetricMarqueeTextState extends State<AsymmetricMarqueeText> {
+  final ScrollController _scrollController = ScrollController();
+  Timer? _timer;
+  bool _isDisposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isDisposed && mounted) {
+        _scheduleStart();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AsymmetricMarqueeText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _timer?.cancel();
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed && mounted) {
+          _scheduleStart();
+        }
+      });
+    }
+  }
+
+  void _scheduleStart() {
+    _timer?.cancel();
+    if (_isDisposed || !mounted) return;
+    if (!_scrollController.hasClients) {
+      _timer = Timer(const Duration(milliseconds: 150), _scheduleStart);
+      return;
+    }
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) return;
+
+    _timer = Timer(widget.pauseStart, _animateForward);
+  }
+
+  void _animateForward() {
+    _timer?.cancel();
+    if (_isDisposed || !mounted || !_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) return;
+
+    final duration = Duration(
+      milliseconds: ((maxScroll / widget.velocity) * 1000).round().clamp(
+        600,
+        6000,
+      ),
+    );
+
+    _scrollController
+        .animateTo(maxScroll, duration: duration, curve: widget.forwardCurve)
+        .then((_) {
+          if (_isDisposed || !mounted) return;
+          _timer = Timer(widget.pauseEnd, _animateReturn);
+        });
+  }
+
+  void _animateReturn() {
+    _timer?.cancel();
+    if (_isDisposed || !mounted || !_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) return;
+
+    final duration = Duration(
+      milliseconds: ((maxScroll / (widget.velocity * 1.25)) * 1000)
+          .round()
+          .clamp(500, 5000),
+    );
+
+    _scrollController
+        .animateTo(0, duration: duration, curve: widget.returnCurve)
+        .then((_) {
+          if (_isDisposed || !mounted) return;
+          _timer = Timer(widget.pauseStart, _animateForward);
+        });
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _timer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Text(
+        widget.text,
+        style: widget.style,
+        maxLines: 1,
+        softWrap: false,
       ),
     );
   }
@@ -694,6 +992,207 @@ class GlowingActionButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Small keyboard-shortcut badge (e.g. "Ctrl+K", "ESC").
+class KbdTag extends StatelessWidget {
+  const KbdTag({super.key, required this.label, required this.colors});
+
+  final String label;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: colors.subCardBg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: colors.subCardBorder),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: colors.textMuted,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Animated gradient border sweep — wrap any child (typically a [BentoCard])
+/// to add a rotating, glowing accent border marking it "live"/"featured"/
+/// "selected".
+class BorderBeam extends StatefulWidget {
+  const BorderBeam({
+    super.key,
+    required this.child,
+    this.borderRadius = 20,
+    this.colors = const [
+      Color(0xFF00D2FF),
+      Color(0xFF0066FF),
+      Color(0xFFA855F7),
+    ],
+    this.strokeWidth = 1.5,
+    this.duration = const Duration(seconds: 5),
+  });
+
+  final Widget child;
+  final double borderRadius;
+  final List<Color> colors;
+  final double strokeWidth;
+  final Duration duration;
+
+  @override
+  State<BorderBeam> createState() => _BorderBeamState();
+}
+
+class _BorderBeamState extends State<BorderBeam>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          foregroundPainter: _BorderBeamPainter(
+            progress: _controller.value,
+            borderRadius: widget.borderRadius,
+            colors: widget.colors,
+            strokeWidth: widget.strokeWidth,
+          ),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _BorderBeamPainter extends CustomPainter {
+  _BorderBeamPainter({
+    required this.progress,
+    required this.borderRadius,
+    required this.colors,
+    required this.strokeWidth,
+  });
+
+  final double progress;
+  final double borderRadius;
+  final List<Color> colors;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        strokeWidth / 2,
+        strokeWidth / 2,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
+      Radius.circular(borderRadius),
+    );
+
+    final gradient = SweepGradient(
+      colors: [...colors, colors.first],
+      stops: List.generate(colors.length + 1, (i) => i / colors.length),
+      transform: GradientRotation(progress * 2 * math.pi),
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(Offset.zero & size)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BorderBeamPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
+/// Mouse-follow spotlight glow — wrap a card's child to add a soft radial
+/// highlight that tracks the cursor on hover.
+class SpotlightGlow extends StatefulWidget {
+  const SpotlightGlow({
+    super.key,
+    required this.colors,
+    required this.child,
+    this.borderRadius = 20,
+    this.glowColor,
+  });
+
+  final AppColors colors;
+  final Widget child;
+  final double borderRadius;
+  final Color? glowColor;
+
+  @override
+  State<SpotlightGlow> createState() => _SpotlightGlowState();
+}
+
+class _SpotlightGlowState extends State<SpotlightGlow> {
+  Offset? _localPosition;
+
+  @override
+  Widget build(BuildContext context) {
+    final glow = widget.glowColor ?? widget.colors.accentColor;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.borderRadius),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          return MouseRegion(
+            onHover: (event) =>
+                setState(() => _localPosition = event.localPosition),
+            onExit: (_) => setState(() => _localPosition = null),
+            child: Stack(
+              children: [
+                widget.child,
+                if (_localPosition != null && w > 0 && h > 0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment(
+                              (_localPosition!.dx / w) * 2 - 1,
+                              (_localPosition!.dy / h) * 2 - 1,
+                            ),
+                            radius: 0.9,
+                            colors: [
+                              glow.withValues(alpha: 0.12),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

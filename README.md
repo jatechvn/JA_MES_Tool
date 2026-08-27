@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.8.0
+# 🤖 JA MES Tool v2.9.0
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.8.0-blue.svg" alt="Version 2.8.0">
+  <img src="https://img.shields.io/badge/version-2.9.0-blue.svg" alt="Version 2.9.0">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -37,14 +37,15 @@
 
 **JA MES Tool** is a specialized desktop application engineered to streamline serial number (SN) verification, test/process history extraction, BOM component traceability, and result reporting from the **Foxconn CloudMES** API platform.
 
-Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN plus a fourth reverse component-lookup view (Component Trace), automated token credential synchronization via browser CDP, and an intuitive modern interface with Bento Glassmorphism, Liquid Glass, Dynamic Island status capsule, and Excel-style search & sort.
+Designed for test engineers and QA teams, this tool provides instant parallel queries across three data views per SN plus a fourth reverse component-lookup view (Component Trace), a Ctrl+K command palette for jumping to any tab/action/setting, automated token credential synchronization via browser CDP, and an intuitive modern interface with Bento Glassmorphism, Liquid Glass, Dynamic Island status capsule, and Excel-style search & sort.
 
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.8.0)
+## 💡 Key Features (v2.9.0)
 
 ### 🎨 Bento Glassmorphism Interface
+- ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click.
 - 🌟 **Bento Grid & Liquid Glass Architecture**: Modern floating Bento cards with 1px top reflective highlight edges, 20-24px BackdropFilter blur, and GPU-composited drifting Mesh Orbs.
 - 🎛️ **Live-Preview 4-Slider Glassmorphism Tuning**: Interactive sliders in Settings (Card Blur, Card Opacity, Dialog Blur, Dialog Opacity) with instant real-time live preview across all UI surfaces, Default reset, and Cancel rollback.
 - 🌓 **1-Click Direct Theme Switcher**: Instant toggle between Light and Dark mode on every click.
@@ -93,11 +94,15 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 <a id="usage"></a>
 ## 🖥️ User Guide
 
-### 1. Adding Serial Numbers
+### 1. Command Palette (Ctrl+K / Cmd+K)
+* Press **Ctrl+K** (or **Cmd+K** on macOS keyboards) anywhere in the app to open a spotlight-style search over every tab, action, and setting.
+* Type to filter by name or keyword, use **↑/↓** to highlight a result, and press **Enter** or click to run it. Press **Esc** or click outside to close.
+
+### 2. Adding Serial Numbers
 * **Single SN**: Type the SN into the left sidebar input box and press **Enter** or click **[+]**.
 * **Batch Import**: Click **[Template]** to save a sample CSV. Fill in your SNs, then click **[Import]**. Title rows containing `"SN"` are automatically skipped.
 
-### 2. Browsing the Three Data Views
+### 3. Browsing the Three Data Views
 * Hover the icon toolbar near **"Result Details"** to reveal its label, or just click it — no need to hover first:
   - 📋 **Test Record**: pass/fail test results per station.
   - 🔳 **Barcode History**: full process/station routing history for the SN.
@@ -106,21 +111,21 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 * Click-drag or double-click any value to select it, then **Ctrl+C** to copy — just like a spreadsheet.
 * Click **[Export]** to save all fetched Test Record data to a structured CSV file.
 
-### 3. Component Trace (reverse component lookup)
+### 4. Component Trace (reverse component lookup)
 * Click the **🧭 Component Trace** tab — the sidebar switches from the SN queue to a **Trace History** list, and the same input box now searches component CSNs instead of adding SNs.
 * Type or scan a component's CSN and press **Enter** (or **[+]/🔍**) — paste multiple CSNs at once (one per line, or comma-separated) to search them all in one go.
 * Each searched CSN becomes a row in the Trace History sidebar (click to revisit a cached result, 🔄 to re-run it, ✕ to remove it) and is **saved to disk**, so the history survives closing and reopening the app.
 * The result panel shows every product SN the CSN is currently installed into, with the same **search/sort** toolbar as the other 3 views.
 * **[Template]/[Import]/[Export]** automatically operate on CSNs instead of SNs while this tab is active.
 
-### 4. Auto Sync Token from Browser (2-Step CDP Wizard)
+### 5. Auto Sync Token from Browser (2-Step CDP Wizard)
 1. Open **Settings ⚙️** (or use the automatic startup expired token popup).
 2. **Step 1**: Click **[1. Open Browser]** to launch Chrome or Microsoft Edge.
 3. Log into your MES account on the web page.
 4. **Step 2**: Click **[2. Sync Credentials]**. The app captures live **Token**, **UUID**, **Operation-ID**, and **Cookie** directly from browser traffic.
 5. Click **Save** to automatically clear prior error screens and re-fetch the entire SN queue (and the Component Trace history, if any).
 
-### 5. Connection Health Check
+### 6. Connection Health Check
 * The status indicator near **"Settings"** title shows:
   - 🟢 **Connected**: Token valid and server reachable.
   - 🟡 **Check Status**: Token expired or unauthorized (401).
@@ -136,20 +141,32 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # App entry point, Provider setup & window_manager init
-│   └── modules/
-│       ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
-│       ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
-│       ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│       ├── constants.dart         # Global app constants & defaults (v2.8.0)
-│       ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
-│       ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
-│       ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
-│       └── ui/
-│           ├── main_window.dart   # Tabs, filter/sort, hover chips, dialogs (WindowListener)
-│           ├── motion.dart        # Shared iOS-style animation Duration/Curve spec
-│           ├── styles.dart        # Theme dispatcher (dark/light tokens)
-│           ├── styles_win10.dart  # Windows 10 translucent theme tokens
-│           └── styles_win11.dart  # Windows 11 acrylic theme tokens
+│   ├── modules/
+│   │   ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
+│   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
+│   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
+│   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
+│   │   ├── constants.dart         # Global app constants & defaults (v2.9.0)
+│   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
+│   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
+│   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
+│   │   └── ui/
+│   │       ├── main_window.dart   # Tabs, filter/sort, dialogs, Command Palette wiring (WindowListener)
+│   │       ├── motion.dart        # Shared iOS-style animation Duration/Curve spec
+│   │       ├── styles.dart        # Re-exports lib/theme/* (kept for backward-compatible imports)
+│   │       ├── styles_win10.dart  # Legacy Win10 theme tokens, superseded by lib/theme/styles_win10.dart
+│   │       └── styles_win11.dart  # Legacy Win11 theme tokens, superseded by lib/theme/styles_win11.dart
+│   ├── theme/                     # Bento Glassmorphism theming system
+│   │   ├── app_colors.dart        # AppColors token set (per-theme color palette)
+│   │   ├── styles_win10.dart      # Windows 10 (Aero) glass color/opacity tuning
+│   │   ├── styles_win11.dart      # Windows 11 (Acrylic/Mica) glass color/opacity tuning
+│   │   └── theme_provider.dart    # ThemeProvider: light/dark/system mode, OS brightness observer
+│   └── widgets/                   # Reusable glass UI components
+│       ├── app_toast.dart         # Transient glass toast notification overlay
+│       ├── command_palette.dart   # Ctrl+K / Cmd+K spotlight command search
+│       ├── filter_search_dock.dart# Search field + filter pills dock (glass-styled)
+│       ├── glass_dialog.dart      # Frosted-glass modal dialog shell
+│       └── glass_widgets.dart     # BentoCard, MeshBackground, SlidingPillTabBar, KbdTag, etc.
 │
 ├── windows/
 │   └── runner/                    # Native Win32 runner (mostly Flutter-generated boilerplate)
@@ -167,7 +184,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.8.0+13)
+├── pubspec.yaml                   # Flutter package manifest (v2.9.0+14)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -222,12 +239,12 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
-- **[2.8.0]** — **Bento Glassmorphism & Liquid Glass Engine**: Complete modern visual upgrade with floating Bento cards, GPU-accelerated drifting mesh orbs, live 4-slider glass tuning (Card Blur/Opacity, Dialog Blur/Opacity with live preview & cancel rollback), 1-click Light/Dark theme switch, and accurate auto-detected build timestamping.
+- **[2.9.0]** — New **Command Palette** (Ctrl+K / Cmd+K): a spotlight-style search overlay listing every tab, action, and setting, with keyword filtering and arrow-key navigation, plus a glass toast notification system. Also fixes a `FocusNode` leak in the palette and removes a `fontFamily` reference to an unbundled font.
+- **[2.8.0]** — **Bento Glassmorphism & Liquid Glass Engine**: Complete modern visual upgrade with floating Bento cards, GPU-accelerated drifting mesh orbs, live 4-slider glass tuning (Card Blur/Opacity, Dialog Blur/Opacity with live preview & cancel rollback), 1-click Light/Dark theme switch, and accurate auto-detected build timestamping. Also fixes first-run glassmorphism defaults not matching the Settings "Default" button, a dialog crash risk when closing mid credential-sync, and the theme not following live OS light/dark changes.
 - **[2.7.0]** — New **Component Trace** view: reverse-lookup a component's own CSN to the product SN it's installed into, with its own persisted sidebar history, search/sort, and CSV template/import/export — sharing the SN queue's add/search input box instead of adding a second one.
 - **[2.6.4]** — SN Master resolution now captures its full API response (next process, error code, route, line code); a "Next" chip surfaces the next process on the records header, whose SN label now auto-scrolls instead of truncating when space is tight.
 - **[2.6.3]** — Chrome and Edge now use persistent, browser-specific profiles with legacy-profile migration and bounded CDP readiness checks to prevent login hangs.
 - **[2.6.2]** — Settings reorganized into Advanced Settings, User Guide, and About tabs; the dialog now adapts its height to the selected tab.
-- **[2.6.1]** — Fixed Verify Connection feedback being invisible behind the Settings dialog's modal barrier; the icon now animates a check/cross result directly instead of relying on a hidden SnackBar.
 
 See [**CHANGELOG.md**](CHANGELOG.md) for the full version history.
 
