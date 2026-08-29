@@ -2553,6 +2553,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         : (snMasterInfo.nextProcessName.isNotEmpty
               ? snMasterInfo.nextProcessName
               : snMasterInfo.nextProcessCode);
+    final routeLabel = snMasterInfo == null
+        ? ''
+        : (snMasterInfo.routeName.isNotEmpty
+              ? snMasterInfo.routeName
+              : snMasterInfo.routeCode);
 
     return BentoCard(
       colors: colors,
@@ -2597,6 +2602,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     color: colors.accentPurple,
                     bg: colors.accentPurple.withValues(alpha: 0.12),
                     border: colors.accentPurple.withValues(alpha: 0.35),
+                    fontSize: 10.5,
+                  ),
+                ],
+                if (routeLabel.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  PillBadge(
+                    label: 'Route: $routeLabel',
+                    color: colors.accentEmerald,
+                    bg: colors.accentEmerald.withValues(alpha: 0.12),
+                    border: colors.accentEmerald.withValues(alpha: 0.35),
                     fontSize: 10.5,
                   ),
                 ],
