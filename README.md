@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.0
+# 🤖 JA MES Tool v2.9.1
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.0-blue.svg" alt="Version 2.9.0">
+  <img src="https://img.shields.io/badge/version-2.9.1-blue.svg" alt="Version 2.9.1">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,7 +42,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.9.0)
+## 💡 Key Features (v2.9.1)
 
 ### 🎨 Bento Glassmorphism Interface
 - ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click.
@@ -61,7 +61,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 - 💾 **Persistent Browser Profiles**: Chrome and Edge use separate app-owned profiles, preserving saved sessions, passwords, and bookmarks across restarts while avoiding profile conflicts.
 - 🌐 **CDP Network Interception (Auto Credentials)**: Captures 100% accurate **Token**, **UUID**, **Operation-ID**, and **Cookie** directly from live browser traffic via CDP.
 - 🛡️ **Verified Connection Badge Icon**: Sleek badge icon (`Icons.verified_outlined`) in Settings footer for testing connection validity.
-- 🔄 **Auto-Refetch SN Queue on Save**: Saving settings automatically clears old 401 errors and re-queries all SNs in queue.
+- 🔄 **Refresh-All Cache Reset**: Refresh All clears cached canonical SN and SN Master metadata before re-querying the queue, preventing stale resolved SN or Next-process information.
 - 🔒 **No Hardcoded Credentials**: Token/cookie are never baked into the source — they're supplied per-user via Settings and persisted only to the local, gitignored `config.json`.
 
 ### ⚙️ Core & Data Management
@@ -123,7 +123,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 2. **Step 1**: Click **[1. Open Browser]** to launch Chrome or Microsoft Edge.
 3. Log into your MES account on the web page.
 4. **Step 2**: Click **[2. Sync Credentials]**. The app captures live **Token**, **UUID**, **Operation-ID**, and **Cookie** directly from browser traffic.
-5. Click **Save** to automatically clear prior error screens and re-fetch the entire SN queue (and the Component Trace history, if any).
+5. Click **Save** to automatically clear prior error screens and re-fetch the entire SN queue (and the Component Trace history, if any). Use **[Refresh All]** when you want to invalidate cached SN Master resolution data before a fresh queue fetch.
 
 ### 6. Connection Health Check
 * The status indicator near **"Settings"** title shows:
@@ -146,7 +146,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
 │   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│   │   ├── constants.dart         # Global app constants & defaults (v2.9.0)
+│   │   ├── constants.dart         # Global app constants & defaults (v2.9.1)
 │   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
@@ -184,7 +184,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.9.0+14)
+├── pubspec.yaml                   # Flutter package manifest (v2.9.1+15)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -239,6 +239,7 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.9.1]** — Refresh All now clears cached canonical SN and SN Master metadata before re-querying, so changed SN mappings and Next-process information cannot remain stale.
 - **[2.9.0]** — New **Command Palette** (Ctrl+K / Cmd+K): a spotlight-style search overlay listing every tab, action, and setting, with keyword filtering and arrow-key navigation, plus a glass toast notification system. Also fixes a `FocusNode` leak in the palette and removes a `fontFamily` reference to an unbundled font.
 - **[2.8.0]** — **Bento Glassmorphism & Liquid Glass Engine**: Complete modern visual upgrade with floating Bento cards, GPU-accelerated drifting mesh orbs, live 4-slider glass tuning (Card Blur/Opacity, Dialog Blur/Opacity with live preview & cancel rollback), 1-click Light/Dark theme switch, and accurate auto-detected build timestamping. Also fixes first-run glassmorphism defaults not matching the Settings "Default" button, a dialog crash risk when closing mid credential-sync, and the theme not following live OS light/dark changes.
 - **[2.7.0]** — New **Component Trace** view: reverse-lookup a component's own CSN to the product SN it's installed into, with its own persisted sidebar history, search/sort, and CSV template/import/export — sharing the SN queue's add/search input box instead of adding a second one.

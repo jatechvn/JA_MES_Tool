@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.0 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.1 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.0-blue.svg" alt="Phiên bản 2.9.0">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.1-blue.svg" alt="Phiên bản 2.9.1">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.9.0)
+## 💡 Tính năng nổi bật (v2.9.1)
 
 ### 🎨 Giao diện Bento Glassmorphism
 - ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy.
@@ -128,7 +128,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
 │   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.0)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.1)
 │   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -166,7 +166,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.9.0+14)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.9.1+15)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -210,6 +210,7 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.1]** — Nút **Làm mới tất cả** xóa cache phân giải SN chính tắc và SN Master trước khi tra cứu lại, tránh giữ thông tin SN hoặc công đoạn kế tiếp đã cũ.
 - **[2.9.0]** — Thêm **Bảng Lệnh Nhanh** (Ctrl+K / Cmd+K): ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt, lọc theo từ khoá và điều hướng bằng phím mũi tên, cùng hệ thống toast thông báo kính mờ. Đồng thời sửa lỗi leak `FocusNode` trong bảng lệnh và bỏ tham chiếu font `fontFamily` chưa được khai báo.
 - **[2.8.0]** — **Đại tu Giao diện Bento Glassmorphism & Liquid Glass**: Nâng cấp toàn diện giao diện với thẻ Bento bồng bềnh, hiệu ứng Mesh Orbs chuyển động trên GPU, bộ 4 slider điều chỉnh độ mờ/đục kính mờ có Live Preview thời gian thực & Hủy hoàn tác, chuyển đổi Theme Sáng/Tối 1-Click và đọc ngày giờ build chính xác từ file compiled. Đồng thời sửa lỗi giá trị mặc định glassmorphism lần đầu mở app không khớp nút "Mặc định", rủi ro crash khi đóng dialog giữa lúc đồng bộ token, và theme không tự cập nhật khi đổi theme hệ điều hành.
 - **[2.7.0]** — Thêm chế độ xem **Component Trace**: tra cứu ngược SN linh kiện để biết nó đang lắp trong sản phẩm nào, có lịch sử tra cứu riêng được lưu lại ở sidebar, tìm kiếm/sắp xếp và hỗ trợ CSV template/nhập/xuất — dùng chung ô nhập/tìm kiếm với hàng đợi SN thay vì thêm ô riêng.

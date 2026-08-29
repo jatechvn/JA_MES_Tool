@@ -5,6 +5,13 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.1] - 2026-08-29
+
+### 🐛 Bug Fixes
+- **🔄 Refresh All cache invalidation**: Refresh All now clears canonical SN and SN Master resolution caches before re-querying the queue, preventing stale resolved SN and Next-process metadata after data changes.
+
+---
+
 ## [2.9.0] - 2026-08-27
 
 ### 🚀 Major Features & Enhancements

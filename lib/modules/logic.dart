@@ -341,6 +341,8 @@ class AppLogic extends ChangeNotifier {
     _wipErrors.clear();
     _wipLoadingStatus.clear();
     _isWipBatchLoading = false;
+    _resolvedSn.clear();
+    _snMasterInfo.clear();
     notifyListeners();
     await _fetchAllPending();
   }

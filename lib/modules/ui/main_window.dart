@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,6 +51,14 @@ Future<T?> _showIosDialog<T>({
       );
     },
   );
+}
+
+Future<void> _openExternalUrl(String url) async {
+  try {
+    await Process.start('explorer.exe', [url]);
+  } catch (error) {
+    debugPrint('Could not open external URL: $error');
+  }
 }
 
 class _MainWindowState extends State<MainWindow> with WindowListener {
@@ -3318,6 +3327,32 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                 fontSize: 11.5,
                 height: 1.4,
               ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: () =>
+                      _openExternalUrl('https://jatechvn.github.io/'),
+                  icon: const Icon(Icons.public_rounded, size: 16),
+                  label: const Text('Website'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.accentColor,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _openExternalUrl(
+                    'https://github.com/jatechvn/JA_MES_Tool',
+                  ),
+                  icon: const Icon(Icons.code_rounded, size: 16),
+                  label: const Text('GitHub Repository'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.accentColor,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
