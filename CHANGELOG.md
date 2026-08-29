@@ -5,6 +5,13 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.2] - 2026-08-29
+
+### 🚀 Major Features & Enhancements
+- **🧭 Route Badge**: Added a Route badge to the records header using the SN Master route name, with a fallback to the route code when the name is unavailable. The badge is shown only when route data is returned by the API.
+
+---
+
 ## [2.9.1] - 2026-08-29
 
 ### 🐛 Bug Fixes

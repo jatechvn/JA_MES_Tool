@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.1
+# 🤖 JA MES Tool v2.9.2
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.1-blue.svg" alt="Version 2.9.1">
+  <img src="https://img.shields.io/badge/version-2.9.2-blue.svg" alt="Version 2.9.2">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,7 +42,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.9.1)
+## 💡 Key Features (v2.9.2)
 
 ### 🎨 Bento Glassmorphism Interface
 - ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click.
@@ -62,6 +62,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 - 🌐 **CDP Network Interception (Auto Credentials)**: Captures 100% accurate **Token**, **UUID**, **Operation-ID**, and **Cookie** directly from live browser traffic via CDP.
 - 🛡️ **Verified Connection Badge Icon**: Sleek badge icon (`Icons.verified_outlined`) in Settings footer for testing connection validity.
 - 🔄 **Refresh-All Cache Reset**: Refresh All clears cached canonical SN and SN Master metadata before re-querying the queue, preventing stale resolved SN or Next-process information.
+- 🧭 **Route Badge**: The records header shows the SN Master route name, falling back to the route code when needed, and stays hidden when route data is unavailable.
 - 🔒 **No Hardcoded Credentials**: Token/cookie are never baked into the source — they're supplied per-user via Settings and persisted only to the local, gitignored `config.json`.
 
 ### ⚙️ Core & Data Management
@@ -110,6 +111,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 * Use the **search box** on any list to filter by any field, and the **[Sort]** button to pick a field and toggle ascending/descending.
 * Click-drag or double-click any value to select it, then **Ctrl+C** to copy — just like a spreadsheet.
 * Click **[Export]** to save all fetched Test Record data to a structured CSV file.
+* When SN Master data includes route information, the records header shows a **Route** badge alongside the **Next** process chip.
 
 ### 4. Component Trace (reverse component lookup)
 * Click the **🧭 Component Trace** tab — the sidebar switches from the SN queue to a **Trace History** list, and the same input box now searches component CSNs instead of adding SNs.
@@ -146,7 +148,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
 │   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│   │   ├── constants.dart         # Global app constants & defaults (v2.9.1)
+│   │   ├── constants.dart         # Global app constants & defaults (v2.9.2)
 │   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
@@ -184,7 +186,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.9.1+15)
+├── pubspec.yaml                   # Flutter package manifest (v2.9.2+16)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -239,6 +241,7 @@ All credentials are entered per-user via the in-app **Settings ⚙️** dialog (
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.9.2]** — Added a conditional **Route** badge to the records header, preferring the SN Master route name and falling back to the route code when necessary.
 - **[2.9.1]** — Refresh All now clears cached canonical SN and SN Master metadata before re-querying, so changed SN mappings and Next-process information cannot remain stale.
 - **[2.9.0]** — New **Command Palette** (Ctrl+K / Cmd+K): a spotlight-style search overlay listing every tab, action, and setting, with keyword filtering and arrow-key navigation, plus a glass toast notification system. Also fixes a `FocusNode` leak in the palette and removes a `fontFamily` reference to an unbundled font.
 - **[2.8.0]** — **Bento Glassmorphism & Liquid Glass Engine**: Complete modern visual upgrade with floating Bento cards, GPU-accelerated drifting mesh orbs, live 4-slider glass tuning (Card Blur/Opacity, Dialog Blur/Opacity with live preview & cancel rollback), 1-click Light/Dark theme switch, and accurate auto-detected build timestamping. Also fixes first-run glassmorphism defaults not matching the Settings "Default" button, a dialog crash risk when closing mid credential-sync, and the theme not following live OS light/dark changes.

@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.1 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.2 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.1-blue.svg" alt="Phiên bản 2.9.1">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.2-blue.svg" alt="Phiên bản 2.9.2">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.9.1)
+## 💡 Tính năng nổi bật (v2.9.2)
 
 ### 🎨 Giao diện Bento Glassmorphism
 - ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy.
@@ -35,6 +35,7 @@
 - 🎛️ **Bộ 4 thanh trượt Glassmorphism Live-Preview**: Tùy chỉnh trực tiếp Độ mờ khối Bento (0-40px), Độ đục khối (5-100%), Độ mờ Hộp thoại (0-40px), Độ đục Hộp thoại (10-100%) với chế độ xem trước thời gian thực, nút Mặc định và Hủy hoàn tác.
 - 🌓 **Đổi Theme 1-Click**: Chuyển đổi trực tiếp Sáng/Tối mượt mà tức thì mỗi lần nhấn.
 - ⏱️ **Đọc ngày giờ Build tự động**: Tự động trích xuất thời gian biên dịch file `data/app.so` hoặc file thực thi hiển thị tại Header và mục Giới thiệu.
+- 🧭 **Badge Route**: Hiển thị route của SN Master trên header danh sách bản ghi, ưu tiên tên route và fallback về mã route khi cần; tự ẩn nếu API không trả dữ liệu route.
 - ✨ **Hiệu ứng chuyển tiếp mượt mà kiểu iOS**: Chuyển tab/SN có animation fade+slide, danh sách bản ghi xuất hiện theo hiệu ứng cascade kèm cuộn có độ nảy, hộp thoại scale+fade khi mở.
 - 🏝️ **Dynamic Island Status Capsule**: Sóng trạng thái kết nối MES trực quan và thanh công cụ thao tác nhanh.
 - 🪟 **Glassmorphism có thể tùy chỉnh**: Cài đặt → Nâng cao có mục "Tùy chỉnh độ mờ & trong suốt" với 4 slider live-preview (Độ mờ/Trong suốt nền chính, Độ mờ/Trong suốt Dialog). Dropdown Sắp xếp và chính cửa sổ Cài đặt đều blur lại theo thời gian thực khi kéo slider — kèm sàn an toàn chống lỗi chữ chồng xuyên thấu dù chỉnh opacity thấp đến đâu.
@@ -93,6 +94,7 @@
 * Dùng **ô tìm kiếm** trên mỗi danh sách để lọc theo mọi trường, và nút **[Sắp xếp]** để chọn trường và đảo chiều tăng/giảm.
 * Kéo chuột hoặc double-click vào giá trị bất kỳ để chọn, rồi **Ctrl+C** để copy — như bảng tính.
 * Bấm **[Xuất (Export)]** để lưu toàn bộ dữ liệu Kết quả Test ra file CSV.
+* Khi SN Master có dữ liệu route, header danh sách bản ghi sẽ hiển thị badge **Route** cùng chip công đoạn **Next**.
 
 ### 4. Component Trace (tra cứu ngược linh kiện)
 * Bấm tab **🧭 Component Trace** — sidebar chuyển từ hàng đợi SN sang danh sách **Lịch sử Tra cứu**, và ô nhập vẫn ở vị trí cũ nhưng giờ dùng để tra cứu SN linh kiện thay vì thêm SN.
@@ -128,7 +130,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
 │   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.1)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.2)
 │   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -166,7 +168,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.9.1+15)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.9.2+16)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -210,6 +212,7 @@ Toàn bộ thông tin đăng nhập được nhập qua hộp thoại **Cài đ�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.2]** — Thêm badge **Route** trên header danh sách bản ghi khi SN Master có dữ liệu route; ưu tiên tên route và fallback về mã route.
 - **[2.9.1]** — Nút **Làm mới tất cả** xóa cache phân giải SN chính tắc và SN Master trước khi tra cứu lại, tránh giữ thông tin SN hoặc công đoạn kế tiếp đã cũ.
 - **[2.9.0]** — Thêm **Bảng Lệnh Nhanh** (Ctrl+K / Cmd+K): ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt, lọc theo từ khoá và điều hướng bằng phím mũi tên, cùng hệ thống toast thông báo kính mờ. Đồng thời sửa lỗi leak `FocusNode` trong bảng lệnh và bỏ tham chiếu font `fontFamily` chưa được khai báo.
 - **[2.8.0]** — **Đại tu Giao diện Bento Glassmorphism & Liquid Glass**: Nâng cấp toàn diện giao diện với thẻ Bento bồng bềnh, hiệu ứng Mesh Orbs chuyển động trên GPU, bộ 4 slider điều chỉnh độ mờ/đục kính mờ có Live Preview thời gian thực & Hủy hoàn tác, chuyển đổi Theme Sáng/Tối 1-Click và đọc ngày giờ build chính xác từ file compiled. Đồng thời sửa lỗi giá trị mặc định glassmorphism lần đầu mở app không khớp nút "Mặc định", rủi ro crash khi đóng dialog giữa lúc đồng bộ token, và theme không tự cập nhật khi đổi theme hệ điều hành.
