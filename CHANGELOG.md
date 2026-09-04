@@ -5,6 +5,20 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.3] - 2026-09-04
+
+### 🚀 Major Features & Enhancements
+- **🔁 Smart Test Record fallback**: When Test Record returns no rows on first app load, a newly searched SN, or an explicit refresh while Test Record is active, the app automatically opens Barcode History so users still see available MES history.
+- **🌐 Windows locale first-run language**: On first launch without a saved language, the app now chooses English, Vietnamese, or Chinese from the Windows locale; saved in-app language preferences still take priority.
+
+### 🎨 UI/UX Improvements
+- **⌨️ Command Palette glass/focus polish**: The command palette now follows the Dialog blur/opacity settings and delays focus slightly to avoid Windows IME underline artifacts.
+
+### 🐛 Bug Fixes
+- **🧭 Manual Test Record tab stays stable**: Selecting an existing SN or manually switching back to Test Record no longer bounces to Barcode History immediately; fallback only runs for fresh app load/search/refresh flows.
+
+---
+
 ## [2.9.2] - 2026-08-29
 
 ### 🚀 Major Features & Enhancements

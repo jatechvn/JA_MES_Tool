@@ -10,6 +10,50 @@ final _logger = Logger('AppLogic');
 
 enum ViewMode { testRecord, barcodeHistory, wipComponents, componentTrace }
 
+bool shouldFallbackToBarcodeHistory({
+  required bool recordsAreEmpty,
+  String? error,
+}) {
+  if (recordsAreEmpty) return true;
+  return error?.toLowerCase().contains('no records found') ?? false;
+}
+
+String defaultLanguageForPlatformLocale(String localeName) {
+  final normalized = localeName.toLowerCase().replaceAll('_', '-');
+  if (normalized.startsWith('vi') || normalized.startsWith('vn')) {
+    return 'vn';
+  }
+  if (normalized.startsWith('zh') || normalized.startsWith('cn')) {
+    return 'cn';
+  }
+  return 'en';
+}
+
+String initialLanguage({
+  required Object? configuredLang,
+  required bool hasConfiguredLanguage,
+  required String platformLocaleName,
+}) {
+  final lang = configuredLang?.toString();
+  if (hasConfiguredLanguage && ['en', 'vn', 'cn'].contains(lang)) {
+    return lang!;
+  }
+  return defaultLanguageForPlatformLocale(platformLocaleName);
+}
+
+bool shouldAutoSwitchToBarcodeHistory({
+  required String selectedSn,
+  required String candidateSn,
+  required ViewMode viewMode,
+  required bool hasNoTestRecordData,
+  required bool fallbackAllowed,
+}) {
+  return fallbackAllowed &&
+      selectedSn == candidateSn &&
+      viewMode == ViewMode.testRecord &&
+      hasNoTestRecordData;
+}
+
 class AppLogic extends ChangeNotifier {
   ViewMode _viewMode = ViewMode.testRecord;
   ViewMode get viewMode => _viewMode;
@@ -138,6 +182,7 @@ class AppLogic extends ChangeNotifier {
   bool? isConnectionValid;
   String? connectionError;
   Timer? _validationTimer;
+  final Set<String> _testRecordFallbackEligibleSns = {};
 
   AppLogic() {
     _init();
@@ -151,7 +196,11 @@ class AppLogic extends ChangeNotifier {
   Future<void> _init() async {
     final config = await ConfigService.loadConfig();
     _token = config['token'] ?? '';
-    _lang = config['lang'] ?? 'en';
+    _lang = initialLanguage(
+      configuredLang: config['lang'],
+      hasConfiguredLanguage: config['hasConfiguredLang'] == true,
+      platformLocaleName: Platform.localeName,
+    );
     _operationId = config['operationId'] ?? defaultOperationId;
     _uuid = config['uuid'] ?? defaultUuid;
     _cookie = config['cookie'] ?? '';
@@ -176,6 +225,7 @@ class AppLogic extends ChangeNotifier {
     if (_traceHistory.isNotEmpty) {
       _selectedTraceCsn = _traceHistory.first;
     }
+    _enableTestRecordFallbackFor(_snList);
     notifyListeners();
     // Auto-fetch all 3 SN data views + the saved Component Trace history, so
     // switching tabs never has to wait — not just the currently active view.
@@ -272,6 +322,7 @@ class AppLogic extends ChangeNotifier {
     _wipErrors.remove(sn);
     _resolvedSn.remove(sn);
     _snMasterInfo.remove(sn);
+    _testRecordFallbackEligibleSns.remove(sn);
     if (_selectedSn == sn) {
       _selectedSn = _snList.isNotEmpty ? _snList.first : '';
     }
@@ -283,6 +334,7 @@ class AppLogic extends ChangeNotifier {
   /// cache) and re-fetches it, without needing to remove/re-add the SN or
   /// restart the app.
   Future<void> refreshSn(String sn) async {
+    _testRecordFallbackEligibleSns.remove(sn);
     _results.remove(sn);
     _errors.remove(sn);
     _loadingStatus.remove(sn);
@@ -294,6 +346,9 @@ class AppLogic extends ChangeNotifier {
     _wipLoadingStatus.remove(sn);
     _resolvedSn.remove(sn);
     _snMasterInfo.remove(sn);
+    if (_viewMode == ViewMode.testRecord) {
+      _enableTestRecordFallbackFor([sn]);
+    }
     notifyListeners();
     await _fetchAllPending();
   }
@@ -312,6 +367,7 @@ class AppLogic extends ChangeNotifier {
     _resolvedSn.clear();
     _snMasterInfo.clear();
     _selectedSn = '';
+    _testRecordFallbackEligibleSns.clear();
     ConfigService.saveConfig(_exportConfigMap());
     notifyListeners();
   }
@@ -328,7 +384,7 @@ class AppLogic extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refetchAllSns() async {
+  Future<void> refetchAllSns({bool allowTestRecordFallback = true}) async {
     _results.clear();
     _errors.clear();
     _loadingStatus.clear();
@@ -343,6 +399,10 @@ class AppLogic extends ChangeNotifier {
     _isWipBatchLoading = false;
     _resolvedSn.clear();
     _snMasterInfo.clear();
+    _testRecordFallbackEligibleSns.clear();
+    if (allowTestRecordFallback && _viewMode == ViewMode.testRecord) {
+      _enableTestRecordFallbackFor(_snList);
+    }
     notifyListeners();
     await _fetchAllPending();
   }
@@ -371,13 +431,16 @@ class AppLogic extends ChangeNotifier {
     await _validateNow();
     notifyListeners();
     if (_snList.isNotEmpty || _traceHistory.isNotEmpty) {
-      refetchAllSns();
+      refetchAllSns(allowTestRecordFallback: false);
     }
   }
 
-  Future<void> addSns(String input) async {
+  Future<void> addSns(
+    String input, {
+    bool allowTestRecordFallback = true,
+  }) async {
     final lines = input.split(RegExp(r'[\n\r,;\s]+'));
-    bool added = false;
+    final addedSns = <String>[];
     for (var line in lines) {
       final sn = line.trim().toUpperCase();
       if (sn == 'SN') continue;
@@ -385,13 +448,18 @@ class AppLogic extends ChangeNotifier {
           RegExp(r'^[A-Z0-9_-]+$').hasMatch(sn) &&
           !_snList.contains(sn)) {
         _snList.add(sn);
-        added = true;
+        addedSns.add(sn);
       }
     }
 
-    if (added) {
+    if (addedSns.isNotEmpty) {
       await ConfigService.saveConfig(_exportConfigMap());
-      if (_selectedSn.isEmpty) _selectedSn = _snList.last;
+      if (_selectedSn.isEmpty) {
+        _selectedSn = _snList.last;
+      }
+      if (allowTestRecordFallback) {
+        _enableTestRecordFallbackFor(addedSns);
+      }
       notifyListeners();
       _fetchAllPending();
     }
@@ -475,7 +543,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         return;
       }
       final content = await file.readAsString();
-      await addSns(content);
+      await addSns(content, allowTestRecordFallback: false);
     } catch (e) {
       _globalError = 'Error importing CSV: $e';
       notifyListeners();
@@ -570,10 +638,17 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
           _results[sn] = records;
           if (records.isEmpty) {
             _errors[sn] = 'No records found';
+            if (_switchToBarcodeHistoryIfNeeded(sn)) {
+              _fetchPendingProcessHistory();
+            }
           }
         } catch (e) {
           _logger.severe('Failed to fetch records for $sn: $e');
-          _errors[sn] = e.toString().replaceFirst('Exception: ', '');
+          final error = e.toString().replaceFirst('Exception: ', '');
+          _errors[sn] = error;
+          if (_switchToBarcodeHistoryIfNeeded(sn)) {
+            _fetchPendingProcessHistory();
+          }
         } finally {
           _loadingStatus[sn] = false;
           notifyListeners();
@@ -582,7 +657,41 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     }
 
     _isBatchLoading = false;
+    for (final sn in currentList) {
+      _testRecordFallbackEligibleSns.remove(sn);
+    }
     notifyListeners();
+  }
+
+  void _enableTestRecordFallbackFor(Iterable<String> sns) {
+    for (final sn in sns) {
+      if (sn.isNotEmpty) {
+        _testRecordFallbackEligibleSns.add(sn);
+      }
+    }
+  }
+
+  bool _hasNoTestRecordData(String sn) {
+    if (sn.isEmpty) return false;
+    return shouldFallbackToBarcodeHistory(
+      recordsAreEmpty: _results[sn]?.isEmpty ?? false,
+      error: _errors[sn],
+    );
+  }
+
+  bool _switchToBarcodeHistoryIfNeeded(String sn) {
+    if (!shouldAutoSwitchToBarcodeHistory(
+      selectedSn: _selectedSn,
+      candidateSn: sn,
+      viewMode: _viewMode,
+      hasNoTestRecordData: _hasNoTestRecordData(sn),
+      fallbackAllowed: _testRecordFallbackEligibleSns.contains(sn),
+    )) {
+      return false;
+    }
+    _viewMode = ViewMode.barcodeHistory;
+    _testRecordFallbackEligibleSns.remove(sn);
+    return true;
   }
 
   Future<void> _fetchPendingProcessHistory() async {
@@ -880,6 +989,10 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   }
 
   Future<void> fetchSnsData() async {
+    _testRecordFallbackEligibleSns.clear();
+    if (_viewMode == ViewMode.testRecord) {
+      _enableTestRecordFallbackFor(_snList);
+    }
     _results.clear();
     _errors.clear();
     notifyListeners();
@@ -887,6 +1000,10 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   }
 
   Future<void> refreshAll() async {
+    _testRecordFallbackEligibleSns.clear();
+    if (_viewMode == ViewMode.testRecord) {
+      _enableTestRecordFallbackFor(_snList);
+    }
     _results.clear();
     _errors.clear();
     _processResults.clear();

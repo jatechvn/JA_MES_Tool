@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.9.2
-Release Date : 2026-08-29
+Version      : v2.9.3
+Release Date : 2026-09-04
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -36,6 +36,14 @@ Key Features:
   asymmetric marquee scrolling.
 - Route Badge: Displays the SN Master route name (falling back to route code)
   on the records header whenever route data is available.
+- Smart Test Record Fallback: When Test Record has no rows on first app load,
+  a newly searched SN, or an explicit Test Record refresh, the app opens Barcode
+  History automatically while preserving manual Test Record tab selection.
+- Windows Locale First-Run Language: On first launch, language defaults from
+  Windows locale (Vietnamese, Chinese, or English) unless the user has saved a
+  language preference.
+- Command Palette Glass Polish: The command palette follows Dialog blur/opacity
+  settings and delays focus slightly to avoid Windows IME underline artifacts.
 - iOS-style Smooth UI Transitions: Animated tab/SN switching, cascading list
   entrances, scale+fade dialogs, and crossfaded themes.
 - Excel-style Search Filter & Sort-by on every record list, with frosted glass

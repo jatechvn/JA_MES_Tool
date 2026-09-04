@@ -148,6 +148,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       colors: colors,
       searchHint: Translations.get('command_search_hint', logic.lang),
       noResultsText: Translations.get('no_commands_found', logic.lang),
+      blurSigma: logic.dialogBlur,
+      isDark: theme.isDark,
+      bgOpacity: logic.dialogOpacity,
       items: () => _buildCommandPaletteItems(context, logic, theme, colors),
       child: Scaffold(
         backgroundColor: colors.bgPrimary,
@@ -676,6 +679,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               colors: colors,
               searchHint: Translations.get('command_search_hint', logic.lang),
               noResultsText: Translations.get('no_commands_found', logic.lang),
+              blurSigma: logic.dialogBlur,
+              isDark: theme.isDark,
+              bgOpacity: logic.dialogOpacity,
             ),
           ),
 
