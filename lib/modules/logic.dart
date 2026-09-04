@@ -10,6 +10,8 @@ final _logger = Logger('AppLogic');
 
 enum ViewMode { testRecord, barcodeHistory, wipComponents, componentTrace }
 
+enum SnDataStatus { normal, warning, error }
+
 bool shouldFallbackToBarcodeHistory({
   required bool recordsAreEmpty,
   String? error,
@@ -52,6 +54,19 @@ bool shouldAutoSwitchToBarcodeHistory({
       selectedSn == candidateSn &&
       viewMode == ViewMode.testRecord &&
       hasNoTestRecordData;
+}
+
+SnDataStatus snDataStatusForViews({
+  required bool hasNoTestRecordData,
+  required bool hasBarcodeHistoryData,
+  required bool hasComponentData,
+  required bool relatedViewsResolved,
+}) {
+  if (!hasNoTestRecordData) return SnDataStatus.normal;
+  if (hasBarcodeHistoryData || hasComponentData) {
+    return SnDataStatus.warning;
+  }
+  return relatedViewsResolved ? SnDataStatus.error : SnDataStatus.normal;
 }
 
 class AppLogic extends ChangeNotifier {
@@ -676,6 +691,21 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     return shouldFallbackToBarcodeHistory(
       recordsAreEmpty: _results[sn]?.isEmpty ?? false,
       error: _errors[sn],
+    );
+  }
+
+  SnDataStatus snDataStatus(String sn) {
+    final hasBarcodeHistoryData = _processResults[sn]?.isNotEmpty == true;
+    final hasComponentData = _wipResults[sn]?.isNotEmpty == true;
+    final relatedViewsResolved =
+        (_processResults.containsKey(sn) || _processErrors.containsKey(sn)) &&
+        (_wipResults.containsKey(sn) || _wipErrors.containsKey(sn));
+
+    return snDataStatusForViews(
+      hasNoTestRecordData: _hasNoTestRecordData(sn),
+      hasBarcodeHistoryData: hasBarcodeHistoryData,
+      hasComponentData: hasComponentData,
+      relatedViewsResolved: relatedViewsResolved,
     );
   }
 

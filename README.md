@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.3
+# 🤖 JA MES Tool v2.9.4
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.3-blue.svg" alt="Version 2.9.3">
+  <img src="https://img.shields.io/badge/version-2.9.4-blue.svg" alt="Version 2.9.4">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,7 +42,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.9.3)
+## 💡 Key Features (v2.9.4)
 
 ### 🎨 Bento Glassmorphism Interface
 - ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click. It now follows the Dialog blur/opacity settings and delays focus slightly to avoid Windows IME underline artifacts.
@@ -64,6 +64,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 - 🔄 **Refresh-All Cache Reset**: Refresh All clears cached canonical SN and SN Master metadata before re-querying the queue, preventing stale resolved SN or Next-process information.
 - 🧭 **Route Badge**: The records header shows the SN Master route name, falling back to the route code when needed, and stays hidden when route data is unavailable.
 - 🔁 **Smart Empty Test Record Fallback**: If Test Record returns no rows after first app load, a newly entered/searched SN, or a refresh while Test Record is active, the app automatically opens Barcode History. Manual tab selection and cached SN selection stay respected.
+- 🟡 **SN Data Status Colors**: If Test Record is empty but Barcode History or Component List has data, the SN is shown in amber with a warning indicator; red is reserved for all three SN views being empty after loading.
 - 🔒 **No Hardcoded Credentials**: Token/cookie are never baked into the source — they're supplied per-user via Settings and persisted only to the local, gitignored `config.json`.
 
 ### ⚙️ Core & Data Management
@@ -114,6 +115,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 * Click **[Export]** to save all fetched Test Record data to a structured CSV file.
 * When SN Master data includes route information, the records header shows a **Route** badge alongside the **Next** process chip.
 * If Test Record has no rows after a first-load fetch, a newly searched SN, or a refresh while Test Record is active, the app automatically switches to **Barcode History**. Simply clicking back to Test Record or selecting a cached SN will not auto-switch away.
+* In the SN queue, amber means Test Record is empty but Barcode History or Component List has data; red means all three SN data views have finished with no data.
 
 ### 4. Component Trace (reverse component lookup)
 * Click the **🧭 Component Trace** tab — the sidebar switches from the SN queue to a **Trace History** list, and the same input box now searches component CSNs instead of adding SNs.
@@ -150,7 +152,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
 │   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│   │   ├── constants.dart         # Global app constants & defaults (v2.9.3)
+│   │   ├── constants.dart         # Global app constants & defaults (v2.9.4)
 │   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
@@ -188,7 +190,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.9.3+17)
+├── pubspec.yaml                   # Flutter package manifest (v2.9.4+18)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -245,6 +247,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.9.4]** — Added amber SN status for empty Test Record data when Barcode History or Component List still has records; red is reserved for all three views being empty after loading.
 - **[2.9.3]** — Added guarded Test Record empty-data fallback to Barcode History, Windows-locale first-run language defaults, and Command Palette dialog-glass/focus polish.
 - **[2.9.2]** — Added a conditional **Route** badge to the records header, preferring the SN Master route name and falling back to the route code when necessary.
 - **[2.9.1]** — Refresh All now clears cached canonical SN and SN Master metadata before re-querying, so changed SN mappings and Next-process information cannot remain stale.

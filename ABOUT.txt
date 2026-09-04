@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.9.3
+Version      : v2.9.4
 Release Date : 2026-09-04
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
@@ -38,7 +38,9 @@ Key Features:
   on the records header whenever route data is available.
 - Smart Test Record Fallback: When Test Record has no rows on first app load,
   a newly searched SN, or an explicit Test Record refresh, the app opens Barcode
-  History automatically while preserving manual Test Record tab selection.
+ History automatically while preserving manual Test Record tab selection.
+- SN Data Status Colors: A missing Test Record with Barcode History or Component
+  List data is shown in amber; red is reserved for an SN with no data in all views.
 - Windows Locale First-Run Language: On first launch, language defaults from
   Windows locale (Vietnamese, Chinese, or English) unless the user has saved a
   language preference.
