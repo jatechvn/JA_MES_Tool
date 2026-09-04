@@ -952,7 +952,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           final sn = logic.snList[index];
           final isSelected = sn == logic.selectedSn;
           final isLoading = logic.loadingStatus[sn] == true;
-          final hasError = logic.errors[sn] != null;
+          final dataStatus = logic.snDataStatus(sn);
+          final hasError = dataStatus == SnDataStatus.error;
+          final hasWarning = dataStatus == SnDataStatus.warning;
           final recordCount = logic.results[sn]?.length ?? 0;
 
           return InkWell(
@@ -995,6 +997,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                       style: TextStyle(
                         color: hasError
                             ? colors.accentRose
+                            : hasWarning
+                            ? colors.accentAmber
                             : (isSelected
                                   ? colors.textPrimary
                                   : colors.textSecondary),
@@ -1016,10 +1020,12 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                       ),
                     ),
                     const SizedBox(width: 6),
-                  ] else if (hasError) ...[
+                  ] else if (hasError || hasWarning) ...[
                     Icon(
-                      Icons.error_rounded,
-                      color: colors.accentRose,
+                      hasError
+                          ? Icons.error_rounded
+                          : Icons.warning_amber_rounded,
+                      color: hasError ? colors.accentRose : colors.accentAmber,
                       size: 16,
                     ),
                     const SizedBox(width: 6),

@@ -121,4 +121,57 @@ void main() {
       },
     );
   });
+
+  group('SN sidebar status Tests', () {
+    test('uses warning when another SN view has data', () {
+      expect(
+        snDataStatusForViews(
+          hasNoTestRecordData: true,
+          hasBarcodeHistoryData: true,
+          hasComponentData: false,
+          relatedViewsResolved: true,
+        ),
+        equals(SnDataStatus.warning),
+      );
+      expect(
+        snDataStatusForViews(
+          hasNoTestRecordData: true,
+          hasBarcodeHistoryData: false,
+          hasComponentData: true,
+          relatedViewsResolved: true,
+        ),
+        equals(SnDataStatus.warning),
+      );
+    });
+
+    test('uses error only when every view is resolved and empty', () {
+      expect(
+        snDataStatusForViews(
+          hasNoTestRecordData: true,
+          hasBarcodeHistoryData: false,
+          hasComponentData: false,
+          relatedViewsResolved: true,
+        ),
+        equals(SnDataStatus.error),
+      );
+      expect(
+        snDataStatusForViews(
+          hasNoTestRecordData: true,
+          hasBarcodeHistoryData: false,
+          hasComponentData: false,
+          relatedViewsResolved: false,
+        ),
+        equals(SnDataStatus.normal),
+      );
+      expect(
+        snDataStatusForViews(
+          hasNoTestRecordData: false,
+          hasBarcodeHistoryData: false,
+          hasComponentData: false,
+          relatedViewsResolved: true,
+        ),
+        equals(SnDataStatus.normal),
+      );
+    });
+  });
 }

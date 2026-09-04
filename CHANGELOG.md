@@ -5,6 +5,20 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.4] - 2026-09-04
+
+### 🎨 UI/UX Improvements
+- **🟡 SN data status colors**: When Test Record has no data but Barcode History
+  or Component List still returns records, the SN in the sidebar is shown in
+  amber with a warning indicator instead of red.
+
+### 🐛 Bug Fixes
+- **🔴 Accurate empty-state error**: Red is now reserved for an SN whose Test
+  Record, Barcode History, and Component List have all finished empty; the
+  sidebar stays neutral while related views are still loading.
+
+---
+
 ## [2.9.3] - 2026-09-04
 
 ### 🚀 Major Features & Enhancements

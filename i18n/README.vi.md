@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.3 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.4 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.3-blue.svg" alt="Phiên bản 2.9.3">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.4-blue.svg" alt="Phiên bản 2.9.4">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.9.3)
+## 💡 Tính năng nổi bật (v2.9.4)
 
 ### 🎨 Giao diện Bento Glassmorphism
 - ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy. Bảng lệnh giờ dùng đúng blur/opacity của Dialog và delay focus nhẹ để tránh gạch chân IME trên Windows.
@@ -37,6 +37,7 @@
 - ⏱️ **Đọc ngày giờ Build tự động**: Tự động trích xuất thời gian biên dịch file `data/app.so` hoặc file thực thi hiển thị tại Header và mục Giới thiệu.
 - 🧭 **Badge Route**: Hiển thị route của SN Master trên header danh sách bản ghi, ưu tiên tên route và fallback về mã route khi cần; tự ẩn nếu API không trả dữ liệu route.
 - 🔁 **Fallback Test Record thông minh**: Nếu Test Record không có dòng dữ liệu sau lần mở app đầu tiên, SN mới nhập/tìm, hoặc refresh khi đang ở Test Record, app tự chuyển sang Barcode History. Việc tự chọn tab Test Record hoặc chọn SN đã cache sẽ không bị bật ngược quá nhanh.
+- 🟡 **Màu trạng thái dữ liệu SN**: Nếu Test Record rỗng nhưng Lịch sử Barcode hoặc Danh sách Linh kiện có dữ liệu, SN sẽ hiện màu vàng kèm cảnh báo; chỉ hiện màu đỏ khi cả ba chế độ xem SN đều đã tải xong nhưng không có dữ liệu.
 - ✨ **Hiệu ứng chuyển tiếp mượt mà kiểu iOS**: Chuyển tab/SN có animation fade+slide, danh sách bản ghi xuất hiện theo hiệu ứng cascade kèm cuộn có độ nảy, hộp thoại scale+fade khi mở.
 - 🏝️ **Dynamic Island Status Capsule**: Sóng trạng thái kết nối MES trực quan và thanh công cụ thao tác nhanh.
 - 🪟 **Glassmorphism có thể tùy chỉnh**: Cài đặt → Nâng cao có mục "Tùy chỉnh độ mờ & trong suốt" với 4 slider live-preview (Độ mờ/Trong suốt nền chính, Độ mờ/Trong suốt Dialog). Dropdown Sắp xếp và chính cửa sổ Cài đặt đều blur lại theo thời gian thực khi kéo slider — kèm sàn an toàn chống lỗi chữ chồng xuyên thấu dù chỉnh opacity thấp đến đâu.
@@ -97,6 +98,7 @@
 * Bấm **[Xuất (Export)]** để lưu toàn bộ dữ liệu Kết quả Test ra file CSV.
 * Khi SN Master có dữ liệu route, header danh sách bản ghi sẽ hiển thị badge **Route** cùng chip công đoạn **Next**.
 * Nếu Test Record không có dữ liệu sau lần load đầu, SN mới nhập/tìm, hoặc refresh khi đang ở Test Record, app sẽ tự chuyển sang **Lịch sử Barcode**. Chỉ bấm lại tab Test Record hoặc chọn SN đã cache sẽ không tự chuyển tab.
+* Trong hàng đợi SN, màu vàng nghĩa là Test Record rỗng nhưng Lịch sử Barcode hoặc Danh sách Linh kiện vẫn có dữ liệu; màu đỏ nghĩa là cả ba chế độ xem SN đều đã tải xong nhưng không có dữ liệu.
 
 ### 4. Component Trace (tra cứu ngược linh kiện)
 * Bấm tab **🧭 Component Trace** — sidebar chuyển từ hàng đợi SN sang danh sách **Lịch sử Tra cứu**, và ô nhập vẫn ở vị trí cũ nhưng giờ dùng để tra cứu SN linh kiện thay vì thêm SN.
@@ -132,7 +134,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
 │   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.3)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.4)
 │   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -170,7 +172,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.9.3+17)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.9.4+18)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -216,6 +218,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.4]** — Thêm màu vàng cho SN khi Test Record rỗng nhưng Lịch sử Barcode hoặc Danh sách Linh kiện vẫn có dữ liệu; chỉ dùng màu đỏ khi cả ba chế độ xem đều rỗng sau khi tải xong.
 - **[2.9.3]** — Thêm fallback Test Record rỗng sang Barcode History có kiểm soát, mặc định ngôn ngữ lần đầu theo Windows locale, và polish Command Palette theo blur/opacity của Dialog.
 - **[2.9.2]** — Thêm badge **Route** trên header danh sách bản ghi khi SN Master có dữ liệu route; ưu tiên tên route và fallback về mã route.
 - **[2.9.1]** — Nút **Làm mới tất cả** xóa cache phân giải SN chính tắc và SN Master trước khi tra cứu lại, tránh giữ thông tin SN hoặc công đoạn kế tiếp đã cũ.
