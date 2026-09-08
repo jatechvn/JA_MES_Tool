@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.4
+# 🤖 JA MES Tool v2.9.5
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.4-blue.svg" alt="Version 2.9.4">
+  <img src="https://img.shields.io/badge/version-2.9.5-blue.svg" alt="Version 2.9.5">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,10 +42,10 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.9.4)
+## 💡 Key Features (v2.9.5)
 
 ### 🎨 Bento Glassmorphism Interface
-- ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click. It now follows the Dialog blur/opacity settings and delays focus slightly to avoid Windows IME underline artifacts.
+- ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click. Command Palette uses a single backdrop blur and a theme-aware Material card following JA_Mini_Showcase; search focus remains delayed after opening.
 - 🌟 **Bento Grid & Liquid Glass Architecture**: Modern floating Bento cards with 1px top reflective highlight edges, 20-24px BackdropFilter blur, and GPU-composited drifting Mesh Orbs.
 - 🎛️ **Live-Preview 4-Slider Glassmorphism Tuning**: Interactive sliders in Settings (Card Blur, Card Opacity, Dialog Blur, Dialog Opacity) with instant real-time live preview across all UI surfaces, Default reset, and Cancel rollback.
 - 🌓 **1-Click Direct Theme Switcher**: Instant toggle between Light and Dark mode on every click.
@@ -152,7 +152,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
 │   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│   │   ├── constants.dart         # Global app constants & defaults (v2.9.4)
+│   │   ├── constants.dart         # Global app constants & defaults (v2.9.5)
 │   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
@@ -190,7 +190,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.9.4+18)
+├── pubspec.yaml                   # Flutter package manifest (v2.9.5+19)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -247,6 +247,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.9.5]** — Command Palette uses a single backdrop blur and a theme-aware Material card following JA_Mini_Showcase; search focus remains delayed after opening.
 - **[2.9.4]** — Added amber SN status for empty Test Record data when Barcode History or Component List still has records; red is reserved for all three views being empty after loading.
 - **[2.9.3]** — Added guarded Test Record empty-data fallback to Barcode History, Windows-locale first-run language defaults, and Command Palette dialog-glass/focus polish.
 - **[2.9.2]** — Added a conditional **Route** badge to the records header, preferring the SN Master route name and falling back to the route code when necessary.

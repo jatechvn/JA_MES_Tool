@@ -51,6 +51,7 @@ Thumbs.db
 # Application logs & local user runtime configs
 logs/
 config.json
+config.ini
 *.log
 
 # Ignore docs folder contents, EXCEPT docs/screenshots/
@@ -79,4 +80,6 @@ backup/
 
 # Claude Code project-local tooling (skills, agent config, runtime locks)
 .claude/
+.agents/
+.codex/
 

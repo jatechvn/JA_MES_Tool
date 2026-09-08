@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.4 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.5 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.4-blue.svg" alt="Phiên bản 2.9.4">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.5-blue.svg" alt="Phiên bản 2.9.5">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,10 +27,10 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.9.4)
+## 💡 Tính năng nổi bật (v2.9.5)
 
 ### 🎨 Giao diện Bento Glassmorphism
-- ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy. Bảng lệnh giờ dùng đúng blur/opacity của Dialog và delay focus nhẹ để tránh gạch chân IME trên Windows.
+- ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy. Bảng lệnh dùng một lớp blur nền và card Material theo theme từ JA_Mini_Showcase; giữ focus tìm kiếm sau hiệu ứng mở.
 - 🌟 **Kiến trúc Bento Grid & Liquid Glass**: Thẻ Bento bồng bềnh với viền phản chiếu ánh sáng 1px trên đỉnh, độ mờ 20-24px BackdropFilter và nền quả cầu Mesh Orbs khuếch tán ánh sáng trên GPU.
 - 🎛️ **Bộ 4 thanh trượt Glassmorphism Live-Preview**: Tùy chỉnh trực tiếp Độ mờ khối Bento (0-40px), Độ đục khối (5-100%), Độ mờ Hộp thoại (0-40px), Độ đục Hộp thoại (10-100%) với chế độ xem trước thời gian thực, nút Mặc định và Hủy hoàn tác.
 - 🌓 **Đổi Theme 1-Click**: Chuyển đổi trực tiếp Sáng/Tối mượt mà tức thì mỗi lần nhấn.
@@ -134,7 +134,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
 │   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.4)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.5)
 │   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -172,7 +172,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.9.4+18)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.9.5+19)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -218,6 +218,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.5]** — Bảng lệnh dùng một lớp blur nền và card Material theo theme từ JA_Mini_Showcase; giữ focus tìm kiếm sau hiệu ứng mở.
 - **[2.9.4]** — Thêm màu vàng cho SN khi Test Record rỗng nhưng Lịch sử Barcode hoặc Danh sách Linh kiện vẫn có dữ liệu; chỉ dùng màu đỏ khi cả ba chế độ xem đều rỗng sau khi tải xong.
 - **[2.9.3]** — Thêm fallback Test Record rỗng sang Barcode History có kiểm soát, mặc định ngôn ngữ lần đầu theo Windows locale, và polish Command Palette theo blur/opacity của Dialog.
 - **[2.9.2]** — Thêm badge **Route** trên header danh sách bản ghi khi SN Master có dữ liệu route; ưu tiên tên route và fallback về mã route.

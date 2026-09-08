@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.4 - 中文说明
+# 🤖 JA MES Tool v2.9.5 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.9.4-blue.svg" alt="版本 2.9.4">
+  <img src="https://img.shields.io/badge/banben-2.9.5-blue.svg" alt="版本 2.9.5">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,10 +27,10 @@
 
 ---
 
-## 💡 主要功能 (v2.9.4)
+## 💡 主要功能 (v2.9.5)
 
 ### 🎨 Bento 毛玻璃视觉架构
-- ⚡ **命令面板 (Ctrl+K / Cmd+K)**：聚光灯式搜索覆盖层，列出所有标签、操作与设置 — 输入即按名称/关键词筛选，↑/↓ 导航，回车或点击执行。现在会跟随 Dialog 的模糊/不透明度设置，并略微延迟聚焦以避免 Windows IME 下划线痕迹。
+- ⚡ **命令面板 (Ctrl+K / Cmd+K)**：聚光灯式搜索覆盖层，列出所有标签、操作与设置 — 输入即按名称/关键词筛选，↑/↓ 导航，回车或点击执行。命令面板采用 JA_Mini_Showcase 的单层背景模糊和主题 Material 卡片，并保留打开后的延迟搜索聚焦。
 - 🌟 **Bento Grid & Liquid Glass 体系**：悬浮式 Bento 卡片设计，配备 1px 顶置光感反射边框，20-24px BackdropFilter 深度毛玻璃模糊以及 GPU 硬件加速的流动 Mesh Orbs 动态光效。
 - 🎛️ **4 轴毛玻璃实时调节面板**：设置中提供卡片模糊度 (0-40px)、卡片不透明度 (5-100%)、对话框模糊度 (0-40px)、对话框不透明度 (10-100%) 四大实时调节滑块，支持实时效果预览、一键默认与取消还原。
 - 🌓 **单击直切主题 (Light ⇄ Dark)**：一键顺畅切换明暗模式。
@@ -134,7 +134,7 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │   │   ├── build_info.dart        # 从 data/app.so 或可执行文件读取真实编译时间戳
 │   │   ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│   │   ├── constants.dart         # 全局常量与默认配置 (v2.9.4)
+│   │   ├── constants.dart         # 全局常量与默认配置 (v2.9.5)
 │   │   ├── logger_service.dart    # 日志服务与 7 天自动清理
 │   │   ├── logic.dart             # 状态管理：SN 队列、追溯历史、四种记录列表、ViewMode、SN 解析缓存
 │   │   ├── translations.dart      # 多语言字典 (EN, VN, CN)
@@ -172,7 +172,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.9.4+18)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.9.5+19)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -215,6 +215,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.9.5]** — 命令面板采用 JA_Mini_Showcase 的单层背景模糊和主题 Material 卡片，并保留打开后的延迟搜索聚焦。
 - **[2.9.4]** — 当 Test Record 为空但条码历史或组件清单仍有数据时，SN 显示黄色；只有三个视图加载完成且全部为空时才显示红色。
 - **[2.9.3]** — 新增受控的空 Test Record 自动切换到 Barcode History、首次启动按 Windows locale 选择语言，以及命令面板 Dialog 玻璃效果/焦点优化。
 - **[2.9.2]** — 在记录列表标题栏新增条件显示的 **Route** 徽章，优先显示 SN Master 路由名称，缺少名称时回退到路由代码。
