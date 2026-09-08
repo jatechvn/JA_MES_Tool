@@ -5,6 +5,18 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.5] - 2026-09-08
+
+### 🐛 Bug Fixes
+- **🎨 Command Palette surface**: Adopt the JA_Mini_Showcase Material surface and clipped card, removing nested backdrop blur. Light mode uses a lighter scrim; keyboard navigation and delayed focus remain available.
+
+### 🔧 Documentation & Tests
+- Synchronize About, User Guide and EN/VI/CN README content for v2.9.5.
+- Add a widget test covering opening the palette and selecting a command.
+- Windows IME visual verification remains pending.
+
+---
+
 ## [2.9.4] - 2026-09-04
 
 ### 🎨 UI/UX Improvements

@@ -129,260 +129,301 @@ class _CommandPaletteState extends State<CommandPalette> {
         ? const Color(0xFF0F172A).withValues(alpha: widget.bgOpacity)
         : const Color(0xFFFFFFFF).withValues(alpha: widget.bgOpacity);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).pop(),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: widget.blurSigma,
-          sigmaY: widget.blurSigma,
-        ),
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.45),
-          alignment: Alignment.topCenter,
-          padding: const EdgeInsets.only(top: 100),
-          child: GestureDetector(
-            onTap: () {}, // absorb taps so they don't bubble to the backdrop
-            child: Shortcuts(
-              shortcuts: {
-                LogicalKeySet(LogicalKeyboardKey.escape):
-                    const _DismissIntent(),
-              },
-              child: Actions(
-                actions: {
-                  _DismissIntent: CallbackAction<_DismissIntent>(
-                    onInvoke: (_) => Navigator.of(context).pop(),
-                  ),
+    return Material(
+      color: Colors.transparent,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: widget.blurSigma,
+            sigmaY: widget.blurSigma,
+          ),
+          child: Container(
+            color: Colors.black.withValues(alpha: widget.isDark ? 0.45 : 0.20),
+            alignment: Alignment.topCenter,
+            padding: const EdgeInsets.only(top: 120),
+            child: GestureDetector(
+              onTap: () {}, // absorb taps so they don't bubble to the backdrop
+              child: Shortcuts(
+                shortcuts: {
+                  LogicalKeySet(LogicalKeyboardKey.escape):
+                      const _DismissIntent(),
                 },
-                child: KeyboardListener(
-                  focusNode: _keyboardFocusNode,
-                  onKeyEvent: (event) {
-                    if (event is KeyDownEvent) {
-                      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        _navigateDown();
-                      } else if (event.logicalKey ==
-                          LogicalKeyboardKey.arrowUp) {
-                        _navigateUp();
-                      } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-                        _selectCurrent();
-                      }
-                    }
+                child: Actions(
+                  actions: {
+                    _DismissIntent: CallbackAction<_DismissIntent>(
+                      onInvoke: (_) => Navigator.of(context).pop(),
+                    ),
                   },
-                  child: GlassContainer(
-                    colors: c,
-                    borderRadius: 18,
-                    padding: EdgeInsets.zero,
-                    backgroundColor: cardBg,
-                    child: SizedBox(
-                      width: 580,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Search Bar Header
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                  child: KeyboardListener(
+                    focusNode: _keyboardFocusNode,
+                    onKeyEvent: (event) {
+                      if (event is KeyDownEvent) {
+                        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          _navigateDown();
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.arrowUp) {
+                          _navigateUp();
+                        } else if (event.logicalKey ==
+                            LogicalKeyboardKey.enter) {
+                          _selectCurrent();
+                        }
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: c.borderDefault),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: widget.isDark ? 0.25 : 0.12,
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.bolt_rounded,
-                                  size: 20,
-                                  color: c.accentCyan,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _controller,
-                                    focusNode: _focusNode,
-                                    onChanged: _onQueryChanged,
-                                    style: TextStyle(
-                                      color: c.textPrimary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    decoration: InputDecoration(
-                                      border: InputBorder.none,
-                                      hintText: widget.searchHint,
-                                      hintStyle: TextStyle(
-                                        color: c.textMuted,
-                                        fontSize: 13.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                KbdTag(label: 'ESC', colors: c),
-                              ],
-                            ),
+                            blurRadius: 32,
+                            offset: const Offset(0, 16),
                           ),
-                          Divider(color: c.borderDefault, height: 1),
-
-                          // Filtered Results List
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 380),
-                            child: _filtered.isEmpty
-                                ? Padding(
-                                    padding: const EdgeInsets.all(28),
-                                    child: Text(
-                                      widget.noResultsText,
-                                      style: TextStyle(
-                                        color: c.textMuted,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
+                        ],
+                      ),
+                      foregroundDecoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border(
+                          top: BorderSide(color: c.glassHighlight, width: 1),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox(
+                          width: 580,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Search Bar Header
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.bolt_rounded,
+                                      size: 20,
+                                      color: c.accentCyan,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _controller,
+                                        focusNode: _focusNode,
+                                        onChanged: _onQueryChanged,
+                                        style: TextStyle(
+                                          color: c.textPrimary,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        decoration: InputDecoration(
+                                          border: InputBorder.none,
+                                          hintText: widget.searchHint,
+                                          hintStyle: TextStyle(
+                                            color: c.textMuted,
+                                            fontSize: 13.5,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  )
-                                : ListView.builder(
-                                    shrinkWrap: true,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 6,
-                                    ),
-                                    itemCount: _filtered.length,
-                                    itemBuilder: (context, index) {
-                                      final item = _filtered[index];
-                                      final isHighlighted =
-                                          index == _selectedIndex;
+                                    KbdTag(label: 'ESC', colors: c),
+                                  ],
+                                ),
+                              ),
+                              Divider(color: c.borderDefault, height: 1),
 
-                                      return InkWell(
-                                        borderRadius: BorderRadius.circular(10),
-                                        onTap: () {
-                                          Navigator.of(context).pop();
-                                          item.onSelect();
-                                        },
-                                        onHover: (hovered) {
-                                          if (hovered) {
-                                            setState(
-                                              () => _selectedIndex = index,
-                                            );
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 8,
+                              // Filtered Results List
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 380,
+                                ),
+                                child: _filtered.isEmpty
+                                    ? Padding(
+                                        padding: const EdgeInsets.all(28),
+                                        child: Text(
+                                          widget.noResultsText,
+                                          style: TextStyle(
+                                            color: c.textMuted,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
                                           ),
-                                          margin: const EdgeInsets.symmetric(
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isHighlighted
-                                                ? c.accentColor.withValues(
-                                                    alpha: 0.15,
-                                                  )
-                                                : Colors.transparent,
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        shrinkWrap: true,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 6,
+                                        ),
+                                        itemCount: _filtered.length,
+                                        itemBuilder: (context, index) {
+                                          final item = _filtered[index];
+                                          final isHighlighted =
+                                              index == _selectedIndex;
+
+                                          return InkWell(
                                             borderRadius: BorderRadius.circular(
                                               10,
                                             ),
-                                            border: Border.all(
-                                              color: isHighlighted
-                                                  ? c.accentColor.withValues(
-                                                      alpha: 0.4,
-                                                    )
-                                                  : Colors.transparent,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 32,
-                                                height: 32,
-                                                decoration: BoxDecoration(
+                                            onTap: () {
+                                              Navigator.of(context).pop();
+                                              item.onSelect();
+                                            },
+                                            onHover: (hovered) {
+                                              if (hovered) {
+                                                setState(
+                                                  () => _selectedIndex = index,
+                                                );
+                                              }
+                                            },
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 8,
+                                                  ),
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: isHighlighted
+                                                    ? c.accentColor.withValues(
+                                                        alpha: 0.15,
+                                                      )
+                                                    : Colors.transparent,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: Border.all(
                                                   color: isHighlighted
                                                       ? c.accentColor
                                                             .withValues(
-                                                              alpha: 0.25,
+                                                              alpha: 0.4,
                                                             )
-                                                      : c.subCardBg,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child: Icon(
-                                                  item.icon,
-                                                  size: 17,
-                                                  color: isHighlighted
-                                                      ? c.accentCyan
-                                                      : c.textSecondary,
+                                                      : Colors.transparent,
                                                 ),
                                               ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      item.label,
-                                                      style: TextStyle(
-                                                        color: isHighlighted
-                                                            ? c.textPrimary
-                                                            : c.textSecondary,
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            isHighlighted
-                                                            ? FontWeight.w700
-                                                            : FontWeight.w600,
-                                                      ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    width: 32,
+                                                    height: 32,
+                                                    decoration: BoxDecoration(
+                                                      color: isHighlighted
+                                                          ? c.accentColor
+                                                                .withValues(
+                                                                  alpha: 0.25,
+                                                                )
+                                                          : c.subCardBg,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
                                                     ),
-                                                    if (item.subtitle !=
-                                                        null) ...[
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        item.subtitle!,
+                                                    alignment: Alignment.center,
+                                                    child: Icon(
+                                                      item.icon,
+                                                      size: 17,
+                                                      color: isHighlighted
+                                                          ? c.accentCyan
+                                                          : c.textSecondary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          item.label,
+                                                          style: TextStyle(
+                                                            color: isHighlighted
+                                                                ? c.textPrimary
+                                                                : c.textSecondary,
+                                                            fontSize: 13,
+                                                            fontWeight:
+                                                                isHighlighted
+                                                                ? FontWeight
+                                                                      .w700
+                                                                : FontWeight
+                                                                      .w600,
+                                                          ),
+                                                        ),
+                                                        if (item.subtitle !=
+                                                            null) ...[
+                                                          const SizedBox(
+                                                            height: 2,
+                                                          ),
+                                                          Text(
+                                                            item.subtitle!,
+                                                            style: TextStyle(
+                                                              color:
+                                                                  c.textMuted,
+                                                              fontSize: 11,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (item.category !=
+                                                      null) ...[
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: c.subCardBorder
+                                                            .withValues(
+                                                              alpha: 0.3,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              5,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        item.category!,
                                                         style: TextStyle(
                                                           color: c.textMuted,
-                                                          fontSize: 11,
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.w600,
                                                         ),
                                                       ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                              if (item.category != null) ...[
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: c.subCardBorder
-                                                        .withValues(alpha: 0.3),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          5,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    item.category!,
-                                                    style: TextStyle(
-                                                      color: c.textMuted,
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w600,
                                                     ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 6),
-                                              ],
-                                              if (item.shortcut != null) ...[
-                                                KbdTag(
-                                                  label: item.shortcut!,
-                                                  colors: c,
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                                    const SizedBox(width: 6),
+                                                  ],
+                                                  if (item.shortcut !=
+                                                      null) ...[
+                                                    KbdTag(
+                                                      label: item.shortcut!,
+                                                      colors: c,
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
