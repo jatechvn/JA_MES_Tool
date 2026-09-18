@@ -79,6 +79,7 @@ class PillBadge extends StatelessWidget {
     this.icon,
     this.fontSize = 11,
     this.padding,
+    this.useMarquee = false,
   });
 
   final String label;
@@ -89,6 +90,7 @@ class PillBadge extends StatelessWidget {
   final IconData? icon;
   final double fontSize;
   final EdgeInsetsGeometry? padding;
+  final bool useMarquee;
 
   @override
   Widget build(BuildContext context) {
@@ -119,15 +121,28 @@ class PillBadge extends StatelessWidget {
             Icon(icon, size: fontSize, color: color),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
+          if (useMarquee)
+            Flexible(
+              child: BounceMarqueeText(
+                text: label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            )
+          else
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
         ],
       ),
     );

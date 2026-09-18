@@ -5,6 +5,38 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.7] - 2026-09-18
+
+### 🚀 Major Features & Enhancements
+- **📊 Barcode History & WIP Components data enrichment**: Extracted and mapped all
+  missing manufacturing fields from Foxconn CloudMES: Line (`lineName`/`lineCode`),
+  Internal SN (`internalSn`), Equipment No (`eqpId`), Product Version (`productVersion`),
+  Plan No (`planNo`), Remark (`remark`), and WIP component Location (`location`).
+- **📥 Expanded CSV reporting**: Export functions for Barcode History and WIP
+  Components now include all newly added manufacturing tracking columns.
+- **🌐 Full multilingual support**: Added English, Vietnamese, and Chinese dictionary
+  translations for line, internal SN, equipment number, version, plan number, and remark.
+
+### 🎨 UI/UX Improvements
+- **🗂️ Dense 2-line SN sidebar cards**: Redesigned SN queue cards with status icon,
+  primary SN, tab-specific count badge, and quick actions on Line 1; clean alternate
+  SN chip (`⇋ $alternateSn`) and Next Station badge on Line 2.
+- **🪟 Translucent glass highlight (JA_IQ5_Flash pattern)**: Replaced opaque dark-blue
+  selection fill with subtle `Color.alphaBlend` tint (8% light / 16% dark over frosted base),
+  luminous borders, and softened ambient diffusion glow.
+- **↔️ Asymmetric bounce marquee (`BounceMarqueeText`)**: Primary SNs, alternate SNs,
+  Next Station badges (`PillBadge(useMarquee: true)`), and Component Trace CSNs smoothly
+  pause-scroll-bounce when overflowing container constraints, with 0% CPU when fitting.
+- **🧹 Streamlined records header**: Removed redundant `Records for SN:` and `Next:`
+  chips from the right header to eliminate text clipping and preserve dedicated search
+  and filter controls.
+
+### 🐛 Bug Fixes & Automation
+- **🛠️ Build script shortcut fix**: Fixed missing PowerShell variable names in `build.bat`
+  line 12 that caused `ParserError: An expression was expected after '('`.
+- **🧪 Comprehensive regression coverage**: Added `test/barcode_history_fields_test.dart`
+  and `test/sn_queue_marquee_test.dart` ensuring 100% test pass rate (28/28 tests).
+
 ## [2.9.6] - 2026-09-18
 
 ### 🚀 Major Features & Enhancements

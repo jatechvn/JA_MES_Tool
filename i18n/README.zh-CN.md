@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.6 - 中文说明
+# 🤖 JA MES Tool v2.9.7 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.9.6-blue.svg" alt="版本 2.9.6">
+  <img src="https://img.shields.io/badge/banben-2.9.7-blue.svg" alt="版本 2.9.7">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>

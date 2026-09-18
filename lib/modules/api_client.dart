@@ -81,6 +81,7 @@ class TestRecord {
 class SnProcessRecord {
   final int id;
   final String productSn;
+  final String internalSn;
   final String customerSn;
   final String lineStation;
   final String currentProcessCode;
@@ -88,17 +89,23 @@ class SnProcessRecord {
   final String operateDt;
   final String result;
   final String woNo;
+  final String planNo;
   final String productNo;
   final String productVersion;
   final String lineName;
+  final String lineCode;
   final String operatorName;
   final String eqpId;
   final String errorCode;
   final String testResultMsg;
+  final String remark;
+  final int? firstFlag;
+  final int? packId;
 
   SnProcessRecord({
     required this.id,
     required this.productSn,
+    required this.internalSn,
     required this.customerSn,
     required this.lineStation,
     required this.currentProcessCode,
@@ -106,19 +113,27 @@ class SnProcessRecord {
     required this.operateDt,
     required this.result,
     required this.woNo,
+    required this.planNo,
     required this.productNo,
     required this.productVersion,
     required this.lineName,
+    required this.lineCode,
     required this.operatorName,
     required this.eqpId,
     required this.errorCode,
     required this.testResultMsg,
+    required this.remark,
+    this.firstFlag,
+    this.packId,
   });
 
   factory SnProcessRecord.fromJson(Map<String, dynamic> json) {
+    final lineN = json['lineName']?.toString() ?? '';
+    final lineC = json['lineCode']?.toString() ?? '';
     return SnProcessRecord(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      productSn: json['productSn']?.toString() ?? '',
+      productSn: json['productSn']?.toString() ?? json['sn']?.toString() ?? '',
+      internalSn: json['internalSn']?.toString() ?? '',
       customerSn: json['customerSn']?.toString() ?? '',
       lineStation: json['lineStation']?.toString() ?? '',
       currentProcessCode: json['currentProcessCode']?.toString() ?? '',
@@ -126,13 +141,21 @@ class SnProcessRecord {
       operateDt: json['operateDt']?.toString() ?? '',
       result: json['result']?.toString() ?? '',
       woNo: json['woNo']?.toString() ?? '',
+      planNo: json['planNo']?.toString() ?? '',
       productNo: json['productNo']?.toString() ?? '',
       productVersion: json['productVersion']?.toString() ?? '',
-      lineName: json['lineName']?.toString() ?? '',
-      operatorName: json['operator']?.toString() ?? '',
+      lineName: lineN.isNotEmpty ? lineN : lineC,
+      lineCode: lineC,
+      operatorName:
+          json['operator']?.toString() ??
+          json['operatorName']?.toString() ??
+          '',
       eqpId: json['eqpId']?.toString() ?? '',
       errorCode: json['errorCode']?.toString() ?? '',
       testResultMsg: json['testResultMsg']?.toString() ?? '',
+      remark: json['remark']?.toString() ?? '',
+      firstFlag: int.tryParse(json['firstFlag']?.toString() ?? ''),
+      packId: int.tryParse(json['packId']?.toString() ?? ''),
     );
   }
 }
@@ -151,6 +174,8 @@ class WipComponentRecord {
   final String installedQty;
   final String creator;
   final String createdDt;
+  final String location;
+  final String materialNameValue;
 
   WipComponentRecord({
     required this.wipProductComponentId,
@@ -166,9 +191,12 @@ class WipComponentRecord {
     required this.installedQty,
     required this.creator,
     required this.createdDt,
+    this.location = '',
+    this.materialNameValue = '',
   });
 
-  String get materialName => mfgPn;
+  String get materialName =>
+      materialNameValue.isNotEmpty ? materialNameValue : mfgPn;
   String get mfg => mfgName;
 
   factory WipComponentRecord.fromJson(Map<String, dynamic> json) {
@@ -187,6 +215,8 @@ class WipComponentRecord {
       installedQty: json['installedQty']?.toString() ?? '',
       creator: json['creator']?.toString() ?? '',
       createdDt: json['createdDt']?.toString() ?? '',
+      location: json['location']?.toString() ?? '',
+      materialNameValue: json['materialName']?.toString() ?? '',
     );
   }
 }

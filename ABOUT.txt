@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.9.6
+Version      : v2.9.7
 Release Date : 2026-09-18
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
@@ -14,6 +14,19 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Barcode History & WIP Components Data Enrichment: Added Line, Internal SN,
+  Equipment No, Product Version, Plan No, Remark, and Location (WIP), with
+  multilingual translations and expanded CSV exports.
+- Sidebar Dense 2-Line SN Card: Rebuilt SN queue cards with status icon,
+  primary SN, tab-specific record count badge, action buttons on line 1, and
+  clean alternate SN chip + Next Station badge on line 2.
+- Translucent Glass Highlight (JA_IQ5_Flash pattern): Refined card background
+  using Color.alphaBlend (8% light / 16% dark tint over frosted base), softer
+  luminous borders, and ambient glow shadow.
+- Asymmetric Bounce Marquee: Smooth pause-scroll-bounce marquee text for long
+  primary SNs, alternate SNs, Next Station badges, and Component Trace CSNs.
+- Streamlined Records Header: Stripped redundant text badges to prevent clipping,
+  creating a dedicated search, route badge, and quick-filter toolbar.
 - Command Palette (Ctrl+K / Cmd+K): spotlight-style search over every tab,
   action, and setting, with keyword filtering and arrow-key navigation.
 - Bento Glassmorphism Architecture: Modern layout inspired by Apple Liquid
@@ -38,7 +51,7 @@ Key Features:
   on the records header whenever route data is available.
 - Smart Test Record Fallback: When Test Record has no rows on first app load,
   a newly searched SN, or an explicit Test Record refresh, the app opens Barcode
- History automatically while preserving manual Test Record tab selection.
+  History automatically while preserving manual Test Record tab selection.
 - SN Data Status Colors: A missing Test Record with Barcode History or Component
   List data is shown in amber; red is reserved for an SN with no data in all views.
 - Windows Locale First-Run Language: On first launch, language defaults from

@@ -244,6 +244,16 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
                       label: Translations.get('result', lang),
                       icon: Icons.fact_check_rounded,
                     ),
+                    GlassDropdownItem(
+                      value: 'line',
+                      label: Translations.get('line', lang),
+                      icon: Icons.linear_scale_rounded,
+                    ),
+                    GlassDropdownItem(
+                      value: 'internal_sn',
+                      label: Translations.get('internal_sn', lang),
+                      icon: Icons.badge_outlined,
+                    ),
                   ],
                 ),
               ),
@@ -290,41 +300,100 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 28,
-                                    height: 28,
-                                    decoration: BoxDecoration(
-                                      color: colors.accentPurple.withValues(
-                                        alpha: 0.12,
+                              Expanded(
+                                child: Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: colors.accentPurple
+                                                .withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: colors.accentPurple
+                                                  .withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.route_rounded,
+                                            color: colors.accentPurple,
+                                            size: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          record.currentProcessName.isNotEmpty
+                                              ? record.currentProcessName
+                                              : record.currentProcessCode,
+                                          style: TextStyle(
+                                            color: colors.textPrimary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (record.lineStation.isNotEmpty)
+                                      PillBadge(
+                                        label: record.lineStation,
+                                        color: colors.accentAmber,
+                                        bg: colors.accentAmber.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        border: colors.accentAmber.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        fontSize: 10,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: colors.accentPurple.withValues(
-                                          alpha: 0.3,
+                                    if (record.lineName.isNotEmpty ||
+                                        record.lineCode.isNotEmpty)
+                                      PillBadge(
+                                        label: record.lineName.isNotEmpty
+                                            ? record.lineName
+                                            : record.lineCode,
+                                        color: colors.accentCyan,
+                                        bg: colors.accentCyan.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        border: colors.accentCyan.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        fontSize: 10,
+                                      ),
+                                    if (record.productVersion.isNotEmpty)
+                                      PillBadge(
+                                        label: 'v${record.productVersion}',
+                                        color: colors.accentPurple,
+                                        bg: colors.accentPurple.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        border: colors.accentPurple.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        fontSize: 10,
+                                      ),
+                                    if (record.operateDt.isNotEmpty)
+                                      Text(
+                                        record.operateDt,
+                                        style: TextStyle(
+                                          color: colors.textMuted,
+                                          fontSize: 11.5,
+                                          fontFamily: 'JetBrains Mono',
                                         ),
                                       ),
-                                    ),
-                                    child: Icon(
-                                      Icons.route_rounded,
-                                      color: colors.accentPurple,
-                                      size: 15,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    record.currentProcessName.isNotEmpty
-                                        ? record.currentProcessName
-                                        : record.currentProcessCode,
-                                    style: TextStyle(
-                                      color: colors.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13.5,
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               if (record.result.isNotEmpty)
                                 PillBadge(
                                   label: record.result.toUpperCase(),
@@ -349,38 +418,196 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
                           Divider(color: colors.borderDefault, height: 1),
                           const SizedBox(height: 8),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: _buildInfoItem(
-                                  Translations.get('process_time', lang),
-                                  record.operateDt,
-                                  colors,
-                                  isCyan: true,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildInfoItem(
+                                      Translations.get('line', lang),
+                                      record.lineName.isNotEmpty
+                                          ? record.lineName
+                                          : record.lineCode,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get(
+                                        'line_station_code',
+                                        lang,
+                                      ),
+                                      record.lineStation,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('equipment_no', lang),
+                                      record.eqpId,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('operator', lang),
+                                      record.operatorName,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('process_time', lang),
+                                      record.operateDt,
+                                      colors,
+                                      isCyan: true,
+                                    ),
+                                  ],
                                 ),
                               ),
+                              const SizedBox(width: 16),
                               Expanded(
-                                child: _buildInfoItem(
-                                  Translations.get('line_station_code', lang),
-                                  record.lineStation,
-                                  colors,
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildInfoItem(
-                                  Translations.get('work_order', lang),
-                                  record.woNo,
-                                  colors,
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildInfoItem(
-                                  Translations.get('operator', lang),
-                                  record.operatorName,
-                                  colors,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildInfoItem(
+                                      Translations.get('internal_sn', lang),
+                                      record.internalSn,
+                                      colors,
+                                      isCyan: record.internalSn.isNotEmpty,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('customer_sn', lang),
+                                      record.customerSn,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('product_no', lang),
+                                      record.productNo,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('version', lang),
+                                      record.productVersion,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('work_order', lang),
+                                      record.woNo,
+                                      colors,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    _buildInfoItem(
+                                      Translations.get('plan_no', lang),
+                                      record.planNo,
+                                      colors,
+                                    ),
+                                    if (record.errorCode.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      _buildInfoItem(
+                                        Translations.get('error_code', lang),
+                                        record.errorCode,
+                                        colors,
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ],
                           ),
+                          if (record.remark.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.accentAmber.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: colors.accentAmber.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 14,
+                                    color: colors.accentAmber,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${Translations.get('remark', lang)}: ',
+                                    style: TextStyle(
+                                      color: colors.accentAmber,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: SelectableText(
+                                      record.remark,
+                                      style: TextStyle(
+                                        color: colors.textPrimary,
+                                        fontSize: 11.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (record.testResultMsg.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.accentRose.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: colors.accentRose.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline_rounded,
+                                    size: 14,
+                                    color: colors.accentRose,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${Translations.get('failure_reason', lang)}: ',
+                                    style: TextStyle(
+                                      color: colors.accentRose,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: SelectableText(
+                                      record.testResultMsg,
+                                      style: TextStyle(
+                                        color: colors.accentRose,
+                                        fontSize: 11.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     );
@@ -397,6 +624,7 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
     AppColors colors, {
     bool isCyan = false,
   }) {
+    if (value.isEmpty) return const SizedBox();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -406,7 +634,7 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
         ),
         const SizedBox(height: 2),
         Text(
-          value.isEmpty ? '—' : value,
+          value,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -426,6 +654,16 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
         return r.currentProcessCode.toLowerCase().contains(_searchQuery) ||
             r.currentProcessName.toLowerCase().contains(_searchQuery) ||
             r.lineStation.toLowerCase().contains(_searchQuery) ||
+            r.lineName.toLowerCase().contains(_searchQuery) ||
+            r.lineCode.toLowerCase().contains(_searchQuery) ||
+            r.internalSn.toLowerCase().contains(_searchQuery) ||
+            r.productVersion.toLowerCase().contains(_searchQuery) ||
+            r.woNo.toLowerCase().contains(_searchQuery) ||
+            r.planNo.toLowerCase().contains(_searchQuery) ||
+            r.productNo.toLowerCase().contains(_searchQuery) ||
+            r.customerSn.toLowerCase().contains(_searchQuery) ||
+            r.eqpId.toLowerCase().contains(_searchQuery) ||
+            r.remark.toLowerCase().contains(_searchQuery) ||
             r.result.toLowerCase().contains(_searchQuery) ||
             r.operatorName.toLowerCase().contains(_searchQuery) ||
             r.operateDt.toLowerCase().contains(_searchQuery);
@@ -445,6 +683,14 @@ class _BarcodeHistoryViewState extends State<BarcodeHistoryView> {
           break;
         case 'result':
           cmp = a.result.compareTo(b.result);
+          break;
+        case 'line':
+          final aLine = a.lineName.isNotEmpty ? a.lineName : a.lineCode;
+          final bLine = b.lineName.isNotEmpty ? b.lineName : b.lineCode;
+          cmp = aLine.compareTo(bLine);
+          break;
+        case 'internal_sn':
+          cmp = a.internalSn.compareTo(b.internalSn);
           break;
         default:
           cmp = 0;
