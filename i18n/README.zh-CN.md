@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.5 - 中文说明
+# 🤖 JA MES Tool v2.9.6 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.9.5-blue.svg" alt="版本 2.9.5">
+  <img src="https://img.shields.io/badge/banben-2.9.6-blue.svg" alt="版本 2.9.6">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 主要功能 (v2.9.5)
+## 💡 主要功能 (v2.9.6)
 
 ### 🎨 Bento 毛玻璃视觉架构
 - ⚡ **命令面板 (Ctrl+K / Cmd+K)**：聚光灯式搜索覆盖层，列出所有标签、操作与设置 — 输入即按名称/关键词筛选，↑/↓ 导航，回车或点击执行。命令面板采用 JA_Mini_Showcase 的单层背景模糊和主题 Material 卡片，并保留打开后的延迟搜索聚焦。
@@ -53,7 +53,8 @@
 - 🔒 **不硬编码任何凭据**：Token/Cookie 绝不写死在源代码中 — 由用户通过设置界面自行提供，仅保存在本地、已被 Git 忽略的 `config.json` 中。
 
 ### ⚙️ 核心与数据管理
-- ⚡ **SN 智能队列与并行查询**：支持单条或批量 SN 异步并行 API 查询，覆盖全部三种数据视图。
+- ⚡ **有界 SN 并行查询队列**：通过一个 FIFO 调度器同时处理最多 6 个 data-query 任务，自动去重并共享 SN Master 解析结果。
+- 🛡️ **过期结果保护**：刷新、删除、重新添加、清空或修改凭据后会使旧任务失效，迟到的 HTTP 响应不会覆盖当前 UI 状态。
 - 📄 **智能 CSV 导入导出**：自动过滤包含 `"SN"`/`"CSN"` 字样的标题行，并生成结构化的 CSV 报告 — 位于 Component Trace 标签时，**[模板]/[导入]/[导出]** 三个按钮会自动切换为组件序列号专用的模板/数据。
 - 🛠️ **Header 字符自动清理引擎**：自动清理隐藏换行符 (`\r\n`)、多余空格及双引号。
 - 📋 **系统日志自动管理**：按日期保存日志并自动清理超过 7 天的旧日志文件。
@@ -134,7 +135,8 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │   │   ├── build_info.dart        # 从 data/app.so 或可执行文件读取真实编译时间戳
 │   │   ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│   │   ├── constants.dart         # 全局常量与默认配置 (v2.9.5)
+│   │   ├── constants.dart         # 全局常量与默认配置 (v2.9.6)
+│   │   ├── query_queue.dart       # 数据查询任务的有界 FIFO 调度器
 │   │   ├── logger_service.dart    # 日志服务与 7 天自动清理
 │   │   ├── logic.dart             # 状态管理：SN 队列、追溯历史、四种记录列表、ViewMode、SN 解析缓存
 │   │   ├── translations.dart      # 多语言字典 (EN, VN, CN)
@@ -172,7 +174,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.9.5+19)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.9.6+20)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -215,6 +217,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.9.6]** — 新增最多 6 个任务并行的 FIFO 查询队列、共享 SN Master 解析、过期结果保护，并恢复带原生 Windows 标题栏控制的紧凑桌面布局。
 - **[2.9.5]** — 命令面板采用 JA_Mini_Showcase 的单层背景模糊和主题 Material 卡片，并保留打开后的延迟搜索聚焦。
 - **[2.9.4]** — 当 Test Record 为空但条码历史或组件清单仍有数据时，SN 显示黄色；只有三个视图加载完成且全部为空时才显示红色。
 - **[2.9.3]** — 新增受控的空 Test Record 自动切换到 Barcode History、首次启动按 Windows locale 选择语言，以及命令面板 Dialog 玻璃效果/焦点优化。

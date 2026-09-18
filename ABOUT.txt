@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.9.5
-Release Date : 2026-09-08
+Version      : v2.9.6
+Release Date : 2026-09-18
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -61,5 +61,9 @@ Key Features:
 - Automatic startup token verification and background check every 3 minutes.
 - HTTP Header Sanitization (fixes \r\n and quote anomalies).
 - Daily Log Management & 7-day automatic cleanup.
+- Bounded parallel SN query queue with stale-result protection, shared SN Master
+  resolution, and refresh-safe loading state updates.
+- Restored compact four-tab desktop composition with native Windows caption
+  controls kept as the single minimize/maximize/close control set.
 - Multi-language UI (English, Vietnamese, Chinese).
 ========================================================================

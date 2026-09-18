@@ -32,6 +32,23 @@ void main() {
         expect(Translations.get('tab_wip_components', lang), isNotEmpty);
       }
     });
+
+    test('About and User Guide use the current app version', () {
+      for (final lang in ['en', 'vn', 'cn']) {
+        expect(
+          Translations.get('about_detail', lang),
+          contains('v$appVersion'),
+        );
+        expect(
+          Translations.get('user_guide_detail', lang),
+          contains('v$appVersion'),
+        );
+        expect(
+          Translations.get('about_detail', lang),
+          isNot(contains('v2.9.5')),
+        );
+      }
+    });
   });
 
   group('Initial Language Tests', () {

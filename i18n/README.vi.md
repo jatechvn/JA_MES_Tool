@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.5 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.6 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.5-blue.svg" alt="Phiên bản 2.9.5">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.6-blue.svg" alt="Phiên bản 2.9.6">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.9.5)
+## 💡 Tính năng nổi bật (v2.9.6)
 
 ### 🎨 Giao diện Bento Glassmorphism
 - ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy. Bảng lệnh dùng một lớp blur nền và card Material theo theme từ JA_Mini_Showcase; giữ focus tìm kiếm sau hiệu ứng mở.
@@ -53,7 +53,8 @@
 - 🔒 **Không hardcode thông tin đăng nhập**: Token/Cookie không bao giờ được nhúng sẵn trong source — người dùng tự cung cấp qua Cài đặt và chỉ lưu cục bộ vào `config.json` (không bị Git theo dõi).
 
 ### ⚙️ Lõi & Quản lý dữ liệu
-- ⚡ **Hàng đợi tra cứu SN song song**: Xử lý tra cứu danh sách SN nhanh chóng theo cơ chế bất đồng bộ, trên cả 3 chế độ xem.
+- ⚡ **Hàng đợi tra cứu SN song song có giới hạn**: Một FIFO scheduler xử lý tối đa 6 tác vụ data-query đồng thời, loại bỏ tác vụ trùng và chia sẻ kết quả SN Master.
+- 🛡️ **Bảo vệ stale-result**: Refresh, xóa, thêm lại, clear hoặc đổi credential sẽ vô hiệu hóa công việc cũ để response đến muộn không ghi đè UI hiện tại.
 - 📄 **Nhập & Xuất file CSV thông minh**: Tự động bỏ qua các dòng tiêu đề (chứa chữ `"SN"`/`"CSN"`) và xuất báo cáo CSV chi tiết — 3 nút **[Tải Mẫu]/[Nhập]/[Xuất]** tự động chuyển sang mẫu/dữ liệu CSN khi đang ở tab Component Trace.
 - 🛠️ **Bộ lọc & Làm sạch dữ liệu Header**: Tự động cắt bỏ ký tự xuống dòng ẩn (`\r\n`), khoảng trắng và dấu ngoặc kép thừa.
 - 📋 **Quản lý Nhật ký hệ thống (Logs)**: Ghi vết theo ngày và tự động xóa các file log cũ quá 7 ngày mỗi khi khởi động.
@@ -134,7 +135,8 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
 │   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.5)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.6)
+│   │   ├── query_queue.dart       # Bộ lập lịch FIFO giới hạn cho data-query
 │   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
 │   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
 │   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
@@ -172,7 +174,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.9.5+19)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.9.6+20)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -218,6 +220,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.6]** — Thêm hàng đợi FIFO tối đa 6 tác vụ song song, bảo vệ stale-result, chia sẻ SN Master và khôi phục bố cục desktop gọn với native caption controls của Windows.
 - **[2.9.5]** — Bảng lệnh dùng một lớp blur nền và card Material theo theme từ JA_Mini_Showcase; giữ focus tìm kiếm sau hiệu ứng mở.
 - **[2.9.4]** — Thêm màu vàng cho SN khi Test Record rỗng nhưng Lịch sử Barcode hoặc Danh sách Linh kiện vẫn có dữ liệu; chỉ dùng màu đỏ khi cả ba chế độ xem đều rỗng sau khi tải xong.
 - **[2.9.3]** — Thêm fallback Test Record rỗng sang Barcode History có kiểm soát, mặc định ngôn ngữ lần đầu theo Windows locale, và polish Command Palette theo blur/opacity của Dialog.

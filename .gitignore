@@ -1,4 +1,4 @@
-# Miscellaneous
+﻿# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -18,10 +18,9 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Local IDE / OS files
+.vscode/
+Thumbs.db
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -33,22 +32,16 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Symbolication related
+# Symbolication & Obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android Studio build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# Local IDE / OS files
-.vscode/
-Thumbs.db
-
-# Application logs & local user runtime configs
+# Application logs & local user runtime configs (credentials/tokens)
 logs/
 config.json
 config.ini
@@ -67,9 +60,13 @@ windows/flutter/ephemeral/
 linux/flutter/ephemeral/
 macos/Flutter/ephemeral/
 
-# Ignore local batch & release scripts (EXCEPT git_push.bat)
+# Batch scripts: allow standard workflow scripts, ignore temporary/scratch bats
 *.bat
+!run.bat
+!build.bat
 !git_push.bat
+!build_windows.bat
+!create_release.bat
 *.zip
 *.lnk
 
@@ -78,8 +75,18 @@ dist/
 dist_pack/
 backup/
 
-# Claude Code project-local tooling (skills, agent config, runtime locks)
-.claude/
+# AI Agent Skills & Tooling (Ignored to keep repository lean, pure buildable code)
 .agents/
+.claude/
 .codex/
-
+.gemini/
+.cursor/
+.windsurf/
+skills/
+**/skills/
+**/.agents/
+**/.claude/
+**/.codex/
+**/.gemini/
+*.skill
+SKILL.md

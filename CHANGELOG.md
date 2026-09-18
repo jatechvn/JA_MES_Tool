@@ -5,6 +5,24 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.6] - 2026-09-18
+
+### 🚀 Major Features & Enhancements
+- **⚡ Bounded parallel SN query queue**: Schedule Test Record, Barcode History,
+  Component List and Component Trace work through one FIFO queue with a default
+  six-job limit, duplicate suppression and shared SN Master resolution.
+- **🛡️ Stale-result protection**: Refresh, removal, re-add, clear and credential
+  changes invalidate old work so late responses cannot overwrite current state.
+
+### 🎨 UI/UX Improvements
+- Restore the compact v2.9.5 main-window composition and keep native Windows
+  caption controls as the only minimize/maximize/close controls.
+- Keep the existing glass theme, command palette, dialogs and terminal/log view
+  available through the restored layout.
+
+### 🔧 Verification
+- Add queue, concurrency and light/dark main-window layout regression coverage.
+
 ## [2.9.5] - 2026-09-08
 
 ### 🐛 Bug Fixes
