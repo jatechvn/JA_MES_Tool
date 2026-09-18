@@ -168,6 +168,9 @@ class WipComponentRecord {
     required this.createdDt,
   });
 
+  String get materialName => mfgPn;
+  String get mfg => mfgName;
+
   factory WipComponentRecord.fromJson(Map<String, dynamic> json) {
     return WipComponentRecord(
       wipProductComponentId:

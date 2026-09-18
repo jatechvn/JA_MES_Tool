@@ -1,30 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
 import 'modules/build_info.dart';
 import 'modules/constants.dart';
 import 'modules/logic.dart';
 import 'modules/logger_service.dart';
+import 'modules/window_helper.dart';
 import 'modules/ui/main_window.dart';
 import 'theme/theme_provider.dart';
 
+import 'theme/language_provider.dart';
+
 void main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   if (args.contains('-debug') ||
       args.contains('--debug') ||
       args.contains('-d')) {
     BuildInfo.isCliDebug = true;
   }
-  WidgetsFlutterBinding.ensureInitialized();
-  // Only used for maximize/resize state (isMaximized + WindowListener) — never
-  // set titleBarStyle/backgroundColor via WindowOptions here, that resets the
-  // native glass composition set up in windows/runner/theme_win10.cpp &
-  // theme_win11.cpp (see flutter-windows-themer skill notes).
-  await windowManager.ensureInitialized();
+
+  await initGlassWindow(
+    title: '$appName v$appVersion',
+    size: const Size(1280, 840),
+    minSize: const Size(840, 560),
+  );
+
   await LoggerService.init();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => AppLogic()),
       ],
       child: const MyApp(),

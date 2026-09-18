@@ -5,10 +5,17 @@ import 'package:logging/logging.dart';
 import 'api_client.dart';
 import 'config_service.dart';
 import 'constants.dart';
+import 'query_queue.dart';
 
 final _logger = Logger('AppLogic');
 
-enum ViewMode { testRecord, barcodeHistory, wipComponents, componentTrace }
+enum ViewMode {
+  testRecord,
+  barcodeHistory,
+  wipComponents,
+  componentTrace,
+  terminal,
+}
 
 enum SnDataStatus { normal, warning, error }
 
@@ -82,8 +89,6 @@ class AppLogic extends ChangeNotifier {
   final Map<String, String> _processErrors = {};
   Map<String, String> get processErrors => _processErrors;
 
-  bool _isProcessBatchLoading = false;
-
   final Map<String, List<WipComponentRecord>> _wipResults = {};
   Map<String, List<WipComponentRecord>> get wipResults => _wipResults;
 
@@ -92,8 +97,6 @@ class AppLogic extends ChangeNotifier {
 
   final Map<String, String> _wipErrors = {};
   Map<String, String> get wipErrors => _wipErrors;
-
-  bool _isWipBatchLoading = false;
 
   // Component Trace: a standalone reverse lookup (scanned component CSN ->
   // product SN it's installed into). Unrelated to the SN queue above — it
@@ -160,16 +163,26 @@ class AppLogic extends ChangeNotifier {
   double _dialogOpacity = 0.85;
   double get dialogOpacity => _dialogOpacity;
 
+  double _dropdownBlur = 20.0;
+  double get dropdownBlur => _dropdownBlur;
+
+  double _dropdownOpacity = 0.86;
+  double get dropdownOpacity => _dropdownOpacity;
+
   void setLiveGlassmorphism({
     double? bgBlur,
     double? bgOpacity,
     double? dialogBlur,
     double? dialogOpacity,
+    double? dropdownBlur,
+    double? dropdownOpacity,
   }) {
     if (bgBlur != null) _bgBlur = bgBlur;
     if (bgOpacity != null) _bgOpacity = bgOpacity;
     if (dialogBlur != null) _dialogBlur = dialogBlur;
     if (dialogOpacity != null) _dialogOpacity = dialogOpacity;
+    if (dropdownBlur != null) _dropdownBlur = dropdownBlur;
+    if (dropdownOpacity != null) _dropdownOpacity = dropdownOpacity;
     notifyListeners();
   }
 
@@ -188,8 +201,7 @@ class AppLogic extends ChangeNotifier {
   String _selectedSn = '';
   String get selectedSn => _selectedSn;
 
-  bool _isBatchLoading = false;
-  bool get isBatchLoading => _isBatchLoading;
+  bool get isBatchLoading => _loadingStatus.values.any((value) => value);
 
   String _globalError = '';
   String get globalError => _globalError;
@@ -199,8 +211,59 @@ class AppLogic extends ChangeNotifier {
   Timer? _validationTimer;
   final Set<String> _testRecordFallbackEligibleSns = {};
 
-  AppLogic() {
-    _init();
+  final QueryQueue _queue;
+  final Map<String, int> _revisions = {};
+  final Map<Object, Future<String>> _resolving = {};
+  bool _disposed = false;
+  int _credentialsRevision = 0;
+  final Future<void> Function(Map<String, dynamic>) _saveConfig;
+
+  AppLogic({
+    bool initialize = true,
+    int queryConcurrency = 6,
+    Future<void> Function(Map<String, dynamic>)? saveConfig,
+  }) : _queue = QueryQueue(concurrency: queryConcurrency),
+       _saveConfig = saveConfig ?? ConfigService.saveConfig {
+    if (initialize) _init();
+  }
+
+  int _revision(String key) => _revisions[key] ?? 0;
+
+  Future<void> get queriesIdle => _queue.idle;
+
+  void _invalidate(String key) {
+    _revisions[key] = _revision(key) + 1;
+  }
+
+  void _invalidateAll({bool includeTrace = false}) {
+    _resolvedSn.clear();
+    _snMasterInfo.clear();
+    for (final sn in _snList) {
+      _invalidate('sn:$sn');
+    }
+    if (includeTrace) {
+      for (final csn in _traceHistory) {
+        _invalidate('csn:$csn');
+      }
+      _traceResults.clear();
+      _traceErrors.clear();
+      _traceLoadingStatus.clear();
+    }
+    _loadingStatus.clear();
+    _processLoadingStatus.clear();
+    _wipLoadingStatus.clear();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _validationTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   double _parseDouble(dynamic value, double fallback) {
@@ -210,6 +273,7 @@ class AppLogic extends ChangeNotifier {
 
   Future<void> _init() async {
     final config = await ConfigService.loadConfig();
+    if (_disposed) return;
     _token = config['token'] ?? '';
     _lang = initialLanguage(
       configuredLang: config['lang'],
@@ -223,6 +287,8 @@ class AppLogic extends ChangeNotifier {
     _bgOpacity = _parseDouble(config['bgOpacity'], 0.25);
     _dialogBlur = _parseDouble(config['dialogBlur'], 20.0);
     _dialogOpacity = _parseDouble(config['dialogOpacity'], 0.85);
+    _dropdownBlur = _parseDouble(config['dropdownBlur'], 20.0);
+    _dropdownOpacity = _parseDouble(config['dropdownOpacity'], 0.86);
 
     if (config['sns'] != null) {
       _snList = List<String>.from(config['sns']);
@@ -256,7 +322,15 @@ class AppLogic extends ChangeNotifier {
       _fetchPendingSns(),
       _fetchPendingProcessHistory(),
       _fetchPendingWipComponents(),
-      refetchAllTraceSearches(),
+      Future.wait(
+        List<String>.of(_traceHistory)
+            .where(
+              (csn) =>
+                  !_traceResults.containsKey(csn) &&
+                  !_traceErrors.containsKey(csn),
+            )
+            .map(_fetchTrace),
+      ),
     ]);
   }
 
@@ -270,6 +344,7 @@ class AppLogic extends ChangeNotifier {
   }
 
   Future<void> _validateNow() async {
+    final revision = _credentialsRevision;
     final res = await verifySettings(
       _token,
       _lang,
@@ -277,6 +352,7 @@ class AppLogic extends ChangeNotifier {
       _uuid,
       _cookie,
     );
+    if (_disposed || revision != _credentialsRevision) return;
     if (res == null) {
       isConnectionValid = true;
       connectionError = null;
@@ -300,6 +376,8 @@ class AppLogic extends ChangeNotifier {
       'bgOpacity': _bgOpacity,
       'dialogBlur': _dialogBlur,
       'dialogOpacity': _dialogOpacity,
+      'dropdownBlur': _dropdownBlur,
+      'dropdownOpacity': _dropdownOpacity,
     };
   }
 
@@ -325,6 +403,7 @@ class AppLogic extends ChangeNotifier {
   }
 
   void removeSn(String sn) {
+    _invalidate('sn:$sn');
     _snList.remove(sn);
     _results.remove(sn);
     _loadingStatus.remove(sn);
@@ -341,7 +420,7 @@ class AppLogic extends ChangeNotifier {
     if (_selectedSn == sn) {
       _selectedSn = _snList.isNotEmpty ? _snList.first : '';
     }
-    ConfigService.saveConfig(_exportConfigMap());
+    _saveConfig(_exportConfigMap());
     notifyListeners();
   }
 
@@ -349,6 +428,7 @@ class AppLogic extends ChangeNotifier {
   /// cache) and re-fetches it, without needing to remove/re-add the SN or
   /// restart the app.
   Future<void> refreshSn(String sn) async {
+    _invalidate('sn:$sn');
     _testRecordFallbackEligibleSns.remove(sn);
     _results.remove(sn);
     _errors.remove(sn);
@@ -369,6 +449,7 @@ class AppLogic extends ChangeNotifier {
   }
 
   void clearAllSns() {
+    _invalidateAll();
     _snList.clear();
     _results.clear();
     _loadingStatus.clear();
@@ -383,7 +464,7 @@ class AppLogic extends ChangeNotifier {
     _snMasterInfo.clear();
     _selectedSn = '';
     _testRecordFallbackEligibleSns.clear();
-    ConfigService.saveConfig(_exportConfigMap());
+    _saveConfig(_exportConfigMap());
     notifyListeners();
   }
 
@@ -395,23 +476,29 @@ class AppLogic extends ChangeNotifier {
     } else {
       _lang = 'en';
     }
-    ConfigService.saveConfig(_exportConfigMap());
+    _saveConfig(_exportConfigMap());
     notifyListeners();
   }
 
+  void setLanguage(String lang) {
+    if (['en', 'vn', 'cn'].contains(lang)) {
+      _lang = lang;
+      _saveConfig(_exportConfigMap());
+      notifyListeners();
+    }
+  }
+
   Future<void> refetchAllSns({bool allowTestRecordFallback = true}) async {
+    _invalidateAll(includeTrace: true);
     _results.clear();
     _errors.clear();
     _loadingStatus.clear();
-    _isBatchLoading = false;
     _processResults.clear();
     _processErrors.clear();
     _processLoadingStatus.clear();
-    _isProcessBatchLoading = false;
     _wipResults.clear();
     _wipErrors.clear();
     _wipLoadingStatus.clear();
-    _isWipBatchLoading = false;
     _resolvedSn.clear();
     _snMasterInfo.clear();
     _testRecordFallbackEligibleSns.clear();
@@ -420,6 +507,55 @@ class AppLogic extends ChangeNotifier {
     }
     notifyListeners();
     await _fetchAllPending();
+  }
+
+  Future<void> updateCredentials({
+    required String token,
+    required String uuid,
+    required String operationId,
+    required String cookie,
+  }) async {
+    final revision = ++_credentialsRevision;
+    _invalidateAll(includeTrace: true);
+    _token = token;
+    _uuid = uuid;
+    _operationId = operationId;
+    _cookie = cookie;
+    await _saveConfig(_exportConfigMap());
+    if (_disposed || revision != _credentialsRevision) return;
+    await _validateNow();
+    if (_disposed || revision != _credentialsRevision) return;
+    notifyListeners();
+    if (_snList.isNotEmpty || _traceHistory.isNotEmpty) {
+      refetchAllSns(allowTestRecordFallback: false);
+    }
+  }
+
+  Future<void> saveFullSettings({
+    required String token,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+    double? bgBlur,
+    double? bgOpacity,
+    double? dialogBlur,
+    double? dialogOpacity,
+    double? dropdownBlur,
+    double? dropdownOpacity,
+  }) async {
+    await updateSettings(
+      token: token,
+      lang: _lang,
+      operationId: operationId,
+      uuid: uuid,
+      cookie: cookie,
+      bgBlur: bgBlur,
+      bgOpacity: bgOpacity,
+      dialogBlur: dialogBlur,
+      dialogOpacity: dialogOpacity,
+      dropdownBlur: dropdownBlur,
+      dropdownOpacity: dropdownOpacity,
+    );
   }
 
   Future<void> updateSettings({
@@ -432,7 +568,11 @@ class AppLogic extends ChangeNotifier {
     double? bgOpacity,
     double? dialogBlur,
     double? dialogOpacity,
+    double? dropdownBlur,
+    double? dropdownOpacity,
   }) async {
+    final revision = ++_credentialsRevision;
+    _invalidateAll(includeTrace: true);
     _token = token;
     _lang = lang;
     _operationId = operationId;
@@ -442,8 +582,12 @@ class AppLogic extends ChangeNotifier {
     if (bgOpacity != null) _bgOpacity = bgOpacity;
     if (dialogBlur != null) _dialogBlur = dialogBlur;
     if (dialogOpacity != null) _dialogOpacity = dialogOpacity;
-    await ConfigService.saveConfig(_exportConfigMap());
+    if (dropdownBlur != null) _dropdownBlur = dropdownBlur;
+    if (dropdownOpacity != null) _dropdownOpacity = dropdownOpacity;
+    await _saveConfig(_exportConfigMap());
+    if (_disposed || revision != _credentialsRevision) return;
     await _validateNow();
+    if (_disposed || revision != _credentialsRevision) return;
     notifyListeners();
     if (_snList.isNotEmpty || _traceHistory.isNotEmpty) {
       refetchAllSns(allowTestRecordFallback: false);
@@ -468,7 +612,7 @@ class AppLogic extends ChangeNotifier {
     }
 
     if (addedSns.isNotEmpty) {
-      await ConfigService.saveConfig(_exportConfigMap());
+      await _saveConfig(_exportConfigMap());
       if (_selectedSn.isEmpty) {
         _selectedSn = _snList.last;
       }
@@ -601,81 +745,169 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     notifyListeners();
   }
 
+  Future<void> exportBarcodeHistoryCsv() async {
+    _globalError = '';
+    notifyListeners();
+    try {
+      final path = await pickFile(isSave: true);
+      if (path == null || path.isEmpty) return;
+
+      final file = File(path.replaceAll('"', '').trim());
+      final buffer = StringBuffer();
+      buffer.writeln(
+        'Product SN,Customer SN,Current Process Code,Current Process Name,Line Station,Result,Operate Date,WO,Product No,Operator',
+      );
+
+      for (final sn in _snList) {
+        final records = _processResults[sn];
+        if (records != null && records.isNotEmpty) {
+          for (final r in records) {
+            buffer.writeln(
+              '${r.productSn},${r.customerSn},${r.currentProcessCode},"${r.currentProcessName}",${r.lineStation},${r.result},${r.operateDt},${r.woNo},${r.productNo},${r.operatorName}',
+            );
+          }
+        }
+      }
+
+      await file.writeAsString(buffer.toString());
+      _globalError = 'Exported Barcode History successfully to $path';
+    } catch (e) {
+      _globalError = 'Error exporting Barcode History: $e';
+    }
+    notifyListeners();
+  }
+
+  Future<void> exportWipComponentsCsv() async {
+    _globalError = '';
+    notifyListeners();
+    try {
+      final path = await pickFile(isSave: true);
+      if (path == null || path.isEmpty) return;
+
+      final file = File(path.replaceAll('"', '').trim());
+      final buffer = StringBuffer();
+      buffer.writeln(
+        'Material No,Material Name,Category,Component SN,Manufacturer,Mfg PN,Date Code,Package ID,Installed Qty,Station Code,Process Code,Created Date',
+      );
+
+      for (final sn in _snList) {
+        final records = _wipResults[sn];
+        if (records != null && records.isNotEmpty) {
+          for (final r in records) {
+            buffer.writeln(
+              '${r.materialNo},"${r.materialName}",${r.materialCategory},${r.scannedCsn},"${r.mfgName}",${r.mfgPn},${r.dateCode},${r.pkgId},${r.installedQty},${r.stationCode},${r.processCode},${r.createdDt}',
+            );
+          }
+        }
+      }
+
+      await file.writeAsString(buffer.toString());
+      _globalError = 'Exported WIP Components successfully to $path';
+    } catch (e) {
+      _globalError = 'Error exporting WIP Components: $e';
+    }
+    notifyListeners();
+  }
+
   /// Resolves a typed SN (internal SN, customer SN, or product SN) to its
   /// canonical top-level product SN via the snMaster lookup, caching the
   /// result per typed SN. Falls back to the raw input on failure so a
   /// resolve error never blocks the existing fetch flow.
-  Future<String> _resolveCanonicalSn(String sn) async {
+  Future<String> _resolveCanonicalSn(String sn, int revision) {
     final cached = _resolvedSn[sn];
-    if (cached != null) return cached;
-    try {
-      final info = await ApiClient.resolveSnMaster(
-        sn: sn,
-        token: _token,
-        lang: _lang,
-        operationId: _operationId,
-        uuid: _uuid,
-        cookie: _cookie,
-      );
-      final canonical = info.sn.isNotEmpty ? info.sn : sn;
-      _resolvedSn[sn] = canonical;
-      _snMasterInfo[sn] = info;
-      return canonical;
-    } catch (e) {
-      _logger.warning('Failed to resolve SN master for $sn: $e');
-      _resolvedSn[sn] = sn;
-      return sn;
-    }
+    if (cached != null) return Future.value(cached);
+    final key = (sn, revision);
+    return _resolving.putIfAbsent(key, () async {
+      try {
+        final info = await ApiClient.resolveSnMaster(
+          sn: sn,
+          token: _token,
+          lang: _lang,
+          operationId: _operationId,
+          uuid: _uuid,
+          cookie: _cookie,
+        );
+        final canonical = info.sn.isNotEmpty ? info.sn : sn;
+        if (!_disposed &&
+            _revision('sn:$sn') == revision &&
+            _snList.contains(sn)) {
+          _resolvedSn[sn] = canonical;
+          _snMasterInfo[sn] = info;
+        }
+        return canonical;
+      } catch (_) {
+        return sn;
+      } finally {
+        _resolving.remove(key);
+      }
+    });
   }
 
-  Future<void> _fetchPendingSns() async {
-    if (_isBatchLoading) return;
-    _isBatchLoading = true;
-    notifyListeners();
+  Future<void> _fetchPendingSns() => _fetchView<TestRecord>(
+    'test',
+    _results,
+    _errors,
+    _loadingStatus,
+    ApiClient.fetchTestRecords,
+  );
 
-    // Iterate through a copy of the list so modifications during await don't crash
-    final currentList = List<String>.from(_snList);
-    for (var sn in currentList) {
-      if (!_results.containsKey(sn) && _errors[sn] == null) {
-        _loadingStatus[sn] = true;
-        notifyListeners();
-
-        try {
-          final canonicalSn = await _resolveCanonicalSn(sn);
-          final records = await ApiClient.fetchTestRecords(
-            sn: canonicalSn,
-            token: _token,
-            lang: _lang,
-            operationId: _operationId,
-            uuid: _uuid,
-            cookie: _cookie,
-          );
-          _results[sn] = records;
-          if (records.isEmpty) {
-            _errors[sn] = 'No records found';
-            if (_switchToBarcodeHistoryIfNeeded(sn)) {
-              _fetchPendingProcessHistory();
+  Future<void> _fetchView<T>(
+    String view,
+    Map<String, List<T>> results,
+    Map<String, String> errors,
+    Map<String, bool> loading,
+    Future<List<T>> Function({
+      required String sn,
+      required String token,
+      required String lang,
+      required String operationId,
+      required String uuid,
+      required String cookie,
+    })
+    fetch,
+  ) async {
+    final jobs = <Future<void>>[];
+    for (final sn in List<String>.of(_snList)) {
+      if (results.containsKey(sn) || errors.containsKey(sn)) continue;
+      final revision = _revision('sn:$sn');
+      bool current() =>
+          !_disposed && _snList.contains(sn) && _revision('sn:$sn') == revision;
+      loading[sn] = true;
+      jobs.add(
+        _queue.run((view, sn, revision), () async {
+          try {
+            final canonical = await _resolveCanonicalSn(sn, revision);
+            if (!current()) return;
+            final records = await fetch(
+              sn: canonical,
+              token: _token,
+              lang: _lang,
+              operationId: _operationId,
+              uuid: _uuid,
+              cookie: _cookie,
+            );
+            if (!current()) return;
+            results[sn] = records;
+            if (records.isEmpty) errors[sn] = 'No records found';
+          } catch (e) {
+            if (current()) {
+              errors[sn] = e.toString().replaceFirst('Exception: ', '');
+            }
+          } finally {
+            if (current()) {
+              loading[sn] = false;
+              if (view == 'test') {
+                _switchToBarcodeHistoryIfNeeded(sn);
+                _testRecordFallbackEligibleSns.remove(sn);
+              }
+              notifyListeners();
             }
           }
-        } catch (e) {
-          _logger.severe('Failed to fetch records for $sn: $e');
-          final error = e.toString().replaceFirst('Exception: ', '');
-          _errors[sn] = error;
-          if (_switchToBarcodeHistoryIfNeeded(sn)) {
-            _fetchPendingProcessHistory();
-          }
-        } finally {
-          _loadingStatus[sn] = false;
-          notifyListeners();
-        }
-      }
-    }
-
-    _isBatchLoading = false;
-    for (final sn in currentList) {
-      _testRecordFallbackEligibleSns.remove(sn);
+        }, isCurrent: current),
+      );
     }
     notifyListeners();
+    await Future.wait(jobs);
   }
 
   void _enableTestRecordFallbackFor(Iterable<String> sns) {
@@ -724,83 +956,21 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     return true;
   }
 
-  Future<void> _fetchPendingProcessHistory() async {
-    if (_isProcessBatchLoading) return;
-    _isProcessBatchLoading = true;
-    notifyListeners();
+  Future<void> _fetchPendingProcessHistory() => _fetchView<SnProcessRecord>(
+    'process',
+    _processResults,
+    _processErrors,
+    _processLoadingStatus,
+    ApiClient.fetchSnProcessHistory,
+  );
 
-    final currentList = List<String>.from(_snList);
-    for (var sn in currentList) {
-      if (!_processResults.containsKey(sn) && _processErrors[sn] == null) {
-        _processLoadingStatus[sn] = true;
-        notifyListeners();
-
-        try {
-          final canonicalSn = await _resolveCanonicalSn(sn);
-          final records = await ApiClient.fetchSnProcessHistory(
-            sn: canonicalSn,
-            token: _token,
-            lang: _lang,
-            operationId: _operationId,
-            uuid: _uuid,
-            cookie: _cookie,
-          );
-          _processResults[sn] = records;
-          if (records.isEmpty) {
-            _processErrors[sn] = 'No records found';
-          }
-        } catch (e) {
-          _logger.severe('Failed to fetch process history for $sn: $e');
-          _processErrors[sn] = e.toString().replaceFirst('Exception: ', '');
-        } finally {
-          _processLoadingStatus[sn] = false;
-          notifyListeners();
-        }
-      }
-    }
-
-    _isProcessBatchLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> _fetchPendingWipComponents() async {
-    if (_isWipBatchLoading) return;
-    _isWipBatchLoading = true;
-    notifyListeners();
-
-    final currentList = List<String>.from(_snList);
-    for (var sn in currentList) {
-      if (!_wipResults.containsKey(sn) && _wipErrors[sn] == null) {
-        _wipLoadingStatus[sn] = true;
-        notifyListeners();
-
-        try {
-          final canonicalSn = await _resolveCanonicalSn(sn);
-          final records = await ApiClient.fetchWipComponents(
-            sn: canonicalSn,
-            token: _token,
-            lang: _lang,
-            operationId: _operationId,
-            uuid: _uuid,
-            cookie: _cookie,
-          );
-          _wipResults[sn] = records;
-          if (records.isEmpty) {
-            _wipErrors[sn] = 'No records found';
-          }
-        } catch (e) {
-          _logger.severe('Failed to fetch WIP components for $sn: $e');
-          _wipErrors[sn] = e.toString().replaceFirst('Exception: ', '');
-        } finally {
-          _wipLoadingStatus[sn] = false;
-          notifyListeners();
-        }
-      }
-    }
-
-    _isWipBatchLoading = false;
-    notifyListeners();
-  }
+  Future<void> _fetchPendingWipComponents() => _fetchView<WipComponentRecord>(
+    'wip',
+    _wipResults,
+    _wipErrors,
+    _wipLoadingStatus,
+    ApiClient.fetchWipComponents,
+  );
 
   /// Reverse component lookup: given a scanned/typed component CSN, finds
   /// which product SN it is currently installed into. Adds the CSN to the
@@ -809,36 +979,48 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   Future<void> searchComponentTrace(String csn) async {
     final trimmed = csn.trim().toUpperCase();
     if (trimmed.isEmpty) return;
-
     if (!_traceHistory.contains(trimmed)) {
       _traceHistory.insert(0, trimmed);
-      ConfigService.saveConfig(_exportConfigMap());
+      _saveConfig(_exportConfigMap());
     }
     _selectedTraceCsn = trimmed;
-    _traceLoadingStatus[trimmed] = true;
-    _traceErrors.remove(trimmed);
-    notifyListeners();
+    _invalidate('csn:$trimmed');
+    await _fetchTrace(trimmed);
+  }
 
-    try {
-      final records = await ApiClient.queryComponentInfo(
-        csn: trimmed,
-        token: _token,
-        lang: _lang,
-        operationId: _operationId,
-        uuid: _uuid,
-        cookie: _cookie,
-      );
-      _traceResults[trimmed] = records;
-      if (records.isEmpty) {
-        _traceErrors[trimmed] = 'No records found';
+  Future<void> _fetchTrace(String csn) {
+    final revision = _revision('csn:$csn');
+    bool current() =>
+        !_disposed &&
+        _traceHistory.contains(csn) &&
+        _revision('csn:$csn') == revision;
+    _traceLoadingStatus[csn] = true;
+    _traceErrors.remove(csn);
+    notifyListeners();
+    return _queue.run(('trace', csn, revision), () async {
+      try {
+        final records = await ApiClient.queryComponentInfo(
+          csn: csn,
+          token: _token,
+          lang: _lang,
+          operationId: _operationId,
+          uuid: _uuid,
+          cookie: _cookie,
+        );
+        if (!current()) return;
+        _traceResults[csn] = records;
+        if (records.isEmpty) _traceErrors[csn] = 'No records found';
+      } catch (e) {
+        if (current()) {
+          _traceErrors[csn] = e.toString().replaceFirst('Exception: ', '');
+        }
+      } finally {
+        if (current()) {
+          _traceLoadingStatus[csn] = false;
+          notifyListeners();
+        }
       }
-    } catch (e) {
-      _logger.severe('Failed to query component info for $trimmed: $e');
-      _traceErrors[trimmed] = e.toString().replaceFirst('Exception: ', '');
-    } finally {
-      _traceLoadingStatus[trimmed] = false;
-      notifyListeners();
-    }
+    }, isCurrent: current);
   }
 
   /// Selects a previously searched CSN from the trace history without
@@ -857,6 +1039,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   }
 
   void removeTraceCsn(String csn) {
+    _invalidate('csn:$csn');
     _traceHistory.remove(csn);
     _traceResults.remove(csn);
     _traceErrors.remove(csn);
@@ -864,38 +1047,33 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     if (_selectedTraceCsn == csn) {
       _selectedTraceCsn = _traceHistory.isNotEmpty ? _traceHistory.first : '';
     }
-    ConfigService.saveConfig(_exportConfigMap());
+    _saveConfig(_exportConfigMap());
     notifyListeners();
   }
 
   void clearTraceHistory() {
+    for (final csn in _traceHistory) {
+      _invalidate('csn:$csn');
+    }
     _traceHistory.clear();
     _traceResults.clear();
     _traceErrors.clear();
     _traceLoadingStatus.clear();
     _selectedTraceCsn = '';
-    ConfigService.saveConfig(_exportConfigMap());
+    _saveConfig(_exportConfigMap());
     notifyListeners();
   }
 
-  /// Re-runs the lookup for every CSN in the trace history (e.g. on app
-  /// startup, or after credentials change). Preserves whatever was selected
-  /// beforehand rather than leaving the last-fetched item selected as a side
-  /// effect of the loop.
+  /// Explicitly refreshes trace history without changing the user's selection.
   Future<void> refetchAllTraceSearches() async {
-    final current = List<String>.from(_traceHistory);
-    final previousSelected = _selectedTraceCsn;
-    for (final csn in current) {
-      await searchComponentTrace(csn);
+    for (final csn in _traceHistory) {
+      _invalidate('csn:$csn');
     }
-    _selectedTraceCsn = previousSelected.isNotEmpty
-        ? previousSelected
-        : (_traceHistory.isNotEmpty ? _traceHistory.first : '');
-    notifyListeners();
+    await Future.wait(List<String>.of(_traceHistory).map(_fetchTrace));
   }
 
   /// Parses a multi-line/comma-separated blob of component CSNs (manual
-  /// paste or CSV file content) and searches each new one in turn — the
+  /// paste or CSV file content) and queues the searches concurrently — the
   /// Component Trace equivalent of [addSns], reusing the same delimiter and
   /// header-row-skip conventions.
   Future<void> addTraceCsns(String input) async {
@@ -911,9 +1089,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       }
     }
 
-    for (final csn in toSearch) {
-      await searchComponentTrace(csn);
-    }
+    await Future.wait(toSearch.map(searchComponentTrace));
   }
 
   Future<void> downloadTraceTemplateCsv() async {
@@ -1018,7 +1194,33 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     );
   }
 
+  Future<bool> testConnection({
+    String? testToken,
+    String? testOpId,
+    String? testUuid,
+    String? testCookie,
+  }) async {
+    final err = await ApiClient.verifyConnection(
+      token: testToken ?? _token,
+      lang: _lang,
+      operationId: testOpId ?? _operationId,
+      uuid: testUuid ?? _uuid,
+      cookie: testCookie ?? _cookie,
+    );
+    if (testToken == null) {
+      isConnectionValid = (err == null);
+      connectionError = err;
+      notifyListeners();
+    }
+    return err == null;
+  }
+
+  Future<void> refetchSn(String sn) => refreshSn(sn);
+  Future<void> refetchTraceHistory() => refetchAllTraceSearches();
+  Future<void> refetchTraceCsn(String csn) => searchComponentTrace(csn);
+
   Future<void> fetchSnsData() async {
+    _invalidateAll();
     _testRecordFallbackEligibleSns.clear();
     if (_viewMode == ViewMode.testRecord) {
       _enableTestRecordFallbackFor(_snList);
@@ -1026,10 +1228,11 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     _results.clear();
     _errors.clear();
     notifyListeners();
-    await _fetchPendingSns();
+    await _fetchAllPending();
   }
 
   Future<void> refreshAll() async {
+    _invalidateAll(includeTrace: true);
     _testRecordFallbackEligibleSns.clear();
     if (_viewMode == ViewMode.testRecord) {
       _enableTestRecordFallbackFor(_snList);

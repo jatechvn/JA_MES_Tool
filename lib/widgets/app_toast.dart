@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -12,8 +13,7 @@ void showAppToast(
   Color? accentColor,
   Duration duration = const Duration(seconds: 3),
 }) {
-  final overlay = Overlay.maybeOf(context);
-  if (overlay == null) return;
+  final overlay = Overlay.of(context);
   late OverlayEntry entry;
   final accent = accentColor ?? colors.accentEmerald;
 
@@ -28,9 +28,7 @@ void showAppToast(
 
   overlay.insert(entry);
   Future.delayed(duration, () {
-    if (entry.mounted) {
-      entry.remove();
-    }
+    if (entry.mounted) entry.remove();
   });
 }
 
@@ -55,7 +53,7 @@ class _ToastWidgetState extends State<_ToastWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 240),
+    duration: const Duration(milliseconds: 220),
   )..forward();
 
   @override
@@ -66,7 +64,6 @@ class _ToastWidgetState extends State<_ToastWidget>
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.colors;
     return Positioned(
       bottom: 32,
       left: 0,
@@ -75,66 +72,77 @@ class _ToastWidgetState extends State<_ToastWidget>
         child: FadeTransition(
           opacity: _controller,
           child: SlideTransition(
-            position: Tween(begin: const Offset(0, 0.35), end: Offset.zero)
+            position: Tween(begin: const Offset(0, 0.3), end: Offset.zero)
                 .animate(
                   CurvedAnimation(
                     parent: _controller,
                     curve: Curves.easeOutCubic,
                   ),
                 ),
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 11,
+            child: _ToastCard(
+              message: widget.message,
+              icon: widget.icon,
+              colors: widget.colors,
+              accent: widget.accent,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToastCard extends StatelessWidget {
+  const _ToastCard({
+    required this.message,
+    required this.icon,
+    required this.colors,
+    required this.accent,
+  });
+
+  final String message;
+  final IconData icon;
+  final AppColors colors;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colors.cardBg.withValues(alpha: 0.94),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withValues(alpha: 0.45)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-                decoration: BoxDecoration(
-                  color: c.subCardBg,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: widget.accent.withValues(alpha: 0.45),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: accent, size: 18),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: widget.accent.withValues(alpha: 0.15),
-                      blurRadius: 16,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
-                foregroundDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border(
-                    top: BorderSide(
-                      color: c.glassHighlight.withValues(alpha: 0.8),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(widget.icon, color: widget.accent, size: 18),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        widget.message,
-                        style: TextStyle(
-                          color: c.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),

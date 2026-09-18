@@ -1,0 +1,1279 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import '../../logic.dart';
+import '../../translations.dart';
+import '../../browser_helper.dart';
+import '../../build_info.dart';
+import '../../constants.dart';
+import '../../../theme/theme_provider.dart';
+import '../../../theme/app_colors.dart';
+import '../../../widgets/glass_widgets.dart';
+import '../../../widgets/glass_dialog.dart';
+import '../../../widgets/app_toast.dart';
+
+Future<void> showAppSettingsDialog(
+  BuildContext context,
+  AppLogic logic,
+  ThemeProvider theme,
+) {
+  // Snapshot initial glassmorphism tuning parameters for rollback on Cancel
+  final origCardBlur = theme.cardBlur;
+  final origCardOpacity = theme.cardOpacity;
+  final origDialogBlur = theme.dialogBlur;
+  final origDialogOpacity = theme.dialogOpacity;
+  final origDropdownBlur = theme.dropdownBlur;
+  final origDropdownOpacity = theme.dropdownOpacity;
+  final origPerfMode = theme.perfMode;
+
+  double tempCardBlur = origCardBlur;
+  double tempCardOpacity = origCardOpacity;
+  double tempDialogBlur = origDialogBlur;
+  double tempDialogOpacity = origDialogOpacity;
+  double tempDropdownBlur = origDropdownBlur;
+  double tempDropdownOpacity = origDropdownOpacity;
+
+  final tokenCtrl = TextEditingController(text: logic.token);
+  final opIdCtrl = TextEditingController(text: logic.operationId);
+  final uuidCtrl = TextEditingController(text: logic.uuid);
+  final cookieCtrl = TextEditingController(text: logic.cookie);
+
+  int currentTab = 0;
+  bool isTestingConnection = false;
+  bool? connectionTestResult;
+  String? connectionTestMsg;
+  bool isSyncingCdp = false;
+
+  return showGeneralDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 250),
+    pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+    transitionBuilder: (ctx, anim1, anim2, child) {
+      final curved = CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+          child: StatefulBuilder(
+            builder: (dialogCtx, setDialogState) {
+              final activeColors = theme.colors;
+
+              void rollbackAndClose() {
+                theme.setLiveGlassmorphism(
+                  cardBlur: origCardBlur,
+                  cardOpacity: origCardOpacity,
+                  dialogBlur: origDialogBlur,
+                  dialogOpacity: origDialogOpacity,
+                  dropdownBlur: origDropdownBlur,
+                  dropdownOpacity: origDropdownOpacity,
+                );
+                theme.setPerfTierMode(origPerfMode);
+                Navigator.pop(dialogCtx);
+              }
+
+              return GlassDialog(
+                title: Translations.get('settings', logic.lang),
+                icon: Icons.settings_rounded,
+                isDark: theme.isDark,
+                blurSigma: theme.dialogBlur,
+                bgOpacity: theme.dialogOpacity,
+                width: 720,
+                height: 600,
+                contentPadding: EdgeInsets.zero,
+                actions: [
+                  TextButton(
+                    onPressed: rollbackAndClose,
+                    child: Text(
+                      Translations.get('cancel', logic.lang),
+                      style: TextStyle(
+                        color: activeColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GlowingActionButton(
+                    height: 36,
+                    colors: activeColors,
+                    icon: Icons.check_rounded,
+                    label: Translations.get('save', logic.lang),
+                    onPressed: () async {
+                      await logic.saveFullSettings(
+                        token: tokenCtrl.text.trim(),
+                        operationId: opIdCtrl.text.trim(),
+                        uuid: uuidCtrl.text.trim(),
+                        cookie: cookieCtrl.text.trim(),
+                        bgBlur: tempCardBlur,
+                        bgOpacity: tempCardOpacity,
+                        dialogBlur: tempDialogBlur,
+                        dialogOpacity: tempDialogOpacity,
+                        dropdownBlur: tempDropdownBlur,
+                        dropdownOpacity: tempDropdownOpacity,
+                      );
+                      if (dialogCtx.mounted) {
+                        Navigator.pop(dialogCtx);
+                        showAppToast(
+                          context,
+                          colors: activeColors,
+                          message: Translations.get(
+                            'fetched_success',
+                            logic.lang,
+                          ),
+                          icon: Icons.check_circle_rounded,
+                          accentColor: activeColors.accentEmerald,
+                        );
+                      }
+                    },
+                  ),
+                ],
+                child: Column(
+                  children: [
+                    // Tab Bar
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: activeColors.subCardBg.withValues(alpha: 0.3),
+                        border: Border(
+                          bottom: BorderSide(color: activeColors.borderDefault),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildTabButton(
+                            index: 0,
+                            currentTab: currentTab,
+                            icon: Icons.cloud_sync_rounded,
+                            label: Translations.get('tab_mes_api', logic.lang),
+                            colors: activeColors,
+                            onTap: () => setDialogState(() => currentTab = 0),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTabButton(
+                            index: 1,
+                            currentTab: currentTab,
+                            icon: Icons.tune_rounded,
+                            label: Translations.get('tab_general', logic.lang),
+                            colors: activeColors,
+                            onTap: () => setDialogState(() => currentTab = 1),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTabButton(
+                            index: 2,
+                            currentTab: currentTab,
+                            icon: Icons.blur_on_rounded,
+                            label: Translations.get('tab_glass', logic.lang),
+                            colors: activeColors,
+                            onTap: () => setDialogState(() => currentTab = 2),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTabButton(
+                            index: 3,
+                            currentTab: currentTab,
+                            icon: Icons.info_outline_rounded,
+                            label: Translations.get('tab_about', logic.lang),
+                            colors: activeColors,
+                            onTap: () => setDialogState(() => currentTab = 3),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Tab Content Body
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: _buildCurrentTabContent(
+                            currentTab: currentTab,
+                            context: context,
+                            dialogCtx: dialogCtx,
+                            logic: logic,
+                            theme: theme,
+                            colors: activeColors,
+                            tokenCtrl: tokenCtrl,
+                            opIdCtrl: opIdCtrl,
+                            uuidCtrl: uuidCtrl,
+                            cookieCtrl: cookieCtrl,
+                            tempCardBlur: tempCardBlur,
+                            tempCardOpacity: tempCardOpacity,
+                            tempDialogBlur: tempDialogBlur,
+                            tempDialogOpacity: tempDialogOpacity,
+                            tempDropdownBlur: tempDropdownBlur,
+                            tempDropdownOpacity: tempDropdownOpacity,
+                            isTestingConnection: isTestingConnection,
+                            connectionTestResult: connectionTestResult,
+                            connectionTestMsg: connectionTestMsg,
+                            isSyncingCdp: isSyncingCdp,
+                            setDialogState: setDialogState,
+                            onSliderChange:
+                                ({
+                                  double? cardBlur,
+                                  double? cardOpacity,
+                                  double? dialogBlur,
+                                  double? dialogOpacity,
+                                  double? dropdownBlur,
+                                  double? dropdownOpacity,
+                                }) {
+                                  setDialogState(() {
+                                    if (cardBlur != null) {
+                                      tempCardBlur = cardBlur;
+                                    }
+                                    if (cardOpacity != null) {
+                                      tempCardOpacity = cardOpacity;
+                                    }
+                                    if (dialogBlur != null) {
+                                      tempDialogBlur = dialogBlur;
+                                    }
+                                    if (dialogOpacity != null) {
+                                      tempDialogOpacity = dialogOpacity;
+                                    }
+                                    if (dropdownBlur != null) {
+                                      tempDropdownBlur = dropdownBlur;
+                                    }
+                                    if (dropdownOpacity != null) {
+                                      tempDropdownOpacity = dropdownOpacity;
+                                    }
+                                  });
+                                  theme.setLiveGlassmorphism(
+                                    cardBlur: tempCardBlur,
+                                    cardOpacity: tempCardOpacity,
+                                    dialogBlur: tempDialogBlur,
+                                    dialogOpacity: tempDialogOpacity,
+                                    dropdownBlur: tempDropdownBlur,
+                                    dropdownOpacity: tempDropdownOpacity,
+                                  );
+                                },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildTabButton({
+  required int index,
+  required int currentTab,
+  required IconData icon,
+  required String label,
+  required AppColors colors,
+  required VoidCallback onTap,
+}) {
+  final isSelected = index == currentTab;
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(10),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? colors.accentColor.withValues(alpha: 0.15)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected
+              ? colors.accentColor.withValues(alpha: 0.45)
+              : Colors.transparent,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: isSelected ? colors.accentColor : colors.textSecondary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? colors.textPrimary : colors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildCurrentTabContent({
+  required int currentTab,
+  required BuildContext context,
+  required BuildContext dialogCtx,
+  required AppLogic logic,
+  required ThemeProvider theme,
+  required AppColors colors,
+  required TextEditingController tokenCtrl,
+  required TextEditingController opIdCtrl,
+  required TextEditingController uuidCtrl,
+  required TextEditingController cookieCtrl,
+  required double tempCardBlur,
+  required double tempCardOpacity,
+  required double tempDialogBlur,
+  required double tempDialogOpacity,
+  required double tempDropdownBlur,
+  required double tempDropdownOpacity,
+  required bool isTestingConnection,
+  required bool? connectionTestResult,
+  required String? connectionTestMsg,
+  required bool isSyncingCdp,
+  required StateSetter setDialogState,
+  required void Function({
+    double? cardBlur,
+    double? cardOpacity,
+    double? dialogBlur,
+    double? dialogOpacity,
+    double? dropdownBlur,
+    double? dropdownOpacity,
+  })
+  onSliderChange,
+}) {
+  switch (currentTab) {
+    case 0:
+      return _buildMesApiTab(
+        context,
+        logic,
+        theme,
+        colors,
+        tokenCtrl,
+        opIdCtrl,
+        uuidCtrl,
+        cookieCtrl,
+        isTestingConnection,
+        connectionTestResult,
+        connectionTestMsg,
+        isSyncingCdp,
+        setDialogState,
+      );
+    case 1:
+      return _buildGeneralTab(context, logic, theme, colors, setDialogState);
+    case 2:
+      return _buildGlassTuningTab(
+        context,
+        logic,
+        theme,
+        colors,
+        tempCardBlur,
+        tempCardOpacity,
+        tempDialogBlur,
+        tempDialogOpacity,
+        tempDropdownBlur,
+        tempDropdownOpacity,
+        setDialogState,
+        onSliderChange,
+      );
+    case 3:
+      return _buildAboutTab(context, logic, theme, colors);
+    default:
+      return const SizedBox.shrink();
+  }
+}
+
+Widget _buildMesApiTab(
+  BuildContext context,
+  AppLogic logic,
+  ThemeProvider theme,
+  AppColors colors,
+  TextEditingController tokenCtrl,
+  TextEditingController opIdCtrl,
+  TextEditingController uuidCtrl,
+  TextEditingController cookieCtrl,
+  bool isTestingConnection,
+  bool? connectionTestResult,
+  String? connectionTestMsg,
+  bool isSyncingCdp,
+  StateSetter setDialogState,
+) {
+  return ListView(
+    physics: const BouncingScrollPhysics(),
+    children: [
+      // CDP Auto Sync Card
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        isFeatured: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bolt_rounded, color: colors.accentAmber, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  Translations.get('cdp_sync_title', logic.lang),
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              Translations.get('cdp_sync_desc', logic.lang),
+              style: TextStyle(
+                color: colors.textSecondary,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colors.accentColor,
+                      side: BorderSide(
+                        color: colors.accentColor.withValues(alpha: 0.5),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+                    label: Text(
+                      Translations.get('btn_open_browser', logic.lang),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onPressed: () async {
+                      await BrowserHelper.launchBrowser();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.accentEmerald,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: isSyncingCdp
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.sync_rounded, size: 16),
+                    label: Text(
+                      isSyncingCdp
+                          ? Translations.get('status_fetching', logic.lang)
+                          : Translations.get(
+                              'btn_sync_credentials',
+                              logic.lang,
+                            ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onPressed: isSyncingCdp
+                        ? null
+                        : () async {
+                            setDialogState(() => isSyncingCdp = true);
+                            final creds =
+                                await BrowserHelper.fetchCredentialsFromBrowser();
+                            setDialogState(() => isSyncingCdp = false);
+                            if (creds != null &&
+                                creds.token != null &&
+                                creds.token!.isNotEmpty) {
+                              tokenCtrl.text = creds.token!;
+                              uuidCtrl.text = creds.uuid ?? '';
+                              opIdCtrl.text = creds.operationId ?? '';
+                              cookieCtrl.text = creds.cookie ?? '';
+                              if (context.mounted) {
+                                showAppToast(
+                                  context,
+                                  colors: colors,
+                                  message: Translations.get(
+                                    'fetched_success',
+                                    logic.lang,
+                                  ),
+                                  icon: Icons.check_circle_rounded,
+                                  accentColor: colors.accentEmerald,
+                                );
+                              }
+                            } else {
+                              if (context.mounted) {
+                                showAppToast(
+                                  context,
+                                  colors: colors,
+                                  message: Translations.get(
+                                    'fetched_fail',
+                                    logic.lang,
+                                  ),
+                                  icon: Icons.error_outline_rounded,
+                                  accentColor: colors.accentRose,
+                                );
+                              }
+                            }
+                          },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+
+      // Credentials Input fields
+      _buildTextField(
+        label: Translations.get('mes_token', logic.lang),
+        controller: tokenCtrl,
+        colors: colors,
+        maxLines: 2,
+      ),
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(
+            child: _buildTextField(
+              label: Translations.get('operation_id', logic.lang),
+              controller: opIdCtrl,
+              colors: colors,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildTextField(
+              label: Translations.get('uuid', logic.lang),
+              controller: uuidCtrl,
+              colors: colors,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 10),
+      _buildTextField(
+        label: Translations.get('cookie', logic.lang),
+        controller: cookieCtrl,
+        colors: colors,
+        maxLines: 2,
+      ),
+      const SizedBox(height: 16),
+
+      // Test Connection Button
+      Row(
+        children: [
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colors.accentCyan,
+              side: BorderSide(color: colors.accentCyan.withValues(alpha: 0.5)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: isTestingConnection
+                ? SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.accentCyan,
+                    ),
+                  )
+                : Icon(
+                    Icons.shield_outlined,
+                    size: 16,
+                    color: colors.accentCyan,
+                  ),
+            label: Text(
+              Translations.get('verify_connection', logic.lang),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            onPressed: isTestingConnection
+                ? null
+                : () async {
+                    setDialogState(() {
+                      isTestingConnection = true;
+                      connectionTestResult = null;
+                      connectionTestMsg = null;
+                    });
+                    final ok = await logic.testConnection(
+                      testToken: tokenCtrl.text.trim(),
+                      testOpId: opIdCtrl.text.trim(),
+                      testUuid: uuidCtrl.text.trim(),
+                      testCookie: cookieCtrl.text.trim(),
+                    );
+                    setDialogState(() {
+                      isTestingConnection = false;
+                      connectionTestResult = ok;
+                      connectionTestMsg = ok
+                          ? Translations.get('connection_valid', logic.lang)
+                          : logic.connectionError ?? 'Failed to connect';
+                    });
+                  },
+          ),
+          const SizedBox(width: 12),
+          if (connectionTestResult != null)
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(
+                    connectionTestResult == true
+                        ? Icons.check_circle_rounded
+                        : Icons.error_outline_rounded,
+                    color: connectionTestResult == true
+                        ? colors.accentEmerald
+                        : colors.accentRose,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      connectionTestMsg ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: connectionTestResult == true
+                            ? colors.accentEmerald
+                            : colors.accentRose,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ],
+  );
+}
+
+Widget _buildGeneralTab(
+  BuildContext context,
+  AppLogic logic,
+  ThemeProvider theme,
+  AppColors colors,
+  StateSetter setDialogState,
+) {
+  return ListView(
+    physics: const BouncingScrollPhysics(),
+    children: [
+      // Language Selector
+      Text(
+        Translations.get('language', logic.lang),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: colors.textPrimary,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          _buildLanguageChoice(
+            label: 'Tiếng Việt',
+            flag: '🇻🇳',
+            code: 'vn',
+            currentCode: logic.lang,
+            colors: colors,
+            onSelect: () {
+              logic.setLanguage('vn');
+              setDialogState(() {});
+            },
+          ),
+          const SizedBox(width: 10),
+          _buildLanguageChoice(
+            label: 'English',
+            flag: '🇬🇧',
+            code: 'en',
+            currentCode: logic.lang,
+            colors: colors,
+            onSelect: () {
+              logic.setLanguage('en');
+              setDialogState(() {});
+            },
+          ),
+          const SizedBox(width: 10),
+          _buildLanguageChoice(
+            label: '中文',
+            flag: '🇨🇳',
+            code: 'cn',
+            currentCode: logic.lang,
+            colors: colors,
+            onSelect: () {
+              logic.setLanguage('cn');
+              setDialogState(() {});
+            },
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+
+      // Performance Graphic Tier Switcher
+      Text(
+        Translations.get('perf_tooltip', logic.lang),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: colors.textPrimary,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Column(
+        children: [
+          _buildTierTile(
+            mode: PerfTierMode.auto,
+            title: 'Auto (Hệ thống tự nhận diện: ${theme.effectiveTier.label})',
+            desc:
+                'CPU: ${theme.cpuCores} Cores • Điểm phần cứng: ${theme.hardwareScore}/100',
+            icon: Icons.auto_awesome_rounded,
+            currentMode: theme.perfMode,
+            colors: colors,
+            onSelect: () => theme.setPerfTierMode(PerfTierMode.auto),
+          ),
+          const SizedBox(height: 8),
+          _buildTierTile(
+            mode: PerfTierMode.ultra,
+            title: Translations.get('tier_ultra', logic.lang),
+            desc:
+                'Hiệu ứng kính mờ đầy đủ, GPU mesh orbs, chuyển động 120 FPS tối đa',
+            icon: Icons.bolt_rounded,
+            currentMode: theme.perfMode,
+            colors: colors,
+            onSelect: () => theme.setPerfTierMode(PerfTierMode.ultra),
+          ),
+          const SizedBox(height: 8),
+          _buildTierTile(
+            mode: PerfTierMode.balanced,
+            title: Translations.get('tier_balanced', logic.lang),
+            desc: 'Tối ưu cho Laptop pin, 60 FPS mượt mà, giảm blur và orb nền',
+            icon: Icons.balance_rounded,
+            currentMode: theme.perfMode,
+            colors: colors,
+            onSelect: () => theme.setPerfTierMode(PerfTierMode.balanced),
+          ),
+          const SizedBox(height: 8),
+          _buildTierTile(
+            mode: PerfTierMode.lite,
+            title: Translations.get('tier_lite', logic.lang),
+            desc: 'Tắt chuyển động nền, loại bỏ 100% giật lag cho máy yếu',
+            icon: Icons.eco_rounded,
+            currentMode: theme.perfMode,
+            colors: colors,
+            onSelect: () => theme.setPerfTierMode(PerfTierMode.lite),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+Widget _buildLanguageChoice({
+  required String label,
+  required String flag,
+  required String code,
+  required String currentCode,
+  required AppColors colors,
+  required VoidCallback onSelect,
+}) {
+  final isSelected = code == currentCode;
+  return Expanded(
+    child: InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colors.accentColor.withValues(alpha: 0.15)
+              : colors.subCardBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? colors.accentColor : colors.borderDefault,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? colors.textPrimary : colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildTierTile({
+  required PerfTierMode mode,
+  required String title,
+  required String desc,
+  required IconData icon,
+  required PerfTierMode currentMode,
+  required AppColors colors,
+  required VoidCallback onSelect,
+}) {
+  final isSelected = mode == currentMode;
+  return InkWell(
+    onTap: onSelect,
+    borderRadius: BorderRadius.circular(10),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? colors.accentColor.withValues(alpha: 0.12)
+            : colors.subCardBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected ? colors.accentColor : colors.borderDefault,
+          width: isSelected ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: isSelected ? colors.accentColor : colors.textSecondary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: TextStyle(fontSize: 11, color: colors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          if (isSelected)
+            Icon(
+              Icons.check_circle_rounded,
+              size: 18,
+              color: colors.accentColor,
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildGlassTuningTab(
+  BuildContext context,
+  AppLogic logic,
+  ThemeProvider theme,
+  AppColors colors,
+  double tempCardBlur,
+  double tempCardOpacity,
+  double tempDialogBlur,
+  double tempDialogOpacity,
+  double tempDropdownBlur,
+  double tempDropdownOpacity,
+  StateSetter setDialogState,
+  void Function({
+    double? cardBlur,
+    double? cardOpacity,
+    double? dialogBlur,
+    double? dialogOpacity,
+    double? dropdownBlur,
+    double? dropdownOpacity,
+  })
+  onSliderChange,
+) {
+  return ListView(
+    physics: const BouncingScrollPhysics(),
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            Translations.get('glass_settings_title', logic.lang),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+            ),
+          ),
+          InkWell(
+            onTap: () {
+              theme.resetToDefaults();
+              onSliderChange(
+                cardBlur: 20.0,
+                cardOpacity: 0.25,
+                dialogBlur: 20.0,
+                dialogOpacity: 0.85,
+                dropdownBlur: 20.0,
+                dropdownOpacity: 0.86,
+              );
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(
+                Translations.get('default', logic.lang),
+                style: TextStyle(
+                  color: colors.accentCyan,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+
+      // 1. Bento Card Blur
+      _buildSliderTile(
+        label: Translations.get('card_blur_label', logic.lang),
+        value: tempCardBlur,
+        min: 0,
+        max: 40,
+        colors: colors,
+        onChanged: (v) => onSliderChange(cardBlur: v),
+      ),
+      const SizedBox(height: 8),
+
+      // 2. Bento Card Opacity
+      _buildSliderTile(
+        label: Translations.get('card_opacity_label', logic.lang),
+        value: tempCardOpacity,
+        min: 0.05,
+        max: 1.0,
+        isPercent: true,
+        colors: colors,
+        onChanged: (v) => onSliderChange(cardOpacity: v),
+      ),
+      const SizedBox(height: 8),
+      Divider(color: colors.borderDefault, height: 1),
+      const SizedBox(height: 8),
+
+      // 3. Dialog Blur
+      _buildSliderTile(
+        label: Translations.get('dialog_blur', logic.lang),
+        value: tempDialogBlur,
+        min: 0,
+        max: 40,
+        colors: colors,
+        onChanged: (v) => onSliderChange(dialogBlur: v),
+      ),
+      const SizedBox(height: 8),
+
+      // 4. Dialog Opacity
+      _buildSliderTile(
+        label: Translations.get('dialog_opacity', logic.lang),
+        value: tempDialogOpacity,
+        min: 0.1,
+        max: 1.0,
+        isPercent: true,
+        colors: colors,
+        onChanged: (v) => onSliderChange(dialogOpacity: v),
+      ),
+      const SizedBox(height: 8),
+      Divider(color: colors.borderDefault, height: 1),
+      const SizedBox(height: 8),
+
+      // 5. Dropdown Blur
+      _buildSliderTile(
+        label: Translations.get('dropdown_blur_label', logic.lang),
+        value: tempDropdownBlur,
+        min: 0,
+        max: 40,
+        colors: colors,
+        onChanged: (v) => onSliderChange(dropdownBlur: v),
+      ),
+      const SizedBox(height: 8),
+
+      // 6. Dropdown Opacity
+      _buildSliderTile(
+        label: Translations.get('dropdown_opacity_label', logic.lang),
+        value: tempDropdownOpacity,
+        min: 0.1,
+        max: 1.0,
+        isPercent: true,
+        colors: colors,
+        onChanged: (v) => onSliderChange(dropdownOpacity: v),
+      ),
+    ],
+  );
+}
+
+Widget _buildAboutTab(
+  BuildContext context,
+  AppLogic logic,
+  ThemeProvider theme,
+  AppColors colors,
+) {
+  final timestamp = BuildInfo.debugTimestamp;
+  return ListView(
+    physics: const BouncingScrollPhysics(),
+    children: [
+      Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [colors.accentColor, colors.accentCyan],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.hub_rounded, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$appName v$appVersion',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Build Date: $timestamp',
+                style: TextStyle(fontSize: 12, color: colors.textSecondary),
+              ),
+            ],
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(14),
+        borderRadius: 12,
+        child: Column(
+          children: [
+            _buildAboutRow(
+              'Engine',
+              'Dart 3.12 / Flutter 3.x Desktop (Windows)',
+              colors,
+            ),
+            _buildAboutRow(
+              'Architecture',
+              'Bento Glassmorphism + Dynamic Island',
+              colors,
+            ),
+            _buildAboutRow(
+              'CDP Interceptor',
+              'Edge / Chrome DevTools Protocol',
+              colors,
+            ),
+            _buildAboutRow(
+              'Hardware Profile',
+              '${theme.cpuCores} Cores (${theme.effectiveTier.label})',
+              colors,
+            ),
+            _buildAboutRow('License', 'Internal Tool • JA Tech', colors),
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
+      OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.accentColor,
+          side: BorderSide(color: colors.accentColor.withValues(alpha: 0.5)),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: const Icon(Icons.folder_open_rounded, size: 16),
+        label: const Text('Open Logs Folder', style: TextStyle(fontSize: 12)),
+        onPressed: () {
+          final exeDir = File(Platform.resolvedExecutable).parent.path;
+          Process.start('explorer.exe', ['$exeDir/logs']);
+        },
+      ),
+    ],
+  );
+}
+
+Widget _buildTextField({
+  required String label,
+  required TextEditingController controller,
+  required AppColors colors,
+  int maxLines = 1,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: colors.textSecondary,
+        ),
+      ),
+      const SizedBox(height: 5),
+      TextField(
+        controller: controller,
+        maxLines: maxLines,
+        style: TextStyle(fontSize: 12.5, color: colors.textPrimary),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          filled: true,
+          fillColor: colors.subCardBg,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: colors.subCardBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: colors.subCardBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: colors.accentColor, width: 1.5),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildSliderTile({
+  required String label,
+  required double value,
+  required double min,
+  required double max,
+  required AppColors colors,
+  required ValueChanged<double> onChanged,
+  bool isPercent = false,
+}) {
+  final displayValue = isPercent
+      ? '${(value * 100).toInt()}%'
+      : '${value.toInt()} px';
+  return Row(
+    children: [
+      SizedBox(
+        width: 140,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: colors.textSecondary,
+          ),
+        ),
+      ),
+      Expanded(
+        child: SliderTheme(
+          data: SliderThemeData(
+            thumbColor: colors.accentColor,
+            activeTrackColor: colors.accentColor,
+            inactiveTrackColor: colors.subCardBorder,
+            trackHeight: 4,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+          ),
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+      SizedBox(
+        width: 50,
+        child: Text(
+          displayValue,
+          textAlign: TextAlign.end,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: colors.accentColor,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildAboutRow(String title, String value, AppColors colors) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 130,
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}

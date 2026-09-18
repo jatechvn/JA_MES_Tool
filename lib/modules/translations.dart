@@ -1,3 +1,5 @@
+import 'constants.dart';
+
 class Translations {
   static const Map<String, Map<String, String>> _dict = {
     'en': {
@@ -5,6 +7,24 @@ class Translations {
       'tab_barcode_history': 'Barcode History',
       'tab_wip_components': 'Component List',
       'tab_component_trace': 'Component Trace',
+      'tab_terminal': 'Terminal & Logs',
+      'perf_tooltip': 'Graphic Tier & Hardware Profile',
+      'tier_ultra': 'Ultra (120 FPS)',
+      'tier_balanced': 'Balanced (60 FPS)',
+      'tier_lite': 'Lite (Low Power)',
+      'dropdown_blur_label': 'Dropdown blur',
+      'dropdown_opacity_label': 'Dropdown opacity',
+      'filter_all': 'All',
+      'filter_pass': 'Pass',
+      'filter_fail': 'Fail',
+      'filter_nodata': 'No Data',
+      'pass_rate': 'Pass Rate',
+      'total_sns': 'Total SNs',
+      'tab_mes_api': 'CloudMES API & CDP',
+      'tab_general': 'General & Display',
+      'tab_glass': 'Glassmorphism Live-Tuning',
+      'tab_about': 'About & Diagnostics',
+      'clear_logs': 'Clear Logs',
       'process_time': 'Process Time',
       'operator': 'Operator',
       'equipment': 'Equipment',
@@ -131,6 +151,24 @@ class Translations {
       'tab_barcode_history': 'Lịch sử Barcode',
       'tab_wip_components': 'Danh sách Linh kiện',
       'tab_component_trace': 'Truy vết Linh kiện',
+      'tab_terminal': 'Nhật ký & Terminal',
+      'perf_tooltip': 'Chế độ đồ họa & Hiệu năng máy',
+      'tier_ultra': 'Cao cấp (120 FPS)',
+      'tier_balanced': 'Cân bằng (60 FPS)',
+      'tier_lite': 'Tiết kiệm (Không lag)',
+      'dropdown_blur_label': 'Độ mờ Dropdown',
+      'dropdown_opacity_label': 'Độ mờ đục Dropdown',
+      'filter_all': 'Tất cả',
+      'filter_pass': 'Đạt (Pass)',
+      'filter_fail': 'Lỗi (Fail)',
+      'filter_nodata': 'Chưa có DL',
+      'pass_rate': 'Tỷ lệ Đạt',
+      'total_sns': 'Tổng SN',
+      'tab_mes_api': 'Kết nối CloudMES & CDP',
+      'tab_general': 'Cài đặt chung & Hiển thị',
+      'tab_glass': 'Hiệu ứng Kính mờ (Glass)',
+      'tab_about': 'Giới thiệu & Chẩn đoán',
+      'clear_logs': 'Xóa sạch Log',
       'process_time': 'Thời gian Công đoạn',
       'operator': 'Người thao tác',
       'equipment': 'Thiết bị',
@@ -257,6 +295,24 @@ class Translations {
       'tab_barcode_history': '条码历史',
       'tab_wip_components': '组件清单',
       'tab_component_trace': '组件追溯',
+      'tab_terminal': '终端与日志',
+      'perf_tooltip': '图形档位与硬件配置',
+      'tier_ultra': '极高 (120 FPS)',
+      'tier_balanced': '均衡 (60 FPS)',
+      'tier_lite': '精简 (低功耗)',
+      'dropdown_blur_label': '下拉框模糊度',
+      'dropdown_opacity_label': '下拉框不透明度',
+      'filter_all': '全部',
+      'filter_pass': '通过 (Pass)',
+      'filter_fail': '失败 (Fail)',
+      'filter_nodata': '无数据',
+      'pass_rate': '合格率',
+      'total_sns': '总序列号',
+      'tab_mes_api': 'CloudMES连接与CDP',
+      'tab_general': '常规与显示',
+      'tab_glass': '毛玻璃实时微调',
+      'tab_about': '关于与系统',
+      'clear_logs': '清空日志',
       'process_time': '工序时间',
       'operator': '操作员',
       'equipment': '设备',
@@ -378,6 +434,7 @@ class Translations {
 
   static String get(String key, String lang) {
     final languageDict = _dict[lang.toLowerCase()] ?? _dict['en'];
-    return languageDict?[key] ?? _dict['en']?[key] ?? key;
+    final value = languageDict?[key] ?? _dict['en']?[key] ?? key;
+    return value.replaceAll('v2.9.5', 'v$appVersion');
   }
 }

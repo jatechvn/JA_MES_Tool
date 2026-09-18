@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../theme/theme_provider.dart';
+import 'glass_widgets.dart';
 
 class GlassDialog extends StatelessWidget {
   final Widget child;
@@ -14,6 +15,7 @@ class GlassDialog extends StatelessWidget {
   final IconData? icon;
   final Widget? headerTrailing;
   final List<Widget>? actions;
+  final EdgeInsetsGeometry contentPadding;
 
   const GlassDialog({
     super.key,
@@ -27,6 +29,7 @@ class GlassDialog extends StatelessWidget {
     this.icon,
     this.headerTrailing,
     this.actions,
+    this.contentPadding = const EdgeInsets.fromLTRB(24, 20, 24, 20),
   });
 
   @override
@@ -128,7 +131,12 @@ class GlassDialog extends StatelessWidget {
                     ),
                   ),
                   Divider(color: c.borderDefault, height: 1),
-                  if (height != null) Expanded(child: child) else child,
+                  if (height != null)
+                    Expanded(
+                      child: Padding(padding: contentPadding, child: child),
+                    )
+                  else
+                    Padding(padding: contentPadding, child: child),
                   if (actions != null && actions!.isNotEmpty) ...[
                     Divider(color: c.borderDefault, height: 1),
                     Padding(
@@ -146,6 +154,104 @@ class GlassDialog extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Convenience wrapper around [GlassDialog] for the common "item details"
+/// layout — a badge row, a subtitle (e.g. version/build), a description
+/// paragraph, an optional tag/stat block, and action buttons. Mirrors the
+/// "exhibit detail" pattern (project details, release notes, device info).
+class DetailDialog extends StatelessWidget {
+  const DetailDialog({
+    super.key,
+    required this.title,
+    required this.isDark,
+    this.badges = const [],
+    this.subtitle,
+    this.description,
+    this.tags = const [],
+    this.actions,
+    this.width = 460,
+  });
+
+  final String title;
+  final bool isDark;
+  final List<Widget> badges;
+  final String? subtitle;
+  final String? description;
+  final List<String> tags;
+  final List<Widget>? actions;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+
+    return GlassDialog(
+      title: title,
+      isDark: isDark,
+      width: width,
+      actions: actions,
+      contentPadding: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (badges.isNotEmpty) ...[
+              Wrap(spacing: 6, runSpacing: 6, children: badges),
+              const SizedBox(height: 10),
+            ],
+            if (subtitle != null) ...[
+              Text(
+                subtitle!,
+                style: TextStyle(
+                  color: c.textMuted,
+                  fontSize: 11,
+                  fontFamily: 'JetBrains Mono',
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (description != null)
+              Text(
+                description!,
+                style: TextStyle(
+                  color: c.textSecondary,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: c.subCardBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: c.subCardBorder),
+                ),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: tags
+                      .map(
+                        (t) => PillBadge(
+                          label: t,
+                          color: c.textSecondary,
+                          bg: c.subCardBg,
+                          border: c.subCardBorder,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

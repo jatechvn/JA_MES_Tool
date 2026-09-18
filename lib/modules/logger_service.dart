@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'build_info.dart';
 
 class LoggerService {
+  static final List<String> recentLogs = [];
+  static final ValueNotifier<int> logChangeNotifier = ValueNotifier<int>(0);
+
   static Future<void> init() async {
     Logger.root.level = Level.ALL;
 
@@ -52,6 +55,13 @@ class LoggerService {
         if (record.stackTrace != null) print(record.stackTrace);
       }
 
+      // Keep recent logs for live Glass Terminal
+      recentLogs.add(msg);
+      if (recentLogs.length > 500) {
+        recentLogs.removeAt(0);
+      }
+      logChangeNotifier.value++;
+
       try {
         await logFile.writeAsString('$msg\n', mode: FileMode.append);
         if (record.error != null) {
@@ -68,5 +78,10 @@ class LoggerService {
         }
       } catch (_) {}
     });
+  }
+
+  static void clearLogs() {
+    recentLogs.clear();
+    logChangeNotifier.value++;
   }
 }

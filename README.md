@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.5
+# 🤖 JA MES Tool v2.9.6
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.5-blue.svg" alt="Version 2.9.5">
+  <img src="https://img.shields.io/badge/version-2.9.6-blue.svg" alt="Version 2.9.6">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,7 +42,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.9.5)
+## 💡 Key Features (v2.9.6)
 
 ### 🎨 Bento Glassmorphism Interface
 - ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click. Command Palette uses a single backdrop blur and a theme-aware Material card following JA_Mini_Showcase; search focus remains delayed after opening.
@@ -68,7 +68,8 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 - 🔒 **No Hardcoded Credentials**: Token/cookie are never baked into the source — they're supplied per-user via Settings and persisted only to the local, gitignored `config.json`.
 
 ### ⚙️ Core & Data Management
-- ⚡ **Parallel SN Query Queue**: Process individual or batch Serial Numbers with asynchronous API fetch, across all three data views.
+- ⚡ **Bounded Parallel SN Query Queue**: Process individual or batch Serial Numbers through one FIFO scheduler with six concurrent data-query jobs, duplicate suppression, and shared SN Master resolution.
+- 🛡️ **Stale-Result Protection**: Refresh, remove, re-add, clear, and credential changes invalidate old work so late HTTP responses cannot overwrite current UI state.
 - 📄 **Smart CSV Batch Import & Export**: Automatically filters out header/title rows (e.g., rows containing `"SN"`/`"CSN"`) and generates structured CSV exports — the **[Template]**/**[Import]**/**[Export]** toolbar buttons switch to CSN-shaped Component Trace templates/exports automatically while that tab is active.
 - 🛠️ **Header Sanitization Engine**: Cleans invisible Carriage Returns (`\r\n`), extra whitespaces, and quote wrappers to prevent HTTP header errors.
 - 📋 **Daily System Logs**: Logs operational events with automatic 7-day file cleanup.
@@ -152,11 +153,15 @@ ja_mes_tool/
 │   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
 │   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
 │   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│   │   ├── constants.dart         # Global app constants & defaults (v2.9.5)
+│   │   ├── constants.dart         # Global app constants & defaults (v2.9.6)
+│   │   ├── query_queue.dart       # FIFO bounded scheduler for data-query jobs
 │   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
 │   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
 │   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
 │   │   └── ui/
+│   │       ├── dialogs/            # Settings and token-expired dialogs
+│   │       ├── sidebar/            # SN and Component Trace history sidebars
+│   │       ├── views/              # Four data views plus terminal/log view
 │   │       ├── main_window.dart   # Tabs, filter/sort, dialogs, Command Palette wiring (WindowListener)
 │   │       ├── motion.dart        # Shared iOS-style animation Duration/Curve spec
 │   │       ├── styles.dart        # Re-exports lib/theme/* (kept for backward-compatible imports)
@@ -172,7 +177,7 @@ ja_mes_tool/
 │       ├── command_palette.dart   # Ctrl+K / Cmd+K spotlight command search
 │       ├── filter_search_dock.dart# Search field + filter pills dock (glass-styled)
 │       ├── glass_dialog.dart      # Frosted-glass modal dialog shell
-│       └── glass_widgets.dart     # BentoCard, MeshBackground, SlidingPillTabBar, KbdTag, etc.
+│       └── glass_widgets.dart     # Compatibility entrypoint for split glass widgets
 │
 ├── windows/
 │   └── runner/                    # Native Win32 runner (mostly Flutter-generated boilerplate)
@@ -190,7 +195,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Vietnamese documentation
 │   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.9.5+19)
+├── pubspec.yaml                   # Flutter package manifest (v2.9.6+20)
 ├── ABOUT.txt                      # Project summary card
 ├── CHANGELOG.md                   # Cumulative version history
 └── LICENSE                        # License file
@@ -247,6 +252,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.9.6]** — Added a bounded six-job FIFO query queue, shared SN Master resolution, stale-result protection, and restored the compact desktop layout with native Windows caption controls.
 - **[2.9.5]** — Command Palette uses a single backdrop blur and a theme-aware Material card following JA_Mini_Showcase; search focus remains delayed after opening.
 - **[2.9.4]** — Added amber SN status for empty Test Record data when Barcode History or Component List still has records; red is reserved for all three views being empty after loading.
 - **[2.9.3]** — Added guarded Test Record empty-data fallback to Barcode History, Windows-locale first-run language defaults, and Command Palette dialog-glass/focus polish.

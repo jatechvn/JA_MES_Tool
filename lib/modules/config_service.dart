@@ -37,6 +37,9 @@ class ConfigService {
           'bgOpacity': data['bgOpacity'],
           'dialogBlur': data['dialogBlur'],
           'dialogOpacity': data['dialogOpacity'],
+          'dropdownBlur': data['dropdownBlur'],
+          'dropdownOpacity': data['dropdownOpacity'],
+          'perfMode': data['perfMode']?.toString() ?? 'auto',
         };
       }
     } catch (e) {
@@ -55,6 +58,9 @@ class ConfigService {
       'bgOpacity': null,
       'dialogBlur': null,
       'dialogOpacity': null,
+      'dropdownBlur': null,
+      'dropdownOpacity': null,
+      'perfMode': 'auto',
     };
   }
 
