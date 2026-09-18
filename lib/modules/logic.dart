@@ -19,6 +19,16 @@ enum ViewMode {
 
 enum SnDataStatus { normal, warning, error }
 
+/// Encodes one value according to RFC 4180-style CSV rules.
+///
+/// Always quoting values keeps exports valid when MES data contains commas,
+/// quotes, or line breaks, while preserving empty values as empty fields.
+String csvField(Object? value) {
+  final text = value?.toString() ?? '';
+  if (text.isEmpty) return '';
+  return '"${text.replaceAll('"', '""')}"';
+}
+
 bool shouldFallbackToBarcodeHistory({
   required bool recordsAreEmpty,
   String? error,
@@ -728,12 +738,31 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         if (records != null && records.isNotEmpty) {
           for (final r in records) {
             buffer.writeln(
-              '${r.sn},${r.internalSn},${r.customerSn},${r.productNo},${r.processCode},${r.lineStationCode},${r.stationId},${r.errCode},${r.testDate},${r.testResult},"${r.failureReason}","${r.failDesc}","${r.loc}",${r.productSeries},${r.woNo},${r.empNo}',
+              [
+                r.sn,
+                r.internalSn,
+                r.customerSn,
+                r.productNo,
+                r.processCode,
+                r.lineStationCode,
+                r.stationId,
+                r.errCode,
+                r.testDate,
+                r.testResult,
+                r.failureReason,
+                r.failDesc,
+                r.loc,
+                r.productSeries,
+                r.woNo,
+                r.empNo,
+              ].map(csvField).join(','),
             );
           }
         } else {
           final err = _errors[sn] ?? 'No records / Pending';
-          buffer.writeln('$sn,,,,,,,,,,,"$err"');
+          buffer.writeln(
+            [sn, ...List<String>.filled(14, ''), err].map(csvField).join(','),
+          );
         }
       }
 
@@ -755,15 +784,33 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final file = File(path.replaceAll('"', '').trim());
       final buffer = StringBuffer();
       buffer.writeln(
-        'Product SN,Customer SN,Current Process Code,Current Process Name,Line Station,Result,Operate Date,WO,Product No,Operator',
+        'Product SN,Internal SN,Customer SN,Current Process Code,Current Process Name,Line,Line Station,Equipment No,Result,Operate Date,WO,Plan No,Product No,Product Version,Operator,Remark',
       );
 
       for (final sn in _snList) {
         final records = _processResults[sn];
         if (records != null && records.isNotEmpty) {
           for (final r in records) {
+            final lineVal = r.lineName.isNotEmpty ? r.lineName : r.lineCode;
             buffer.writeln(
-              '${r.productSn},${r.customerSn},${r.currentProcessCode},"${r.currentProcessName}",${r.lineStation},${r.result},${r.operateDt},${r.woNo},${r.productNo},${r.operatorName}',
+              [
+                r.productSn,
+                r.internalSn,
+                r.customerSn,
+                r.currentProcessCode,
+                r.currentProcessName,
+                lineVal,
+                r.lineStation,
+                r.eqpId,
+                r.result,
+                r.operateDt,
+                r.woNo,
+                r.planNo,
+                r.productNo,
+                r.productVersion,
+                r.operatorName,
+                r.remark,
+              ].map(csvField).join(','),
             );
           }
         }
@@ -787,7 +834,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final file = File(path.replaceAll('"', '').trim());
       final buffer = StringBuffer();
       buffer.writeln(
-        'Material No,Material Name,Category,Component SN,Manufacturer,Mfg PN,Date Code,Package ID,Installed Qty,Station Code,Process Code,Created Date',
+        'Material No,Material Name,Category,Component SN,Location,Manufacturer,Mfg PN,Date Code,Package ID,Installed Qty,Station Code,Process Code,Created Date',
       );
 
       for (final sn in _snList) {
@@ -795,7 +842,21 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         if (records != null && records.isNotEmpty) {
           for (final r in records) {
             buffer.writeln(
-              '${r.materialNo},"${r.materialName}",${r.materialCategory},${r.scannedCsn},"${r.mfgName}",${r.mfgPn},${r.dateCode},${r.pkgId},${r.installedQty},${r.stationCode},${r.processCode},${r.createdDt}',
+              [
+                r.materialNo,
+                r.materialName,
+                r.materialCategory,
+                r.scannedCsn,
+                r.location,
+                r.mfgName,
+                r.mfgPn,
+                r.dateCode,
+                r.pkgId,
+                r.installedQty,
+                r.stationCode,
+                r.processCode,
+                r.createdDt,
+              ].map(csvField).join(','),
             );
           }
         }
@@ -1161,12 +1222,29 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         if (records != null && records.isNotEmpty) {
           for (final r in records) {
             buffer.writeln(
-              '$csn,${r.productSn},${r.materialNo},"${r.materialName}",${r.materialCategory},${r.mfgName},${r.mfgPn},${r.productNo},${r.lineCode},${r.processCode},${r.woNo},${r.installedQty},${r.createdDt},${r.checkAssembled}',
+              [
+                csn,
+                r.productSn,
+                r.materialNo,
+                r.materialName,
+                r.materialCategory,
+                r.mfgName,
+                r.mfgPn,
+                r.productNo,
+                r.lineCode,
+                r.processCode,
+                r.woNo,
+                r.installedQty,
+                r.createdDt,
+                r.checkAssembled,
+              ].map(csvField).join(','),
             );
           }
         } else {
           final err = _traceErrors[csn] ?? 'No records / Pending';
-          buffer.writeln('$csn,,,,,,,,,,,,,"$err"');
+          buffer.writeln(
+            [csn, ...List<String>.filled(12, ''), err].map(csvField).join(','),
+          );
         }
       }
 

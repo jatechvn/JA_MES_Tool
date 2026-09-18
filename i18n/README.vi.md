@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.6 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.7 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.6-blue.svg" alt="Phiên bản 2.9.6">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.7-blue.svg" alt="Phiên bản 2.9.7">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>

@@ -917,7 +917,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
         itemCount: logic.snList.length,
-        separatorBuilder: (ctx, idx) => const SizedBox(height: 6),
+        separatorBuilder: (ctx, idx) => const SizedBox(height: 5),
         itemBuilder: (context, index) {
           final sn = logic.snList[index];
           final isSelected = sn == logic.selectedSn;
@@ -925,7 +925,106 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           final dataStatus = logic.snDataStatus(sn);
           final hasError = dataStatus == SnDataStatus.error;
           final hasWarning = dataStatus == SnDataStatus.warning;
-          final recordCount = logic.results[sn]?.length ?? 0;
+
+          // Record count for active tab
+          int recordCount = 0;
+          switch (logic.viewMode) {
+            case ViewMode.testRecord:
+              recordCount = logic.results[sn]?.length ?? 0;
+              break;
+            case ViewMode.barcodeHistory:
+              recordCount = logic.processResults[sn]?.length ?? 0;
+              break;
+            case ViewMode.wipComponents:
+              recordCount = logic.wipResults[sn]?.length ?? 0;
+              break;
+            case ViewMode.componentTrace:
+              recordCount = logic.traceResults[sn]?.length ?? 0;
+              break;
+            default:
+              recordCount = logic.results[sn]?.length ?? 0;
+              break;
+          }
+          if (recordCount == 0 && logic.results.containsKey(sn)) {
+            recordCount = logic.results[sn]?.length ?? 0;
+          }
+
+          // Next Station info from MES master
+          final masterInfo = logic.snMasterInfo[sn];
+          final nextStation = masterInfo == null
+              ? ''
+              : (masterInfo.nextProcessName.isNotEmpty
+                    ? masterInfo.nextProcessName
+                    : masterInfo.nextProcessCode);
+
+          // Alternate / Resolved SN
+          String? alternateSn;
+          final resolved = logic.resolvedSnFor(sn);
+          if (resolved != null && resolved.isNotEmpty && resolved != sn) {
+            alternateSn = resolved;
+          } else {
+            final testList = logic.results[sn];
+            if (testList != null && testList.isNotEmpty) {
+              final r = testList.first;
+              if (r.customerSn.isNotEmpty && r.customerSn != sn) {
+                alternateSn = r.customerSn;
+              } else if (r.internalSn.isNotEmpty && r.internalSn != sn) {
+                alternateSn = r.internalSn;
+              }
+            }
+            if (alternateSn == null) {
+              final procList = logic.processResults[sn];
+              if (procList != null && procList.isNotEmpty) {
+                final r = procList.first;
+                if (r.customerSn.isNotEmpty && r.customerSn != sn) {
+                  alternateSn = r.customerSn;
+                } else if (r.internalSn.isNotEmpty && r.internalSn != sn) {
+                  alternateSn = r.internalSn;
+                }
+              }
+            }
+          }
+
+          final hasBottomRow =
+              isLoading ||
+              hasError ||
+              hasWarning ||
+              (alternateSn != null && alternateSn.isNotEmpty) ||
+              nextStation.isNotEmpty;
+
+          final Color cardBg = isSelected
+              ? (theme.isDark
+                    ? Color.alphaBlend(
+                        colors.accentColor.withValues(alpha: 0.16),
+                        const Color(0xFF1E293B).withValues(
+                          alpha: (theme.cardOpacity * 1.5).clamp(0.20, 0.85),
+                        ),
+                      )
+                    : Color.alphaBlend(
+                        colors.accentColor.withValues(alpha: 0.08),
+                        Colors.white.withValues(
+                          alpha: (theme.cardOpacity * 2.0).clamp(0.35, 0.85),
+                        ),
+                      ))
+              : colors.subCardBg;
+
+          final Color cardBorder = isSelected
+              ? (theme.isDark
+                    ? colors.accentColor.withValues(alpha: 0.55)
+                    : colors.accentColor.withValues(alpha: 0.45))
+              : colors.subCardBorder;
+
+          final List<BoxShadow>? cardShadow = isSelected
+              ? [
+                  BoxShadow(
+                    color: colors.primaryGlow.withValues(
+                      alpha: theme.isDark ? 0.20 : 0.12,
+                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null;
 
           return InkWell(
             onTap: () => logic.selectSn(sn),
@@ -933,125 +1032,231 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             child: AnimatedContainer(
               duration: Motion.fast,
               curve: Motion.curveOut,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6.5,
+              ),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? colors.accentColor.withValues(alpha: 0.18)
-                    : colors.subCardBg,
+                color: cardBg,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected ? colors.accentColor : colors.subCardBorder,
-                  width: isSelected ? 1.2 : 1.0,
+                  color: cardBorder,
+                  width: isSelected ? 1.1 : 1.0,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: colors.primaryGlow.withValues(alpha: 0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
+                boxShadow: cardShadow,
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.tag_rounded,
-                    size: 14,
-                    color: isSelected ? colors.accentCyan : colors.textMuted,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      sn,
-                      style: TextStyle(
+                  // Row 1: Status Icon + SN + Count Badge + Actions
+                  Row(
+                    children: [
+                      Icon(
+                        hasError
+                            ? Icons.error_rounded
+                            : hasWarning
+                            ? Icons.warning_amber_rounded
+                            : (isLoading
+                                  ? Icons.sync_rounded
+                                  : (isSelected
+                                        ? Icons.tag_rounded
+                                        : Icons.tag_rounded)),
+                        size: 14,
                         color: hasError
                             ? colors.accentRose
                             : hasWarning
                             ? colors.accentAmber
                             : (isSelected
-                                  ? colors.textPrimary
-                                  : colors.textSecondary),
-                        fontWeight: isSelected
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                        fontFamily: 'JetBrains Mono',
-                        fontSize: 12,
+                                  ? colors.accentCyan
+                                  : colors.textMuted),
                       ),
-                    ),
-                  ),
-                  if (isLoading) ...[
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.accentCyan,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ] else if (hasError || hasWarning) ...[
-                    Icon(
-                      hasError
-                          ? Icons.error_rounded
-                          : Icons.warning_amber_rounded,
-                      color: hasError ? colors.accentRose : colors.accentAmber,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                  ] else if (logic.results.containsKey(sn)) ...[
-                    AnimatedSwitcher(
-                      duration: Motion.fast,
-                      transitionBuilder: (child, animation) =>
-                          ScaleTransition(scale: animation, child: child),
-                      child: PillBadge(
-                        key: ValueKey(recordCount),
-                        label: '$recordCount',
-                        color: recordCount > 0
-                            ? colors.accentEmerald
-                            : colors.textMuted,
-                        bg: recordCount > 0
-                            ? colors.accentEmerald.withValues(alpha: 0.15)
-                            : colors.subCardBg,
-                        border: recordCount > 0
-                            ? colors.accentEmerald.withValues(alpha: 0.4)
-                            : colors.subCardBorder,
-                        fontSize: 9.5,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1.5,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: BounceMarqueeText(
+                          text: sn,
+                          style: TextStyle(
+                            color: hasError
+                                ? colors.accentRose
+                                : hasWarning
+                                ? colors.accentAmber
+                                : (isSelected
+                                      ? colors.textPrimary
+                                      : colors.textSecondary),
+                            fontWeight: isSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 12.5,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  if (!isLoading) ...[
-                    InkWell(
-                      onTap: () => logic.refreshSn(sn),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Padding(
-                        padding: const EdgeInsets.all(2),
-                        child: Icon(
-                          Icons.refresh_rounded,
-                          color: colors.textMuted,
-                          size: 14,
+                      if (recordCount > 0 || logic.results.containsKey(sn)) ...[
+                        AnimatedSwitcher(
+                          duration: Motion.fast,
+                          transitionBuilder: (child, animation) =>
+                              ScaleTransition(scale: animation, child: child),
+                          child: PillBadge(
+                            key: ValueKey('${sn}_$recordCount'),
+                            label: '$recordCount',
+                            color: recordCount > 0
+                                ? colors.accentEmerald
+                                : colors.textMuted,
+                            bg: recordCount > 0
+                                ? colors.accentEmerald.withValues(alpha: 0.15)
+                                : colors.subCardBg,
+                            border: recordCount > 0
+                                ? colors.accentEmerald.withValues(alpha: 0.4)
+                                : colors.subCardBorder,
+                            fontSize: 9.5,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      if (!isLoading) ...[
+                        InkWell(
+                          onTap: () => logic.refreshSn(sn),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: Icon(
+                              Icons.refresh_rounded,
+                              color: colors.textMuted,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      InkWell(
+                        onTap: () => logic.removeSn(sn),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: colors.textMuted,
+                            size: 14,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                  InkWell(
-                    onTap: () => logic.removeSn(sn),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: colors.textMuted,
-                        size: 14,
-                      ),
-                    ),
+                    ],
                   ),
+
+                  // Row 2: Alternate SN + Next Station / Status
+                  if (hasBottomRow) ...[
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        if (isLoading) ...[
+                          SizedBox(
+                            width: 10,
+                            height: 10,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.8,
+                              color: colors.accentCyan,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            Translations.get('status_fetching', logic.lang),
+                            style: TextStyle(
+                              color: colors.accentCyan,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ] else if (hasError) ...[
+                          Flexible(
+                            child: Text(
+                              logic.errors[sn] ?? 'Error',
+                              style: TextStyle(
+                                color: colors.accentRose,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ] else ...[
+                          if (alternateSn != null &&
+                              alternateSn.isNotEmpty) ...[
+                            Flexible(
+                              flex: 3,
+                              fit: FlexFit.loose,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.accentCyan.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                    color: colors.accentCyan.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.sync_alt_rounded,
+                                      size: 10,
+                                      color: colors.accentCyan,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: BounceMarqueeText(
+                                        text: alternateSn,
+                                        style: TextStyle(
+                                          color: colors.accentCyan,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          fontFamily: 'JetBrains Mono',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                          ],
+                          if (nextStation.isNotEmpty) ...[
+                            Flexible(
+                              flex: 2,
+                              fit: FlexFit.loose,
+                              child: PillBadge(
+                                label: 'Next: $nextStation',
+                                color: colors.accentPurple,
+                                bg: colors.accentPurple.withValues(alpha: 0.12),
+                                border: colors.accentPurple.withValues(
+                                  alpha: 0.35,
+                                ),
+                                fontSize: 9.5,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1.5,
+                                ),
+                                icon: Icons.arrow_forward_rounded,
+                                useMarquee: true,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1079,7 +1284,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
         itemCount: logic.traceHistory.length,
-        separatorBuilder: (ctx, idx) => const SizedBox(height: 6),
+        separatorBuilder: (ctx, idx) => const SizedBox(height: 4),
         itemBuilder: (context, index) {
           final csn = logic.traceHistory[index];
           final isSelected = csn == logic.selectedTraceCsn;
@@ -1087,31 +1292,55 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           final hasError = logic.traceErrors[csn] != null;
           final recordCount = logic.traceResults[csn]?.length ?? 0;
 
+          final Color cardBg = isSelected
+              ? (theme.isDark
+                    ? Color.alphaBlend(
+                        colors.accentColor.withValues(alpha: 0.16),
+                        const Color(0xFF1E293B).withValues(
+                          alpha: (theme.cardOpacity * 1.5).clamp(0.20, 0.85),
+                        ),
+                      )
+                    : Color.alphaBlend(
+                        colors.accentColor.withValues(alpha: 0.08),
+                        Colors.white.withValues(
+                          alpha: (theme.cardOpacity * 2.0).clamp(0.35, 0.85),
+                        ),
+                      ))
+              : colors.subCardBg;
+
+          final Color cardBorder = isSelected
+              ? (theme.isDark
+                    ? colors.accentColor.withValues(alpha: 0.55)
+                    : colors.accentColor.withValues(alpha: 0.45))
+              : colors.subCardBorder;
+
+          final List<BoxShadow>? cardShadow = isSelected
+              ? [
+                  BoxShadow(
+                    color: colors.primaryGlow.withValues(
+                      alpha: theme.isDark ? 0.20 : 0.12,
+                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null;
+
           return InkWell(
             onTap: () => logic.selectTraceCsn(csn),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
               duration: Motion.fast,
               curve: Motion.curveOut,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5.5),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? colors.accentColor.withValues(alpha: 0.18)
-                    : colors.subCardBg,
-                borderRadius: BorderRadius.circular(10),
+                color: cardBg,
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? colors.accentColor : colors.subCardBorder,
-                  width: isSelected ? 1.2 : 1.0,
+                  color: cardBorder,
+                  width: isSelected ? 1.1 : 1.0,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: colors.primaryGlow.withValues(alpha: 0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
+                boxShadow: cardShadow,
               ),
               child: Row(
                 children: [
@@ -1122,8 +1351,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      csn,
+                    child: BounceMarqueeText(
+                      text: csn,
                       style: TextStyle(
                         color: hasError
                             ? colors.accentRose
@@ -1373,6 +1602,11 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       _testRecordListState,
     );
 
+    final passCount = records
+        .where((r) => r.testResult.toUpperCase() == 'PASS')
+        .length;
+    final failCount = records.length - passCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1385,6 +1619,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           resolvedSn: logic.resolvedSnFor(sn),
           snMasterInfo: logic.snMasterInfo[sn],
           listState: _testRecordListState,
+          passCount: passCount,
+          failCount: failCount,
           sortOptions: [
             _SortOption(
               'test_date',
@@ -1431,28 +1667,24 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         else
           Expanded(
             child: ListView.separated(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+              physics: const BouncingScrollPhysics(),
               itemCount: displayRecords.length,
-              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+              separatorBuilder: (ctx, i) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final isPass = record.testResult.toUpperCase() == 'PASS';
-                final itemKey =
-                    '${record.stationId}_${record.testDate}_${record.testTime}_${record.internalSn}';
 
                 return _StaggeredItem(
-                  key: ValueKey(itemKey),
-                  itemKey: itemKey,
-                  animatedKeys: _testRecordListState.animatedItemKeys,
+                  itemKey:
+                      'test_rec_${record.stationId}_${record.testDate}_${record.testTime}_$index',
                   index: index,
+                  animatedKeys: _testRecordListState.animatedItemKeys,
                   child: BentoCard(
                     colors: colors,
                     blurSigma: logic.bgBlur,
                     bgOpacity: logic.bgOpacity,
-                    padding: const EdgeInsets.all(16),
-                    borderRadius: 14,
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1488,9 +1720,34 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   style: TextStyle(
                                     color: colors.textPrimary,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 14.5,
+                                    fontSize: 14,
                                   ),
                                 ),
+                                if (record.processCode.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  PillBadge(
+                                    label: record.processCode,
+                                    color: colors.accentCyan,
+                                    bg: colors.accentCyan.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    border: colors.accentCyan.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    fontSize: 10,
+                                  ),
+                                ],
+                                if (record.testDate.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    record.testDate,
+                                    style: TextStyle(
+                                      color: colors.textMuted,
+                                      fontSize: 11.5,
+                                      fontFamily: 'JetBrains Mono',
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             PillBadge(
@@ -1508,67 +1765,98 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Divider(color: colors.borderDefault, height: 1),
                         const SizedBox(height: 10),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 8),
 
-                        // Details Grid
-                        _buildInfoRow(
-                          Translations.get('product_no', logic.lang),
-                          record.productNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('internal_sn', logic.lang),
-                          record.internalSn,
-                          colors,
-                          highlight: true,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('customer_sn', logic.lang),
-                          record.customerSn,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('process_code', logic.lang),
-                          record.processCode,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('line_station_code', logic.lang),
-                          record.lineStationCode,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('test_host', logic.lang),
-                          record.loc,
-                          colors,
-                          highlight: true,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('product_series', logic.lang),
-                          record.productSeries,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('work_order', logic.lang),
-                          record.woNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('test_date', logic.lang),
-                          record.testDate,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('test_time', logic.lang),
-                          record.testTime,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('emp_no', logic.lang),
-                          record.empNo,
-                          colors,
+                        // Details Grid (2 Columns: Compact & Space-optimized)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Column 1: Product, Order & Execution Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get('product_no', logic.lang),
+                                    record.productNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('work_order', logic.lang),
+                                    record.woNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'product_series',
+                                      logic.lang,
+                                    ),
+                                    record.productSeries,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('emp_no', logic.lang),
+                                    record.empNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('test_time', logic.lang),
+                                    record.testTime,
+                                    colors,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            // Column 2: Process, Station & Host Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'process_code',
+                                      logic.lang,
+                                    ),
+                                    record.processCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'line_station_code',
+                                      logic.lang,
+                                    ),
+                                    record.lineStationCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('test_host', logic.lang),
+                                    record.loc,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('internal_sn', logic.lang),
+                                    record.internalSn,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('customer_sn', logic.lang),
+                                    record.customerSn,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('test_date', logic.lang),
+                                    record.testDate,
+                                    colors,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
 
                         if (!isPass) ...[
@@ -1721,6 +2009,15 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       _barcodeListState,
     );
 
+    final passCount = records
+        .where(
+          (r) =>
+              r.result.toLowerCase() == 'pass' ||
+              (r.result.isEmpty && r.errorCode.isEmpty),
+        )
+        .length;
+    final failCount = records.length - passCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1733,6 +2030,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           resolvedSn: logic.resolvedSnFor(sn),
           snMasterInfo: logic.snMasterInfo[sn],
           listState: _barcodeListState,
+          passCount: passCount,
+          failCount: failCount,
           sortOptions: [
             _SortOption(
               'process_time',
@@ -1753,6 +2052,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               'line_station',
               Translations.get('line_station_code', logic.lang),
               icon: Icons.alt_route_rounded,
+            ),
+            _SortOption(
+              'line',
+              Translations.get('line', logic.lang),
+              icon: Icons.linear_scale_rounded,
+            ),
+            _SortOption(
+              'internal_sn',
+              Translations.get('internal_sn', logic.lang),
+              icon: Icons.badge_outlined,
             ),
           ],
         ),
@@ -1779,16 +2088,14 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         else
           Expanded(
             child: ListView.separated(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+              physics: const BouncingScrollPhysics(),
               itemCount: displayRecords.length,
-              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final isPass = record.result.toLowerCase() == 'pass';
                 final itemKey =
-                    '${record.currentProcessCode}_${record.operateDt}_${record.lineStation}';
+                    '${record.currentProcessCode}_${record.operateDt}_${record.lineStation}_$index';
 
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
@@ -1799,49 +2106,109 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     colors: colors,
                     blurSigma: logic.bgBlur,
                     bgOpacity: logic.bgOpacity,
-                    padding: const EdgeInsets.all(16),
-                    borderRadius: 14,
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: colors.accentPurple.withValues(
-                                      alpha: 0.12,
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: colors.accentPurple.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentPurple
+                                                .withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.route_rounded,
+                                          color: colors.accentPurple,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        record.currentProcessName.isNotEmpty
+                                            ? record.currentProcessName
+                                            : record.currentProcessCode,
+                                        style: TextStyle(
+                                          color: colors.textPrimary,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (record.lineStation.isNotEmpty)
+                                    PillBadge(
+                                      label: record.lineStation,
+                                      color: colors.accentAmber,
+                                      bg: colors.accentAmber.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentAmber.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colors.accentPurple.withValues(
-                                        alpha: 0.3,
+                                  if (record.lineName.isNotEmpty ||
+                                      record.lineCode.isNotEmpty)
+                                    PillBadge(
+                                      label: record.lineName.isNotEmpty
+                                          ? record.lineName
+                                          : record.lineCode,
+                                      color: colors.accentCyan,
+                                      bg: colors.accentCyan.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentCyan.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
+                                    ),
+                                  if (record.productVersion.isNotEmpty)
+                                    PillBadge(
+                                      label: 'v${record.productVersion}',
+                                      color: colors.accentPurple,
+                                      bg: colors.accentPurple.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentPurple.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
+                                    ),
+                                  if (record.operateDt.isNotEmpty)
+                                    Text(
+                                      record.operateDt,
+                                      style: TextStyle(
+                                        color: colors.textMuted,
+                                        fontSize: 11.5,
+                                        fontFamily: 'JetBrains Mono',
                                       ),
                                     ),
-                                  ),
-                                  child: Icon(
-                                    Icons.route_rounded,
-                                    color: colors.accentPurple,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  record.currentProcessName.isNotEmpty
-                                      ? record.currentProcessName
-                                      : record.currentProcessCode,
-                                  style: TextStyle(
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14.5,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             if (record.result.isNotEmpty)
                               PillBadge(
                                 label: record.result.toUpperCase(),
@@ -1862,61 +2229,194 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Divider(color: colors.borderDefault, height: 1),
                         const SizedBox(height: 10),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 8),
 
-                        _buildInfoRow(
-                          Translations.get('process_time', logic.lang),
-                          record.operateDt,
-                          colors,
-                          highlight: true,
+                        // Details Grid (2 Columns)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get('line', logic.lang),
+                                    record.lineName.isNotEmpty
+                                        ? record.lineName
+                                        : record.lineCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'line_station_code',
+                                      logic.lang,
+                                    ),
+                                    record.lineStation,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'equipment_no',
+                                      logic.lang,
+                                    ),
+                                    record.eqpId,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('operator', logic.lang),
+                                    record.operatorName,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'process_time',
+                                      logic.lang,
+                                    ),
+                                    record.operateDt,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get('internal_sn', logic.lang),
+                                    record.internalSn,
+                                    colors,
+                                    highlight: record.internalSn.isNotEmpty,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('customer_sn', logic.lang),
+                                    record.customerSn,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('product_no', logic.lang),
+                                    record.productNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('version', logic.lang),
+                                    record.productVersion,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('work_order', logic.lang),
+                                    record.woNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('plan_no', logic.lang),
+                                    record.planNo,
+                                    colors,
+                                  ),
+                                  if (record.errorCode.isNotEmpty)
+                                    _buildInfoRow(
+                                      Translations.get(
+                                        'error_code',
+                                        logic.lang,
+                                      ),
+                                      record.errorCode,
+                                      colors,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        _buildInfoRow(
-                          Translations.get('line_station_code', logic.lang),
-                          record.lineStation,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('work_order', logic.lang),
-                          record.woNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('product_no', logic.lang),
-                          record.productNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('customer_sn', logic.lang),
-                          record.customerSn,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('operator', logic.lang),
-                          record.operatorName,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('equipment', logic.lang),
-                          record.eqpId,
-                          colors,
-                        ),
-                        if (record.errorCode.isNotEmpty)
-                          _buildInfoRow(
-                            Translations.get('error_code', logic.lang),
-                            record.errorCode,
-                            colors,
+                        if (record.remark.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.accentAmber.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: colors.accentAmber.withValues(
+                                  alpha: 0.25,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 14,
+                                  color: colors.accentAmber,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${Translations.get('remark', logic.lang)}: ',
+                                  style: TextStyle(
+                                    color: colors.accentAmber,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SelectableText(
+                                    record.remark,
+                                    style: TextStyle(
+                                      color: colors.textPrimary,
+                                      fontSize: 11.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         if (record.testResultMsg.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6.0),
-                            child: Text(
-                              '${Translations.get('failure_reason', logic.lang)}: ${record.testResultMsg}',
-                              style: TextStyle(
-                                color: colors.accentRose,
-                                fontSize: 12,
+                          Container(
+                            margin: const EdgeInsets.only(top: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.accentRose.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: colors.accentRose.withValues(
+                                  alpha: 0.25,
+                                ),
                               ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 14,
+                                  color: colors.accentRose,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${Translations.get('failure_reason', logic.lang)}: ',
+                                  style: TextStyle(
+                                    color: colors.accentRose,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SelectableText(
+                                    record.testResultMsg,
+                                    style: TextStyle(
+                                      color: colors.accentRose,
+                                      fontSize: 11.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                       ],
@@ -2075,15 +2575,13 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         else
           Expanded(
             child: ListView.separated(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+              physics: const BouncingScrollPhysics(),
               itemCount: displayRecords.length,
-              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final itemKey =
-                    '${record.materialNo}_${record.scannedCsn}_${record.createdDt}';
+                    '${record.materialNo}_${record.scannedCsn}_${record.createdDt}_$index';
 
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
@@ -2094,8 +2592,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     colors: colors,
                     blurSigma: logic.bgBlur,
                     bgOpacity: logic.bgOpacity,
-                    padding: const EdgeInsets.all(16),
-                    borderRadius: 14,
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2130,9 +2628,20 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   style: TextStyle(
                                     color: colors.textPrimary,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 14.5,
+                                    fontSize: 14,
                                   ),
                                 ),
+                                if (record.createdDt.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    record.createdDt,
+                                    style: TextStyle(
+                                      color: colors.textMuted,
+                                      fontSize: 11.5,
+                                      fontFamily: 'JetBrains Mono',
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             if (record.materialCategory.isNotEmpty)
@@ -2146,55 +2655,94 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Divider(color: colors.borderDefault, height: 1),
                         const SizedBox(height: 10),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 8),
 
-                        _buildInfoRow(
-                          Translations.get('manufacturer', logic.lang),
-                          record.mfgName,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('mfg_pn', logic.lang),
-                          record.mfgPn,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('component_sn', logic.lang),
-                          record.scannedCsn,
-                          colors,
-                          highlight: true,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('package_id', logic.lang),
-                          record.pkgId,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('date_code', logic.lang),
-                          record.dateCode,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('quantity', logic.lang),
-                          record.installedQty,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('line_station_code', logic.lang),
-                          record.stationCode,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('process_time', logic.lang),
-                          record.createdDt,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('operator', logic.lang),
-                          record.creator,
-                          colors,
+                        // Details Grid (2 Columns)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'component_sn',
+                                      logic.lang,
+                                    ),
+                                    record.scannedCsn,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('location', logic.lang),
+                                    record.location,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'manufacturer',
+                                      logic.lang,
+                                    ),
+                                    record.mfgName,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('mfg_pn', logic.lang),
+                                    record.mfgPn,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('package_id', logic.lang),
+                                    record.pkgId,
+                                    colors,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get('quantity', logic.lang),
+                                    record.installedQty,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('date_code', logic.lang),
+                                    record.dateCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'line_station_code',
+                                      logic.lang,
+                                    ),
+                                    record.stationCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'process_time',
+                                      logic.lang,
+                                    ),
+                                    record.createdDt,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('operator', logic.lang),
+                                    record.creator,
+                                    colors,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -2368,15 +2916,13 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         else
           Expanded(
             child: ListView.separated(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+              physics: const BouncingScrollPhysics(),
               itemCount: displayRecords.length,
-              separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final record = displayRecords[index];
                 final itemKey =
-                    '${record.productSn}_${record.scannedCsn}_${record.createdDt}';
+                    '${record.productSn}_${record.scannedCsn}_${record.createdDt}_$index';
 
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
@@ -2387,8 +2933,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     colors: colors,
                     blurSigma: logic.bgBlur,
                     bgOpacity: logic.bgOpacity,
-                    padding: const EdgeInsets.all(16),
-                    borderRadius: 14,
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2423,10 +2969,21 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   style: TextStyle(
                                     color: colors.textPrimary,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 15,
+                                    fontSize: 14.5,
                                     fontFamily: 'JetBrains Mono',
                                   ),
                                 ),
+                                if (record.createdDt.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    record.createdDt,
+                                    style: TextStyle(
+                                      color: colors.textMuted,
+                                      fontSize: 11.5,
+                                      fontFamily: 'JetBrains Mono',
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             if (record.checkAssembled.isNotEmpty)
@@ -2440,70 +2997,109 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Divider(color: colors.borderDefault, height: 1),
                         const SizedBox(height: 10),
+                        Divider(color: colors.borderDefault, height: 1),
+                        const SizedBox(height: 8),
 
-                        _buildInfoRow(
-                          Translations.get('component_sn', logic.lang),
-                          record.scannedCsn,
-                          colors,
-                          highlight: true,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('material_no', logic.lang),
-                          record.materialNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('material_name', logic.lang),
-                          record.materialName,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('material_category', logic.lang),
-                          record.materialCategory,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('manufacturer', logic.lang),
-                          record.mfgName,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('mfg_pn', logic.lang),
-                          record.mfgPn,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('product_no', logic.lang),
-                          record.productNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('line_code', logic.lang),
-                          record.lineCode,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('process_code', logic.lang),
-                          record.processCode,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('work_order', logic.lang),
-                          record.woNo,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('quantity', logic.lang),
-                          record.installedQty,
-                          colors,
-                        ),
-                        _buildInfoRow(
-                          Translations.get('process_time', logic.lang),
-                          record.createdDt,
-                          colors,
+                        // Details Grid (2 Columns)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'component_sn',
+                                      logic.lang,
+                                    ),
+                                    record.scannedCsn,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('material_no', logic.lang),
+                                    record.materialNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'material_name',
+                                      logic.lang,
+                                    ),
+                                    record.materialName,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'material_category',
+                                      logic.lang,
+                                    ),
+                                    record.materialCategory,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'manufacturer',
+                                      logic.lang,
+                                    ),
+                                    record.mfgName,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('mfg_pn', logic.lang),
+                                    record.mfgPn,
+                                    colors,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(
+                                    Translations.get('product_no', logic.lang),
+                                    record.productNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('line_code', logic.lang),
+                                    record.lineCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'process_code',
+                                      logic.lang,
+                                    ),
+                                    record.processCode,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('work_order', logic.lang),
+                                    record.woNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('quantity', logic.lang),
+                                    record.installedQty,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'process_time',
+                                      logic.lang,
+                                    ),
+                                    record.createdDt,
+                                    colors,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -2527,101 +3123,117 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     required List<_SortOption> sortOptions,
     String? resolvedSn,
     SnMasterInfo? snMasterInfo,
+    int? passCount,
+    int? failCount,
   }) {
     final logic = context.watch<AppLogic>();
-    final snLabel =
-        (resolvedSn != null && resolvedSn.isNotEmpty && resolvedSn != sn)
-        ? '$sn → $resolvedSn'
-        : sn;
-    final nextProcessLabel = snMasterInfo == null
-        ? ''
-        : (snMasterInfo.nextProcessName.isNotEmpty
-              ? snMasterInfo.nextProcessName
-              : snMasterInfo.nextProcessCode);
     final routeLabel = snMasterInfo == null
         ? ''
         : (snMasterInfo.routeName.isNotEmpty
               ? snMasterInfo.routeName
               : snMasterInfo.routeCode);
 
+    final isAllSelected = listState.filter.isEmpty;
+    final isPassSelected = listState.filter.toUpperCase() == 'PASS';
+    final isFailSelected = listState.filter.toUpperCase() == 'FAIL';
+
     return BentoCard(
       colors: colors,
       blurSigma: logic.bgBlur,
       bgOpacity: logic.bgOpacity,
       borderRadius: 14,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: _MarqueeText(
-                    key: ValueKey('records_header_$snLabel'),
-                    text: '${Translations.get('records_for', lang)}: $snLabel',
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                PillBadge(
-                  label: '$count',
-                  color: colors.accentCyan,
-                  bg: colors.accentCyan.withValues(alpha: 0.12),
-                  border: colors.accentCyan.withValues(alpha: 0.35),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 2,
-                  ),
-                  fontSize: 10.5,
-                ),
-                if (nextProcessLabel.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  PillBadge(
-                    label: 'Next: $nextProcessLabel',
-                    color: colors.accentPurple,
-                    bg: colors.accentPurple.withValues(alpha: 0.12),
-                    border: colors.accentPurple.withValues(alpha: 0.35),
-                    fontSize: 10.5,
-                  ),
-                ],
-                if (routeLabel.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  PillBadge(
-                    label: 'Route: $routeLabel',
-                    color: colors.accentEmerald,
-                    bg: colors.accentEmerald.withValues(alpha: 0.12),
-                    border: colors.accentEmerald.withValues(alpha: 0.35),
-                    fontSize: 10.5,
-                  ),
-                ],
-              ],
+          if (routeLabel.isNotEmpty) ...[
+            PillBadge(
+              label: 'Route: $routeLabel',
+              color: colors.accentEmerald,
+              bg: colors.accentEmerald.withValues(alpha: 0.12),
+              border: colors.accentEmerald.withValues(alpha: 0.35),
+              fontSize: 10.5,
+              icon: Icons.alt_route_rounded,
             ),
-          ),
+            const SizedBox(width: 10),
+          ],
+          if (passCount != null && failCount != null && count > 0) ...[
+            Container(
+              height: 28,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: colors.subCardBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.subCardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildQuickFilterTab(
+                    label: 'All ($count)',
+                    selected: isAllSelected,
+                    colors: colors,
+                    activeColor: colors.accentCyan,
+                    onTap: () => setState(() {
+                      listState.filterCtrl.clear();
+                      listState.filter = '';
+                    }),
+                  ),
+                  _buildQuickFilterTab(
+                    label: 'PASS ($passCount)',
+                    selected: isPassSelected,
+                    colors: colors,
+                    activeColor: colors.accentEmerald,
+                    onTap: () => setState(() {
+                      if (isPassSelected) {
+                        listState.filterCtrl.clear();
+                        listState.filter = '';
+                      } else {
+                        listState.filterCtrl.text = 'PASS';
+                        listState.filter = 'PASS';
+                      }
+                    }),
+                  ),
+                  if (failCount > 0)
+                    _buildQuickFilterTab(
+                      label: 'FAIL ($failCount)',
+                      selected: isFailSelected,
+                      colors: colors,
+                      activeColor: colors.accentRose,
+                      onTap: () => setState(() {
+                        if (isFailSelected) {
+                          listState.filterCtrl.clear();
+                          listState.filter = '';
+                        } else {
+                          listState.filterCtrl.text = 'FAIL';
+                          listState.filter = 'FAIL';
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          const Spacer(),
           const SizedBox(width: 12),
           SizedBox(
-            width: 220,
-            height: 34,
+            width: 200,
+            height: 32,
             child: TextField(
               controller: listState.filterCtrl,
-              style: TextStyle(fontSize: 12.5, color: colors.textPrimary),
+              style: TextStyle(fontSize: 12, color: colors.textPrimary),
               decoration: InputDecoration(
                 isDense: true,
                 hintText: Translations.get('search_placeholder', lang),
-                hintStyle: TextStyle(fontSize: 12, color: colors.textMuted),
+                hintStyle: TextStyle(fontSize: 11.5, color: colors.textMuted),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  size: 16,
+                  size: 15,
                   color: colors.textSecondary,
                 ),
                 prefixIconConstraints: const BoxConstraints(
-                  minWidth: 30,
-                  minHeight: 30,
+                  minWidth: 28,
+                  minHeight: 28,
                 ),
                 suffixIcon: listState.filter.isEmpty
                     ? null
@@ -2632,17 +3244,17 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         }),
                         child: Icon(
                           Icons.close_rounded,
-                          size: 14,
+                          size: 13,
                           color: colors.textSecondary,
                         ),
                       ),
                 suffixIconConstraints: const BoxConstraints(
-                  minWidth: 26,
-                  minHeight: 26,
+                  minWidth: 24,
+                  minHeight: 24,
                 ),
                 filled: true,
                 fillColor: colors.subCardBg,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(vertical: 6),
                 border: OutlineInputBorder(
                   borderSide: BorderSide.none,
                   borderRadius: BorderRadius.circular(8),
@@ -2962,55 +3574,97 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     String value,
     AppColors colors, {
     bool highlight = false,
+    double labelWidth = 135,
   }) {
     if (value.isEmpty) return const SizedBox();
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 160,
+            width: labelWidth,
             child: Text(
               '$label: ',
               style: TextStyle(
                 color: colors.textSecondary,
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (highlight)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
                 color: colors.accentCyan.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(5),
                 border: Border.all(
                   color: colors.accentCyan.withValues(alpha: 0.3),
                 ),
               ),
-              child: Text(
+              child: SelectableText(
                 value,
                 style: TextStyle(
                   color: colors.accentCyan,
-                  fontSize: 12.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   fontFamily: 'JetBrains Mono',
                 ),
+                maxLines: 1,
               ),
             )
           else
             Expanded(
-              child: Text(
+              child: SelectableText(
                 value,
                 style: TextStyle(
                   color: colors.textPrimary,
-                  fontSize: 12.5,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   fontFamily: 'JetBrains Mono',
                 ),
+                maxLines: 1,
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickFilterTab({
+    required String label,
+    required bool selected,
+    required AppColors colors,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: selected
+              ? activeColor.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: selected
+                ? activeColor.withValues(alpha: 0.45)
+                : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? activeColor : colors.textSecondary,
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -3104,13 +3758,19 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               r.currentProcessCode,
               r.currentProcessName,
               r.lineStation,
+              r.lineName,
+              r.lineCode,
               r.woNo,
+              r.planNo,
               r.productNo,
+              r.productVersion,
               r.customerSn,
+              r.internalSn,
               r.operatorName,
               r.eqpId,
               r.errorCode,
               r.testResultMsg,
+              r.remark,
               r.operateDt,
               r.result,
             ].any((f) => f.toLowerCase().contains(q)),
@@ -3144,6 +3804,14 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           case 'line_station':
             cmp = a.lineStation.compareTo(b.lineStation);
             break;
+          case 'line':
+            final aLine = a.lineName.isNotEmpty ? a.lineName : a.lineCode;
+            final bLine = b.lineName.isNotEmpty ? b.lineName : b.lineCode;
+            cmp = aLine.compareTo(bLine);
+            break;
+          case 'internal_sn':
+            cmp = a.internalSn.compareTo(b.internalSn);
+            break;
           default:
             cmp = 0;
         }
@@ -3174,6 +3842,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               r.processCode,
               r.creator,
               r.createdDt,
+              r.location,
             ].any((f) => f.toLowerCase().contains(q)),
           )
           .toList();
@@ -3466,68 +4135,6 @@ class _HoverChipState extends State<_HoverChip> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MarqueeText extends StatefulWidget {
-  final String text;
-  final TextStyle style;
-  const _MarqueeText({super.key, required this.text, required this.style});
-
-  @override
-  State<_MarqueeText> createState() => _MarqueeTextState();
-}
-
-class _MarqueeTextState extends State<_MarqueeText> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _runLoop());
-  }
-
-  Future<void> _runLoop() async {
-    if (!mounted || !_scrollController.hasClients) return;
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (!mounted || !_scrollController.hasClients) return;
-
-    final maxScrollExtent = _scrollController.position.maxScrollExtent;
-    if (maxScrollExtent <= 0) return;
-
-    while (mounted) {
-      await _scrollController.animateTo(
-        maxScrollExtent,
-        duration: Duration(milliseconds: widget.text.length * 60),
-        curve: Curves.linear,
-      );
-      if (!mounted) return;
-      await Future.delayed(const Duration(milliseconds: 1500));
-      if (!mounted) return;
-      await _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeOut,
-      );
-      if (!mounted) return;
-      await Future.delayed(const Duration(milliseconds: 1500));
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: Axis.horizontal,
-      physics: const NeverScrollableScrollPhysics(),
-      child: Text(widget.text, style: widget.style, maxLines: 1),
     );
   }
 }
