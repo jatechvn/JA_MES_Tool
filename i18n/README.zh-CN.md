@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.7 - 中文说明
+# 🤖 JA MES Tool v2.9.8 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.9.7-blue.svg" alt="版本 2.9.7">
+  <img src="https://img.shields.io/badge/banben-2.9.8-blue.svg" alt="版本 2.9.8">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -42,6 +42,15 @@
 - 🏝️ **Dynamic Island 状态胶囊**：动态波形指示 MES 实时连接状态，集成快速操作工具栏。
 - 🪟 **可调节毛玻璃效果**：设置 → 高级 中的"自定义模糊与透明度"面板提供 4 个实时预览滑块 (主背景模糊度/不透明度、对话框模糊度/不透明度)。排序下拉菜单与设置窗口本身都会随拖动滑块实时重新模糊 — 内置安全下限，无论不透明度调多低都能防止文字重叠透视的问题。
 - 🎨 **多语言与实心主题**：支持暗黑/亮色主题及 **英文**、**越南文**、**中文** 三语切换。首次启动且没有保存语言时，会根据 Windows locale 自动选择默认语言。
+
+### 🚀 局域网在线升级系统 (LAN OTA Update)
+- 🔄 **企业级自动升级引擎**：内置语义化版本号解析、比较与排序引擎 (`SemanticVersion`)。
+- 📁 **局域网共享与 UNC 路径支持**：支持直接扫描 UNC 路径或 SMB 凭据挂载 (`\\10.81.141.226\temp\...`)。
+- 🛡️ **Zip Slip 与负载完整性防护**：解压前对 zip 条目进行路径穿越攻击 (`..`) 与软链接校验，确保解压安全。
+- ⚡ **无感 Robocopy 安全热替换更新**：自动解压至临时目录并调用后台 PowerShell 脚本执行 Robocopy 差异同步，严格保护用户本地配置与日志 (`/XD logs /XF config.json config.ini update_config.json`)，无需管理员权限自动重启。
+- 🪟 **Bento 磨砂玻璃升级通知弹窗**：精美毛玻璃更新提示弹窗，展示新旧版本对比、包大小、发布时间、详细更新日志 (`releaseNotes`) 及实时下载进度条。
+- ⚙️ **设置 Tab 5 (OTA 升级)**：专属设置选项卡，支持一键检查、更新路径自定义、可选网络共享认证与定时检查策略。
+- ⏱️ **启动延时后台静默检查**：启动后延时 3 秒后台自动检查，不阻塞主 UI 渲染。
 
 ### 🔐 凭据与连接
 - ⚡ **启动时 Token 过期自动弹窗**：启动程序时自动检测 Token 有效性，过期时立即弹出 2 步凭据同步窗口。
@@ -217,6 +226,8 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.9.8]** — **集成局域网在线升级系统 (LAN OTA Update)**：支持局域网 UNC 共享目录版本自动检测、带 build number 的 SemVer 语义化版本比对、基于 Robocopy 的后台静默热替换升级、Bento 毛玻璃升级弹窗及设置 Tab 5 专属管理页。
+- **[2.9.7]** — 完整解析并映射 CloudMES 条码历史与 WIP 组件全部关键字段 (产线、内部条码、设备编号、产品版本、工单计划号、备注、物料位置)，扩充 CSV 导出，重构双行致密 SN 卡片并新增弹性回弹跑马灯。
 - **[2.9.6]** — 新增最多 6 个任务并行的 FIFO 查询队列、共享 SN Master 解析、过期结果保护，并恢复带原生 Windows 标题栏控制的紧凑桌面布局。
 - **[2.9.5]** — 命令面板采用 JA_Mini_Showcase 的单层背景模糊和主题 Material 卡片，并保留打开后的延迟搜索聚焦。
 - **[2.9.4]** — 当 Test Record 为空但条码历史或组件清单仍有数据时，SN 显示黄色；只有三个视图加载完成且全部为空时才显示红色。
