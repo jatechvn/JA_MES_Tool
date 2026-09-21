@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.9.7
-Release Date : 2026-09-18
+Version      : v2.9.8
+Release Date : 2026-09-21
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,14 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- LAN OTA Auto-Update & Installer System: Enterprise-grade over-the-air update
+  pipeline supporting UNC/SMB network shares (with optional Windows net use
+  credentials), SemVer engine, Zip Slip protection, automatic apply_update.bat
+  generation with user config/logs protection and auto-rollback.
+- Bento Frosted Glass Update Prompt: Elegant modal with version comparison,
+  package size, release notes viewer, and live download/extract progress indicator.
+- Dedicated Settings Tab 5 (OTA Update): Full control over update server path,
+  network credentials, manual update check, and check interval schedule.
 - Barcode History & WIP Components Data Enrichment: Added Line, Internal SN,
   Equipment No, Product Version, Plan No, Remark, and Location (WIP), with
   multilingual translations and expanded CSV exports.

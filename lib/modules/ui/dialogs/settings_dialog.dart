@@ -10,6 +10,8 @@ import '../../../theme/app_colors.dart';
 import '../../../widgets/glass_widgets.dart';
 import '../../../widgets/glass_dialog.dart';
 import '../../../widgets/app_toast.dart';
+import '../../services/ota_update_service.dart';
+import 'glass_update_dialog.dart';
 
 Future<void> showAppSettingsDialog(
   BuildContext context,
@@ -36,6 +38,15 @@ Future<void> showAppSettingsDialog(
   final opIdCtrl = TextEditingController(text: logic.operationId);
   final uuidCtrl = TextEditingController(text: logic.uuid);
   final cookieCtrl = TextEditingController(text: logic.cookie);
+
+  // OTA Update settings controllers & state
+  final otaConfig = OtaUpdateService().currentConfig;
+  final otaServerPathCtrl = TextEditingController(text: otaConfig.serverPath);
+  final otaUsernameCtrl = TextEditingController(text: otaConfig.username);
+  final otaPasswordCtrl = TextEditingController(text: otaConfig.password);
+  String otaInterval = otaConfig.checkInterval;
+  bool isCheckingForUpdates = false;
+  UpdateCheckResult? manualUpdateCheckResult;
 
   int currentTab = 0;
   bool isTestingConnection = false;
@@ -79,7 +90,7 @@ Future<void> showAppSettingsDialog(
                 isDark: theme.isDark,
                 blurSigma: theme.dialogBlur,
                 bgOpacity: theme.dialogOpacity,
-                width: 720,
+                width: 760,
                 height: 600,
                 contentPadding: EdgeInsets.zero,
                 actions: [
@@ -111,6 +122,12 @@ Future<void> showAppSettingsDialog(
                         dialogOpacity: tempDialogOpacity,
                         dropdownBlur: tempDropdownBlur,
                         dropdownOpacity: tempDropdownOpacity,
+                      );
+                      await OtaUpdateService().updateConfig(
+                        serverPath: otaServerPathCtrl.text.trim(),
+                        username: otaUsernameCtrl.text.trim(),
+                        password: otaPasswordCtrl.text.trim(),
+                        checkInterval: otaInterval,
                       );
                       if (dialogCtx.mounted) {
                         Navigator.pop(dialogCtx);
@@ -179,6 +196,18 @@ Future<void> showAppSettingsDialog(
                             colors: activeColors,
                             onTap: () => setDialogState(() => currentTab = 3),
                           ),
+                          const SizedBox(width: 8),
+                          _buildTabButton(
+                            index: 4,
+                            currentTab: currentTab,
+                            icon: Icons.system_update_alt_rounded,
+                            label: Translations.get(
+                              'tab_ota_update',
+                              logic.lang,
+                            ),
+                            colors: activeColors,
+                            onTap: () => setDialogState(() => currentTab = 4),
+                          ),
                         ],
                       ),
                     ),
@@ -210,7 +239,22 @@ Future<void> showAppSettingsDialog(
                             connectionTestResult: connectionTestResult,
                             connectionTestMsg: connectionTestMsg,
                             isSyncingCdp: isSyncingCdp,
+                            otaServerPathCtrl: otaServerPathCtrl,
+                            otaUsernameCtrl: otaUsernameCtrl,
+                            otaPasswordCtrl: otaPasswordCtrl,
+                            otaInterval: otaInterval,
+                            isCheckingForUpdates: isCheckingForUpdates,
+                            manualUpdateCheckResult: manualUpdateCheckResult,
                             setDialogState: setDialogState,
+                            onIntervalChanged: (val) {
+                              setDialogState(() => otaInterval = val);
+                            },
+                            onUpdateCheckStateChanged: (checking, result) {
+                              setDialogState(() {
+                                isCheckingForUpdates = checking;
+                                manualUpdateCheckResult = result;
+                              });
+                            },
                             onSliderChange:
                                 ({
                                   double? cardBlur,
@@ -334,7 +378,15 @@ Widget _buildCurrentTabContent({
   required bool? connectionTestResult,
   required String? connectionTestMsg,
   required bool isSyncingCdp,
+  required TextEditingController otaServerPathCtrl,
+  required TextEditingController otaUsernameCtrl,
+  required TextEditingController otaPasswordCtrl,
+  required String otaInterval,
+  required bool isCheckingForUpdates,
+  required UpdateCheckResult? manualUpdateCheckResult,
   required StateSetter setDialogState,
+  required void Function(String) onIntervalChanged,
+  required void Function(bool, UpdateCheckResult?) onUpdateCheckStateChanged,
   required void Function({
     double? cardBlur,
     double? cardOpacity,
@@ -381,6 +433,23 @@ Widget _buildCurrentTabContent({
       );
     case 3:
       return _buildAboutTab(context, logic, theme, colors);
+    case 4:
+      return _buildOtaUpdateTab(
+        context,
+        dialogCtx,
+        logic,
+        theme,
+        colors,
+        otaServerPathCtrl,
+        otaUsernameCtrl,
+        otaPasswordCtrl,
+        otaInterval,
+        isCheckingForUpdates,
+        manualUpdateCheckResult,
+        setDialogState,
+        onIntervalChanged,
+        onUpdateCheckStateChanged,
+      );
     default:
       return const SizedBox.shrink();
   }
@@ -1146,25 +1215,35 @@ Widget _buildTextField({
   required TextEditingController controller,
   required AppColors colors,
   int maxLines = 1,
+  bool obscureText = false,
+  String? hintText,
 }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: colors.textSecondary,
+      if (label.isNotEmpty) ...[
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: colors.textSecondary,
+          ),
         ),
-      ),
-      const SizedBox(height: 5),
+        const SizedBox(height: 5),
+      ],
       TextField(
         controller: controller,
         maxLines: maxLines,
+        obscureText: obscureText,
         style: TextStyle(fontSize: 12.5, color: colors.textPrimary),
         decoration: InputDecoration(
           isDense: true,
+          hintText: hintText,
+          hintStyle: TextStyle(
+            fontSize: 12,
+            color: colors.textSecondary.withValues(alpha: 0.5),
+          ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 10,
@@ -1275,5 +1354,490 @@ Widget _buildAboutRow(String title, String value, AppColors colors) {
         ),
       ],
     ),
+  );
+}
+
+Widget _buildOtaUpdateTab(
+  BuildContext context,
+  BuildContext dialogCtx,
+  AppLogic logic,
+  ThemeProvider theme,
+  AppColors colors,
+  TextEditingController otaServerPathCtrl,
+  TextEditingController otaUsernameCtrl,
+  TextEditingController otaPasswordCtrl,
+  String otaInterval,
+  bool isCheckingForUpdates,
+  UpdateCheckResult? manualUpdateCheckResult,
+  StateSetter setDialogState,
+  void Function(String) onIntervalChanged,
+  void Function(bool, UpdateCheckResult?) onUpdateCheckStateChanged,
+) {
+  final isDark = theme.isDark;
+  final otaConfig = OtaUpdateService().currentConfig;
+
+  Future<void> checkForUpdatesManually() async {
+    onUpdateCheckStateChanged(true, null);
+    final path = otaServerPathCtrl.text.trim();
+    try {
+      final result = await OtaUpdateService().checkForUpdates(
+        overrideServerPath: path,
+        isManual: true,
+      );
+      onUpdateCheckStateChanged(false, result);
+      if (result.hasUpdate && result.packageInfo != null && dialogCtx.mounted) {
+        showGlassUpdateDialog(
+          context: context,
+          packageInfo: result.packageInfo!,
+          lang: logic.lang,
+        );
+      }
+    } catch (e) {
+      onUpdateCheckStateChanged(
+        false,
+        UpdateCheckResult(
+          hasUpdate: false,
+          currentVersion: appVersion,
+          isConnectionSuccess: false,
+          errorMessage: e.toString().replaceFirst('Exception: ', ''),
+        ),
+      );
+    }
+  }
+
+  void openAppFolder() {
+    final file = OtaUpdateService().getConfigFile();
+    if (Platform.isWindows) {
+      if (file.existsSync()) {
+        Process.run('explorer.exe', ['/select,', file.path]);
+      } else {
+        Process.run('explorer.exe', [file.parent.path]);
+      }
+    }
+  }
+
+  return ListView(
+    physics: const BouncingScrollPhysics(),
+    children: [
+      // 1. Version Status Card
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        isFeatured: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [colors.accentColor, colors.accentCyan],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.accentColor.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.system_update_alt_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${Translations.get('current_version', logic.lang)}: v$appVersion',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        otaConfig.lastCheckTime != null
+                            ? '${Translations.get('last_checked', logic.lang)}: ${otaConfig.lastCheckTime!.hour.toString().padLeft(2, '0')}:${otaConfig.lastCheckTime!.minute.toString().padLeft(2, '0')} ${otaConfig.lastCheckTime!.day}/${otaConfig.lastCheckTime!.month}/${otaConfig.lastCheckTime!.year}'
+                            : Translations.get('never_checked', logic.lang),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.icon(
+                  onPressed: isCheckingForUpdates
+                      ? null
+                      : checkForUpdatesManually,
+                  icon: isCheckingForUpdates
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Icon(Icons.refresh_rounded, size: 15),
+                  label: Text(
+                    isCheckingForUpdates
+                        ? Translations.get('checking_updates', logic.lang)
+                        : Translations.get('check_updates_now', logic.lang),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colors.accentColor,
+                    foregroundColor: Colors.white,
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (manualUpdateCheckResult != null) ...[
+              const SizedBox(height: 14),
+              if (manualUpdateCheckResult.hasUpdate &&
+                  manualUpdateCheckResult.packageInfo != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.accentEmerald.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: colors.accentEmerald.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: 18,
+                        color: colors.accentEmerald,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${Translations.get('update_available', logic.lang)} (${manualUpdateCheckResult.packageInfo!.version.displayVersion} • ${manualUpdateCheckResult.packageInfo!.formattedSize})',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: colors.accentEmerald,
+                          ),
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          showGlassUpdateDialog(
+                            context: context,
+                            packageInfo: manualUpdateCheckResult.packageInfo!,
+                            lang: logic.lang,
+                          );
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.accentEmerald,
+                          foregroundColor: Colors.white,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                        ),
+                        child: Text(
+                          Translations.get('update_now', logic.lang),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (manualUpdateCheckResult.errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.accentRose.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: colors.accentRose.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 18,
+                        color: colors.accentRose,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          manualUpdateCheckResult.errorMessage!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.accentRose,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.accentColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: colors.accentColor.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.verified_rounded,
+                        size: 18,
+                        color: colors.accentColor,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          Translations.get('no_updates_available', logic.lang),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 14),
+
+      // 2. Check Interval Card
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  size: 18,
+                  color: colors.accentColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  Translations.get('check_interval', logic.lang),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              decoration: BoxDecoration(
+                color: colors.subCardBg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.subCardBorder),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: otaInterval,
+                  isExpanded: true,
+                  dropdownColor: isDark
+                      ? const Color(0xFF1E293B)
+                      : Colors.white,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'startup',
+                      child: Text(
+                        Translations.get('interval_startup', logic.lang),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'daily',
+                      child: Text(
+                        Translations.get('interval_daily', logic.lang),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'weekly',
+                      child: Text(
+                        Translations.get('interval_weekly', logic.lang),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'off',
+                      child: Text(
+                        Translations.get('interval_disabled', logic.lang),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      onIntervalChanged(val);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 14),
+
+      // 3. Server Configuration Card
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.dns_rounded, size: 18, color: colors.accentColor),
+                const SizedBox(width: 8),
+                Text(
+                  Translations.get('server_path', logic.lang),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: openAppFolder,
+                  icon: const Icon(Icons.folder_open_rounded, size: 14),
+                  label: Text(
+                    Translations.get('open_config_folder', logic.lang),
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: colors.accentColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildTextField(
+              label: '',
+              controller: otaServerPathCtrl,
+              colors: colors,
+              hintText: Translations.get('server_path_hint', logic.lang),
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 14),
+
+      // 4. Network Authentication Card
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 18,
+                  color: colors.accentColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  Translations.get('ota_credentials', logic.lang),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    label: Translations.get('ota_username', logic.lang),
+                    controller: otaUsernameCtrl,
+                    colors: colors,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildTextField(
+                    label: Translations.get('ota_password', logic.lang),
+                    controller: otaPasswordCtrl,
+                    colors: colors,
+                    obscureText: true,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ],
   );
 }
