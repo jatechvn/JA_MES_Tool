@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.7 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.8 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.7-blue.svg" alt="Phiên bản 2.9.7">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.8-blue.svg" alt="Phiên bản 2.9.8">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -42,6 +42,15 @@
 - 🏝️ **Dynamic Island Status Capsule**: Sóng trạng thái kết nối MES trực quan và thanh công cụ thao tác nhanh.
 - 🪟 **Glassmorphism có thể tùy chỉnh**: Cài đặt → Nâng cao có mục "Tùy chỉnh độ mờ & trong suốt" với 4 slider live-preview (Độ mờ/Trong suốt nền chính, Độ mờ/Trong suốt Dialog). Dropdown Sắp xếp và chính cửa sổ Cài đặt đều blur lại theo thời gian thực khi kéo slider — kèm sàn an toàn chống lỗi chữ chồng xuyên thấu dù chỉnh opacity thấp đến đâu.
 - 🎨 **Giao diện Đa ngôn ngữ & Solid**: Hỗ trợ Light/Dark Mode và chuyển đổi 3 ngôn ngữ (**Tiếng Việt**, **Tiếng Anh**, **Tiếng Trung**). Lần mở app đầu tiên sẽ tự chọn ngôn ngữ theo Windows locale nếu chưa có cấu hình đã lưu.
+
+### 🚀 Hệ thống Tự động Cập nhật qua Mạng LAN (OTA Update)
+- 🔄 **Lõi cập nhật chuẩn doanh nghiệp**: Hỗ trợ phân tích, so khớp và kiểm tra phiên bản theo Semantic Versioning (`SemanticVersion`).
+- 📁 **Hỗ trợ chia sẻ mạng UNC & LAN**: Quét trực tiếp thư mục UNC hoặc ánh xạ ổ đĩa mạng qua giao thức SMB (`\\10.81.141.226\temp\...`).
+- 🛡️ **Bảo vệ an toàn dữ liệu & chống Zip Slip**: Xác thực đường dẫn tệp tin trước khi giải nén, ngăn chặn tấn công directory traversal (`..`).
+- ⚡ **Quy trình cập nhật Hot-Swap bằng Robocopy**: Tự động sao lưu trước khi cập nhật, đồng bộ an toàn các tệp tin mới và bảo toàn dữ liệu cấu hình/nhật ký người dùng (`/XD logs /XF config.json config.ini update_config.json`).
+- 🪟 **Hộp thoại Bento Glassmorphic Update Dialog**: Hộp thoại kính mờ tinh tế hiển thị so sánh phiên bản, kích thước tệp tải về, ngày phát hành, nhật ký thay đổi và thanh tiến trình thời gian thực.
+- ⚙️ **Tab Cập nhật (OTA) trong Cài đặt**: Cấu hình đường dẫn chia sẻ, tài khoản xác thực tùy chọn và chu kỳ kiểm tra tự động.
+- ⏱️ **Kiểm tra chạy ngầm khi khởi động**: Tự động kích hoạt kiểm tra sau 3 giây khi mở app mà không ảnh hưởng tới hiệu năng UI.
 
 ### 🔐 Xác thực & Kết nối
 - ⚡ **Tự động Cảnh báo Popup Token Hết Hạn trên Startup**: Phát hiện Token hết hạn ngay khi mở app và tự động bật Cửa sổ Popup đồng bộ 2 bước.
@@ -220,6 +229,8 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.8]** — **Tích hợp LAN Over-The-Air (OTA) Update**: Tự động kiểm tra bản phát hành mới qua thư mục chia sẻ mạng LAN / UNC Share, so sánh phiên bản chuẩn Semantic Versioning kèm build number, quy trình cập nhật Hot-Swap an toàn bằng Robocopy, hộp thoại Bento Glass Update Dialog và tab Cập nhật trong Cài đặt.
+- **[2.9.7]** — Bổ sung đầy đủ các trường Barcode History & WIP Components từ CloudMES (Line, Internal SN, Thiết bị, Phiên bản, Kế hoạch, Ghi chú, Vị trí linh kiện), mở rộng xuất CSV, card SN 2 dòng tinh tế và hiệu ứng marquee nảy.
 - **[2.9.6]** — Thêm hàng đợi FIFO tối đa 6 tác vụ song song, bảo vệ stale-result, chia sẻ SN Master và khôi phục bố cục desktop gọn với native caption controls của Windows.
 - **[2.9.5]** — Bảng lệnh dùng một lớp blur nền và card Material theo theme từ JA_Mini_Showcase; giữ focus tìm kiếm sau hiệu ứng mở.
 - **[2.9.4]** — Thêm màu vàng cho SN khi Test Record rỗng nhưng Lịch sử Barcode hoặc Danh sách Linh kiện vẫn có dữ liệu; chỉ dùng màu đỏ khi cả ba chế độ xem đều rỗng sau khi tải xong.

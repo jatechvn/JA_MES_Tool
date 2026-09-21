@@ -1,4 +1,4 @@
-﻿# Miscellaneous
+# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -67,6 +67,8 @@ macos/Flutter/ephemeral/
 !git_push.bat
 !build_windows.bat
 !create_release.bat
+!install.bat
+!uninstall.bat
 *.zip
 *.lnk
 
