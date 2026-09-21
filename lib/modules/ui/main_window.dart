@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +14,8 @@ import 'styles.dart';
 import 'motion.dart';
 import 'dialogs/settings_dialog.dart';
 import 'dialogs/token_expired_dialog.dart';
+import 'dialogs/glass_update_dialog.dart';
+import '../services/ota_update_service.dart';
 import 'views/terminal_view.dart';
 
 class MainWindow extends StatefulWidget {
@@ -26,6 +29,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   final TextEditingController _snController = TextEditingController();
   bool _hasCheckedInitialToken = false;
   bool _isMaximized = false;
+  Timer? _tokenCheckTimer;
+  Timer? _otaCheckTimer;
 
   final _ListViewState _testRecordListState = _ListViewState();
   final _BarcodeListViewState _barcodeListState = _BarcodeListViewState();
@@ -44,11 +49,14 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialToken();
+      _checkOtaUpdateOnStartup();
     });
   }
 
   @override
   void dispose() {
+    _tokenCheckTimer?.cancel();
+    _otaCheckTimer?.cancel();
     windowManager.removeListener(this);
     _sortOverlayEntry?.remove();
     _testRecordListState.filterCtrl.dispose();
@@ -69,14 +77,45 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     if (mounted) setState(() => _isMaximized = false);
   }
 
-  void _checkInitialToken() async {
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    final logic = context.read<AppLogic>();
-    if (logic.isConnectionValid == false && !_hasCheckedInitialToken) {
-      _hasCheckedInitialToken = true;
-      _showTokenExpiredWarningDialog(context, logic);
-    }
+  void _checkInitialToken() {
+    _tokenCheckTimer?.cancel();
+    _tokenCheckTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      final logic = context.read<AppLogic>();
+      if (logic.isConnectionValid == false && !_hasCheckedInitialToken) {
+        _hasCheckedInitialToken = true;
+        _showTokenExpiredWarningDialog(context, logic);
+      }
+    });
+  }
+
+  void _checkOtaUpdateOnStartup() {
+    _otaCheckTimer?.cancel();
+    _otaCheckTimer = Timer(const Duration(milliseconds: 2500), () async {
+      if (!mounted) return;
+      try {
+        final otaService = OtaUpdateService();
+        final cfg = await otaService.loadConfig();
+        if (cfg.checkInterval == 'off') return;
+        if (cfg.checkInterval == 'startup' ||
+            otaService.shouldCheckForUpdates(
+              interval: cfg.checkInterval,
+              lastCheckTime: cfg.lastCheckTime,
+            )) {
+          final result = await otaService.checkForUpdates();
+          if (result.hasUpdate && result.packageInfo != null && mounted) {
+            final logic = context.read<AppLogic>();
+            showGlassUpdateDialog(
+              context: context,
+              packageInfo: result.packageInfo!,
+              lang: logic.lang,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[OtaUpdate] Startup check error: $e');
+      }
+    });
   }
 
   @override

@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.7
+# 🤖 JA MES Tool v2.9.8
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.7-blue.svg" alt="Version 2.9.7">
+  <img src="https://img.shields.io/badge/version-2.9.8-blue.svg" alt="Version 2.9.8">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -54,6 +54,15 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 - 🏝️ **Dynamic-Island Status Capsule**: Live MES connection status wave and quick actions toolbar.
 - 🪟 **Adjustable Glassmorphism**: Settings → Advanced has a "Customize blur & transparency" panel with 4 live-preview sliders (Main background blur/opacity, Dialog blur/opacity). The Sort dropdown and the Settings dialog itself both re-blur in real time as you drag — with a built-in legibility floor that prevents the see-through overlapping-text glitch regardless of how low opacity is set.
 - 🎨 **Glassmorphic Multi-Language UI**: Light & Dark themes with multi-language switching (**English**, **Vietnamese**, **Chinese**). On first launch, the default language follows the Windows locale when no saved language exists.
+
+### 🚀 LAN Over-The-Air (OTA) Update System
+- 🔄 **Enterprise-Grade Auto-Update Engine**: Full SemVer parsing, comparison, and sorting engine (`SemanticVersion`).
+- 📁 **LAN UNC & Network Share Connectivity**: Direct UNC folder scanning or automated Windows `net use` credentials mount (`\\10.81.141.226\temp\...`).
+- 🛡️ **Zip Slip & Payload Integrity Protection**: Validates zip entries against path traversal attacks (`..`), absolute roots, and symlinks before unpacking.
+- ⚡ **Safe Robocopy Updater (`apply_update.bat`)**: Process waiting loop, automatic pre-update backup, safe payload mirroring preserving user configs and logs (`/XD logs /XF config.json config.ini update_config.json`), auto-rollback on failure, and seamless application relaunch.
+- 🪟 **Bento Frosted Glass Update Dialog**: Sleek update notification modal with version comparison cards, package size, release notes viewer, and live progress bar.
+- ⚙️ **Settings Tab 5 (OTA Update)**: Dedicated settings tab for manual update checks, server path configuration, optional network authentication, and check interval scheduling (Startup / Daily / Weekly / Disabled).
+- ⏱️ **Background Startup Auto-Check**: Delayed background check runs 2.5s after launch with lifecycle-safe cancellation.
 
 ### 🔐 Credentials & Connectivity
 - ⚡ **Automatic Startup Expired Token Warning Popup**: Detects expired token on app launch and immediately opens a 2-step sync prompt to refresh credentials.
@@ -252,6 +261,8 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.9.8]** — Enterprise-grade LAN Over-The-Air (OTA) update system with SemVer engine, UNC/SMB share connectivity, Robocopy installer generation (`apply_update.bat`) with config/logs protection and auto-rollback, Bento Frosted Glass update prompt, Settings Tab 5, and non-blocking startup auto-check.
+- **[2.9.7]** — Barcode History & WIP Components manufacturing fields enrichment, dense 2-line SN sidebar cards, translucent glass highlights, asymmetric bounce marquee, and streamlined records header.
 - **[2.9.6]** — Added a bounded six-job FIFO query queue, shared SN Master resolution, stale-result protection, and restored the compact desktop layout with native Windows caption controls.
 - **[2.9.5]** — Command Palette uses a single backdrop blur and a theme-aware Material card following JA_Mini_Showcase; search focus remains delayed after opening.
 - **[2.9.4]** — Added amber SN status for empty Test Record data when Barcode History or Component List still has records; red is reserved for all three views being empty after loading.

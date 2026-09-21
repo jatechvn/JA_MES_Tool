@@ -5,6 +5,23 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.8] - 2026-09-21
+
+### 🚀 Major Features & Enhancements
+- **🔄 LAN Over-The-Air (OTA) Update System**: Tích hợp cơ chế tự động kiểm tra và cập nhật phiên bản qua mạng nội bộ LAN / UNC Share (`\\server\share\JA_MES_Tool` hoặc thư mục mạng ánh xạ).
+- **📦 SemVer & Build-Number Comparator**: Hỗ trợ so sánh phiên bản chuẩn Semantic Versioning kèm mã build `+buildNumber` (`2.9.8+22 > 2.9.7+21`), ngăn ngừa update lặp và bảo đảm cập nhật chính xác.
+- **🛡️ Non-blocking Robocopy Hot-Swap Updater**: Cơ chế tự động giải nén bản cập nhật vào thư mục tạm `%TEMP%` và kích hoạt kịch bản PowerShell/Robocopy chạy nền (`Start-Process powershell -WindowStyle Hidden`) để đồng bộ file mới, tự khởi động lại ứng dụng mà không cần quyền Administrator.
+- **⚙️ Cấu hình cập nhật linh hoạt (Settings Tab 5)**: Bổ sung tab "Cập nhật (OTA)" trong Cài đặt cho phép bật/tắt tự động kiểm tra khi khởi động, cấu hình đường dẫn mạng LAN, kiểm tra thủ công tức thì với hiển thị trạng thái động (`Testing...`, `Connected`, `Invalid Path`).
+- **🪟 Bento Glass Update Dialog**: Thiết kế hộp thoại thông báo cập nhật chuẩn Glassmorphic Bento Grid với hiệu ứng `BackdropFilter`, hiển thị phiên bản hiện tại vs mới nhất, kích thước tải về, ngày phát hành, danh sách ghi chú phát hành (`releaseNotes`), thanh tiến trình phần trăm kèm tốc độ và nút thao tác trực quan.
+
+### 🎨 UI/UX & Reliability Improvements
+- **⚡ Non-blocking Background Check**: Kiểm tra cập nhật ngầm sau 3 giây khi khởi động app mà không gây nghẽn UI, tự động hủy bỏ timer an toàn khi đóng ứng dụng (`dispose()`).
+- **🌐 Trilingual Dictionary Support**: Bổ sung đầy đủ 22 chuỗi ngôn ngữ cho tính năng OTA Update trên cả 3 ngôn ngữ: Tiếng Việt, Tiếng Anh và Tiếng Trung.
+
+### 🧪 Verification & Testing
+- **🧪 Unit test suite toàn diện**: Bổ sung `test/ota_update_service_test.dart` bao phủ 9 ca kiểm thử (phân tích cấu trúc version, so sánh SemVer, đọc metadata `version.json`, kiểm tra đường dẫn không hợp lệ).
+- **✅ 100% Test Pass**: Toàn bộ 38/38 unit/widget test vượt qua thành công (`flutter test`).
+
 ## [2.9.7] - 2026-09-18
 
 ### 🚀 Major Features & Enhancements
