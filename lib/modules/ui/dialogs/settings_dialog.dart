@@ -173,8 +173,11 @@ Future<void> showAppSettingsDialog(
                           _buildTabButton(
                             index: 1,
                             currentTab: currentTab,
-                            icon: Icons.tune_rounded,
-                            label: Translations.get('tab_general', logic.lang),
+                            icon: Icons.palette_rounded,
+                            label: Translations.get(
+                              'tab_display_glass',
+                              logic.lang,
+                            ),
                             colors: activeColors,
                             onTap: () => setDialogState(() => currentTab = 1),
                           ),
@@ -182,31 +185,13 @@ Future<void> showAppSettingsDialog(
                           _buildTabButton(
                             index: 2,
                             currentTab: currentTab,
-                            icon: Icons.blur_on_rounded,
-                            label: Translations.get('tab_glass', logic.lang),
-                            colors: activeColors,
-                            onTap: () => setDialogState(() => currentTab = 2),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTabButton(
-                            index: 3,
-                            currentTab: currentTab,
                             icon: Icons.info_outline_rounded,
-                            label: Translations.get('tab_about', logic.lang),
-                            colors: activeColors,
-                            onTap: () => setDialogState(() => currentTab = 3),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTabButton(
-                            index: 4,
-                            currentTab: currentTab,
-                            icon: Icons.system_update_alt_rounded,
                             label: Translations.get(
-                              'tab_ota_update',
+                              'tab_about_updates',
                               logic.lang,
                             ),
                             colors: activeColors,
-                            onTap: () => setDialogState(() => currentTab = 4),
+                            onTap: () => setDialogState(() => currentTab = 2),
                           ),
                         ],
                       ),
@@ -317,41 +302,47 @@ Widget _buildTabButton({
   required VoidCallback onTap,
 }) {
   final isSelected = index == currentTab;
-  return InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(10),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? colors.accentColor.withValues(alpha: 0.15)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
+  return Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
           color: isSelected
-              ? colors.accentColor.withValues(alpha: 0.45)
+              ? colors.accentColor.withValues(alpha: 0.15)
               : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? colors.accentColor.withValues(alpha: 0.45)
+                : Colors.transparent,
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isSelected ? colors.accentColor : colors.textSecondary,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? colors.textPrimary : colors.textSecondary,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? colors.accentColor : colors.textSecondary,
             ),
-          ),
-        ],
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? colors.textPrimary : colors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -415,9 +406,7 @@ Widget _buildCurrentTabContent({
         setDialogState,
       );
     case 1:
-      return _buildGeneralTab(context, logic, theme, colors, setDialogState);
-    case 2:
-      return _buildGlassTuningTab(
+      return _buildDisplayAndGlassTab(
         context,
         logic,
         theme,
@@ -431,10 +420,8 @@ Widget _buildCurrentTabContent({
         setDialogState,
         onSliderChange,
       );
-    case 3:
-      return _buildAboutTab(context, logic, theme, colors);
-    case 4:
-      return _buildOtaUpdateTab(
+    case 2:
+      return _buildAboutAndUpdatesTab(
         context,
         dialogCtx,
         logic,
@@ -471,6 +458,7 @@ Widget _buildMesApiTab(
   StateSetter setDialogState,
 ) {
   return ListView(
+    key: const PageStorageKey('settings_tab_mes_api'),
     physics: const BouncingScrollPhysics(),
     children: [
       // CDP Auto Sync Card
@@ -744,17 +732,33 @@ Widget _buildMesApiTab(
   );
 }
 
-Widget _buildGeneralTab(
+Widget _buildDisplayAndGlassTab(
   BuildContext context,
   AppLogic logic,
   ThemeProvider theme,
   AppColors colors,
+  double tempCardBlur,
+  double tempCardOpacity,
+  double tempDialogBlur,
+  double tempDialogOpacity,
+  double tempDropdownBlur,
+  double tempDropdownOpacity,
   StateSetter setDialogState,
+  void Function({
+    double? cardBlur,
+    double? cardOpacity,
+    double? dialogBlur,
+    double? dialogOpacity,
+    double? dropdownBlur,
+    double? dropdownOpacity,
+  })
+  onSliderChange,
 ) {
   return ListView(
+    key: const PageStorageKey('settings_tab_display_glass'),
     physics: const BouncingScrollPhysics(),
     children: [
-      // Language Selector
+      // 1. Language Selector
       Text(
         Translations.get('language', logic.lang),
         style: TextStyle(
@@ -803,9 +807,9 @@ Widget _buildGeneralTab(
           ),
         ],
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 18),
 
-      // Performance Graphic Tier Switcher
+      // 2. Performance Graphic Tier Switcher
       Text(
         Translations.get('perf_tooltip', logic.lang),
         style: TextStyle(
@@ -859,6 +863,137 @@ Widget _buildGeneralTab(
             onSelect: () => theme.setPerfTierMode(PerfTierMode.lite),
           ),
         ],
+      ),
+      const SizedBox(height: 18),
+
+      // 3. Glassmorphism Live-Tuning BentoCard
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.blur_on_rounded,
+                      size: 18,
+                      color: colors.accentColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      Translations.get('glass_settings_title', logic.lang),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  onTap: () {
+                    theme.resetToDefaults();
+                    onSliderChange(
+                      cardBlur: 20.0,
+                      cardOpacity: 0.25,
+                      dialogBlur: 20.0,
+                      dialogOpacity: 0.85,
+                      dropdownBlur: 20.0,
+                      dropdownOpacity: 0.86,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Text(
+                      Translations.get('default', logic.lang),
+                      style: TextStyle(
+                        color: colors.accentCyan,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Bento Card Sliders
+            _buildSliderTile(
+              label: Translations.get('card_blur_label', logic.lang),
+              value: tempCardBlur,
+              min: 0,
+              max: 40,
+              colors: colors,
+              onChanged: (v) => onSliderChange(cardBlur: v),
+            ),
+            const SizedBox(height: 6),
+            _buildSliderTile(
+              label: Translations.get('card_opacity_label', logic.lang),
+              value: tempCardOpacity,
+              min: 0.05,
+              max: 1.0,
+              isPercent: true,
+              colors: colors,
+              onChanged: (v) => onSliderChange(cardOpacity: v),
+            ),
+            const SizedBox(height: 8),
+            Divider(color: colors.borderDefault, height: 1),
+            const SizedBox(height: 8),
+
+            // Dialog Sliders
+            _buildSliderTile(
+              label: Translations.get('dialog_blur', logic.lang),
+              value: tempDialogBlur,
+              min: 0,
+              max: 40,
+              colors: colors,
+              onChanged: (v) => onSliderChange(dialogBlur: v),
+            ),
+            const SizedBox(height: 6),
+            _buildSliderTile(
+              label: Translations.get('dialog_opacity', logic.lang),
+              value: tempDialogOpacity,
+              min: 0.1,
+              max: 1.0,
+              isPercent: true,
+              colors: colors,
+              onChanged: (v) => onSliderChange(dialogOpacity: v),
+            ),
+            const SizedBox(height: 8),
+            Divider(color: colors.borderDefault, height: 1),
+            const SizedBox(height: 8),
+
+            // Dropdown Sliders
+            _buildSliderTile(
+              label: Translations.get('dropdown_blur_label', logic.lang),
+              value: tempDropdownBlur,
+              min: 0,
+              max: 40,
+              colors: colors,
+              onChanged: (v) => onSliderChange(dropdownBlur: v),
+            ),
+            const SizedBox(height: 6),
+            _buildSliderTile(
+              label: Translations.get('dropdown_opacity_label', logic.lang),
+              value: tempDropdownOpacity,
+              min: 0.1,
+              max: 1.0,
+              isPercent: true,
+              colors: colors,
+              onChanged: (v) => onSliderChange(dropdownOpacity: v),
+            ),
+          ],
+        ),
       ),
     ],
   );
@@ -971,242 +1106,6 @@ Widget _buildTierTile({
         ],
       ),
     ),
-  );
-}
-
-Widget _buildGlassTuningTab(
-  BuildContext context,
-  AppLogic logic,
-  ThemeProvider theme,
-  AppColors colors,
-  double tempCardBlur,
-  double tempCardOpacity,
-  double tempDialogBlur,
-  double tempDialogOpacity,
-  double tempDropdownBlur,
-  double tempDropdownOpacity,
-  StateSetter setDialogState,
-  void Function({
-    double? cardBlur,
-    double? cardOpacity,
-    double? dialogBlur,
-    double? dialogOpacity,
-    double? dropdownBlur,
-    double? dropdownOpacity,
-  })
-  onSliderChange,
-) {
-  return ListView(
-    physics: const BouncingScrollPhysics(),
-    children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            Translations.get('glass_settings_title', logic.lang),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: colors.textPrimary,
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              theme.resetToDefaults();
-              onSliderChange(
-                cardBlur: 20.0,
-                cardOpacity: 0.25,
-                dialogBlur: 20.0,
-                dialogOpacity: 0.85,
-                dropdownBlur: 20.0,
-                dropdownOpacity: 0.86,
-              );
-            },
-            borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Text(
-                Translations.get('default', logic.lang),
-                style: TextStyle(
-                  color: colors.accentCyan,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-
-      // 1. Bento Card Blur
-      _buildSliderTile(
-        label: Translations.get('card_blur_label', logic.lang),
-        value: tempCardBlur,
-        min: 0,
-        max: 40,
-        colors: colors,
-        onChanged: (v) => onSliderChange(cardBlur: v),
-      ),
-      const SizedBox(height: 8),
-
-      // 2. Bento Card Opacity
-      _buildSliderTile(
-        label: Translations.get('card_opacity_label', logic.lang),
-        value: tempCardOpacity,
-        min: 0.05,
-        max: 1.0,
-        isPercent: true,
-        colors: colors,
-        onChanged: (v) => onSliderChange(cardOpacity: v),
-      ),
-      const SizedBox(height: 8),
-      Divider(color: colors.borderDefault, height: 1),
-      const SizedBox(height: 8),
-
-      // 3. Dialog Blur
-      _buildSliderTile(
-        label: Translations.get('dialog_blur', logic.lang),
-        value: tempDialogBlur,
-        min: 0,
-        max: 40,
-        colors: colors,
-        onChanged: (v) => onSliderChange(dialogBlur: v),
-      ),
-      const SizedBox(height: 8),
-
-      // 4. Dialog Opacity
-      _buildSliderTile(
-        label: Translations.get('dialog_opacity', logic.lang),
-        value: tempDialogOpacity,
-        min: 0.1,
-        max: 1.0,
-        isPercent: true,
-        colors: colors,
-        onChanged: (v) => onSliderChange(dialogOpacity: v),
-      ),
-      const SizedBox(height: 8),
-      Divider(color: colors.borderDefault, height: 1),
-      const SizedBox(height: 8),
-
-      // 5. Dropdown Blur
-      _buildSliderTile(
-        label: Translations.get('dropdown_blur_label', logic.lang),
-        value: tempDropdownBlur,
-        min: 0,
-        max: 40,
-        colors: colors,
-        onChanged: (v) => onSliderChange(dropdownBlur: v),
-      ),
-      const SizedBox(height: 8),
-
-      // 6. Dropdown Opacity
-      _buildSliderTile(
-        label: Translations.get('dropdown_opacity_label', logic.lang),
-        value: tempDropdownOpacity,
-        min: 0.1,
-        max: 1.0,
-        isPercent: true,
-        colors: colors,
-        onChanged: (v) => onSliderChange(dropdownOpacity: v),
-      ),
-    ],
-  );
-}
-
-Widget _buildAboutTab(
-  BuildContext context,
-  AppLogic logic,
-  ThemeProvider theme,
-  AppColors colors,
-) {
-  final timestamp = BuildInfo.debugTimestamp;
-  return ListView(
-    physics: const BouncingScrollPhysics(),
-    children: [
-      Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colors.accentColor, colors.accentCyan],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(Icons.hub_rounded, color: Colors.white, size: 26),
-          ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$appName v$appVersion',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Build Date: $timestamp',
-                style: TextStyle(fontSize: 12, color: colors.textSecondary),
-              ),
-            ],
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      BentoCard(
-        colors: colors,
-        padding: const EdgeInsets.all(14),
-        borderRadius: 12,
-        child: Column(
-          children: [
-            _buildAboutRow(
-              'Engine',
-              'Dart 3.12 / Flutter 3.x Desktop (Windows)',
-              colors,
-            ),
-            _buildAboutRow(
-              'Architecture',
-              'Bento Glassmorphism + Dynamic Island',
-              colors,
-            ),
-            _buildAboutRow(
-              'CDP Interceptor',
-              'Edge / Chrome DevTools Protocol',
-              colors,
-            ),
-            _buildAboutRow(
-              'Hardware Profile',
-              '${theme.cpuCores} Cores (${theme.effectiveTier.label})',
-              colors,
-            ),
-            _buildAboutRow('License', 'Internal Tool • JA Tech', colors),
-          ],
-        ),
-      ),
-      const SizedBox(height: 14),
-      OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.accentColor,
-          side: BorderSide(color: colors.accentColor.withValues(alpha: 0.5)),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        icon: const Icon(Icons.folder_open_rounded, size: 16),
-        label: const Text('Open Logs Folder', style: TextStyle(fontSize: 12)),
-        onPressed: () {
-          final exeDir = File(Platform.resolvedExecutable).parent.path;
-          Process.start('explorer.exe', ['$exeDir/logs']);
-        },
-      ),
-    ],
   );
 }
 
@@ -1357,7 +1256,7 @@ Widget _buildAboutRow(String title, String value, AppColors colors) {
   );
 }
 
-Widget _buildOtaUpdateTab(
+Widget _buildAboutAndUpdatesTab(
   BuildContext context,
   BuildContext dialogCtx,
   AppLogic logic,
@@ -1375,6 +1274,7 @@ Widget _buildOtaUpdateTab(
 ) {
   final isDark = theme.isDark;
   final otaConfig = OtaUpdateService().currentConfig;
+  final timestamp = BuildInfo.debugTimestamp;
 
   Future<void> checkForUpdatesManually() async {
     onUpdateCheckStateChanged(true, null);
@@ -1417,9 +1317,10 @@ Widget _buildOtaUpdateTab(
   }
 
   return ListView(
+    key: const PageStorageKey('settings_tab_about_updates'),
     physics: const BouncingScrollPhysics(),
     children: [
-      // 1. Version Status Card
+      // 1. Featured Version & Update Status Card
       BentoCard(
         colors: colors,
         padding: const EdgeInsets.all(16),
@@ -1431,13 +1332,15 @@ Widget _buildOtaUpdateTab(
             Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [colors.accentColor, colors.accentCyan],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
                         color: colors.accentColor.withValues(alpha: 0.35),
@@ -1447,9 +1350,9 @@ Widget _buildOtaUpdateTab(
                     ],
                   ),
                   child: const Icon(
-                    Icons.system_update_alt_rounded,
+                    Icons.hub_rounded,
                     color: Colors.white,
-                    size: 22,
+                    size: 24,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -1458,26 +1361,27 @@ Widget _buildOtaUpdateTab(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${Translations.get('current_version', logic.lang)}: v$appVersion',
+                        '$appName v$appVersion',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
                           color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        otaConfig.lastCheckTime != null
-                            ? '${Translations.get('last_checked', logic.lang)}: ${otaConfig.lastCheckTime!.hour.toString().padLeft(2, '0')}:${otaConfig.lastCheckTime!.minute.toString().padLeft(2, '0')} ${otaConfig.lastCheckTime!.day}/${otaConfig.lastCheckTime!.month}/${otaConfig.lastCheckTime!.year}'
-                            : Translations.get('never_checked', logic.lang),
+                        'Build: $timestamp • ${otaConfig.lastCheckTime != null ? '${Translations.get('last_checked', logic.lang)}: ${otaConfig.lastCheckTime!.hour.toString().padLeft(2, '0')}:${otaConfig.lastCheckTime!.minute.toString().padLeft(2, '0')} ${otaConfig.lastCheckTime!.day}/${otaConfig.lastCheckTime!.month}/${otaConfig.lastCheckTime!.year}' : Translations.get('never_checked', logic.lang)}',
                         style: TextStyle(
                           fontSize: 11.5,
                           color: colors.textSecondary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: isCheckingForUpdates
                       ? null
@@ -1640,10 +1544,9 @@ Widget _buildOtaUpdateTab(
           ],
         ),
       ),
-
       const SizedBox(height: 14),
 
-      // 2. Check Interval Card
+      // 2. LAN OTA Settings Card
       BentoCard(
         colors: colors,
         padding: const EdgeInsets.all(16),
@@ -1653,14 +1556,10 @@ Widget _buildOtaUpdateTab(
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.schedule_rounded,
-                  size: 18,
-                  color: colors.accentColor,
-                ),
+                Icon(Icons.dns_rounded, size: 18, color: colors.accentColor),
                 const SizedBox(width: 8),
                 Text(
-                  Translations.get('check_interval', logic.lang),
+                  Translations.get('server_path', logic.lang),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -1669,7 +1568,33 @@ Widget _buildOtaUpdateTab(
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
+            _buildTextField(
+              label: '',
+              controller: otaServerPathCtrl,
+              colors: colors,
+              hintText: Translations.get('server_path_hint', logic.lang),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  size: 16,
+                  color: colors.accentColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  Translations.get('check_interval', logic.lang),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
               decoration: BoxDecoration(
@@ -1734,86 +1659,6 @@ Widget _buildOtaUpdateTab(
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-
-      const SizedBox(height: 14),
-
-      // 3. Server Configuration Card
-      BentoCard(
-        colors: colors,
-        padding: const EdgeInsets.all(16),
-        borderRadius: 14,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.dns_rounded, size: 18, color: colors.accentColor),
-                const SizedBox(width: 8),
-                Text(
-                  Translations.get('server_path', logic.lang),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: openAppFolder,
-                  icon: const Icon(Icons.folder_open_rounded, size: 14),
-                  label: Text(
-                    Translations.get('open_config_folder', logic.lang),
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    foregroundColor: colors.accentColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _buildTextField(
-              label: '',
-              controller: otaServerPathCtrl,
-              colors: colors,
-              hintText: Translations.get('server_path_hint', logic.lang),
-            ),
-          ],
-        ),
-      ),
-
-      const SizedBox(height: 14),
-
-      // 4. Network Authentication Card
-      BentoCard(
-        colors: colors,
-        padding: const EdgeInsets.all(16),
-        borderRadius: 14,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.lock_outline_rounded,
-                  size: 18,
-                  color: colors.accentColor,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  Translations.get('ota_credentials', logic.lang),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -1837,6 +1682,110 @@ Widget _buildOtaUpdateTab(
             ),
           ],
         ),
+      ),
+      const SizedBox(height: 14),
+
+      // 3. Technical Specs & Diagnostics
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(14),
+        borderRadius: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: colors.accentColor,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  Translations.get('tab_about', logic.lang),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _buildAboutRow(
+              'Engine',
+              'Dart 3.12 / Flutter 3.x Desktop (Windows)',
+              colors,
+            ),
+            _buildAboutRow(
+              'Architecture',
+              'Bento Glassmorphism + Dynamic Island',
+              colors,
+            ),
+            _buildAboutRow(
+              'CDP Interceptor',
+              'Edge / Chrome DevTools Protocol',
+              colors,
+            ),
+            _buildAboutRow(
+              'Hardware Profile',
+              '${theme.cpuCores} Cores (${theme.effectiveTier.label})',
+              colors,
+            ),
+            _buildAboutRow('License', 'Internal Tool • JA Tech', colors),
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
+
+      // Action buttons: Open Logs & Open Config Folder
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.accentColor,
+                side: BorderSide(
+                  color: colors.accentColor.withValues(alpha: 0.5),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.folder_open_rounded, size: 16),
+              label: const Text(
+                'Open Logs Folder',
+                style: TextStyle(fontSize: 12),
+              ),
+              onPressed: () {
+                final exeDir = File(Platform.resolvedExecutable).parent.path;
+                Process.start('explorer.exe', ['$exeDir/logs']);
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.accentColor,
+                side: BorderSide(
+                  color: colors.accentColor.withValues(alpha: 0.5),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.settings_suggest_rounded, size: 16),
+              label: Text(
+                Translations.get('open_config_folder', logic.lang),
+                style: const TextStyle(fontSize: 12),
+              ),
+              onPressed: openAppFolder,
+            ),
+          ),
+        ],
       ),
     ],
   );
