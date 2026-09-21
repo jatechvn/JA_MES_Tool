@@ -1,15 +1,24 @@
-param([string]$Mode = '')
+param(
+    [string]$Origin = '',
+    [string]$Mode = ''
+)
 $ErrorActionPreference = 'Stop'
-$silent = $Mode -in @('/silent', '/s', '-silent', '-s')
+$cleanMode = if ($null -ne $Mode) { $Mode.Trim('"'' ').ToLower() } else { '' }
+$silent = $cleanMode -in @('/silent', '/s', '-silent', '-s', 'silent')
 function Confirm-Yes([string]$prompt) {
     return ((Read-Host $prompt).Trim() -match '^(?i:y|yes)$')
 }
 try {
     $target = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\JA_MES_Tool')).TrimEnd('\')
-    $origin = [IO.Path]::GetFullPath($env:UNINSTALL_ORIGIN).TrimEnd('\')
+    if ([string]::IsNullOrWhiteSpace($Origin)) {
+        $Origin = $env:UNINSTALL_ORIGIN
+    }
+    $originClean = if (-not [string]::IsNullOrWhiteSpace($Origin)) { $Origin.Trim('"'' ') } else { '' }
+    $originPath = if (-not [string]::IsNullOrWhiteSpace($originClean)) { [IO.Path]::GetFullPath($originClean).TrimEnd('\') } else { '' }
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'
     $registered = (Get-ItemProperty -LiteralPath $key -ErrorAction Stop).InstallLocation
-    if ($origin -ne $target -or $registered -ne $target) {
+    $registeredPath = if (-not [string]::IsNullOrWhiteSpace($registered)) { [IO.Path]::GetFullPath($registered.Trim('"'' ')).TrimEnd('\') } else { '' }
+    if (($originPath -ne '' -and $originPath -ne $target) -or ($registeredPath -ne '' -and $registeredPath -ne $target)) {
         throw 'Run the uninstaller from the registered installation, not a portable/source folder.'
     }
     function Assert-PlainDirectory([string]$path) {
@@ -52,19 +61,20 @@ try {
     }
     Set-Location -LiteralPath $env:TEMP
     [System.IO.Directory]::SetCurrentDirectory($env:TEMP)
+    Start-Sleep -Milliseconds 500
     if (Test-Path -LiteralPath $target) {
         $deleted = $false
-        for ($retry = 0; $retry -lt 3; $retry++) {
+        for ($retry = 0; $retry -lt 5; $retry++) {
             try {
                 Remove-Item -LiteralPath $target -Recurse -Force
                 $deleted = $true
                 break
             } catch {
-                Start-Sleep -Milliseconds 500
+                Start-Sleep -Milliseconds 600
             }
         }
         if (-not $deleted -and (Test-Path -LiteralPath $target)) {
-            Remove-Item -LiteralPath $target -Recurse -Force
+            cmd.exe /c "rd /s /q `"$target`""
         }
     }
     if ($purge) {
