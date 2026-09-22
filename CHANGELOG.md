@@ -5,6 +5,29 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.9] - 2026-09-22
+
+### 🚀 Nâng cấp & Tính năng mới
+- **🪟 Tối ưu hóa & Hợp nhất Settings Dialog thành 3 tab Bento Grid**:
+  - Hợp nhất cấu trúc 5 tab rời rạc bị tràn chiều ngang (760px) thành 3 tab Bento Grid cân đối:
+    1. **CloudMES & CDP** (`tab_mes_api`): Đồng bộ CDP tự động từ Chrome/Edge + quản lý credentials và kiểm tra kết nối.
+    2. **Giao diện & Kính mờ** (`tab_display_glass`): Chọn ngôn ngữ + Graphic Tier switcher + Bento card điều khiển 6 thanh trượt Glassmorphism với Live-Preview tức thì và nút Mặc định.
+    3. **Thông tin & Cập nhật** (`tab_about_updates`): Trạng thái LAN OTA + Cấu hình UNC Share Server + Thẻ thông số hệ thống và nút mở thư mục Logs/Config.
+  - Áp dụng `Expanded` cho toàn bộ thanh tab bar, căn giữa nội dung, bọc `Flexible` + `TextOverflow.ellipsis`, loại bỏ 100% hiện tượng tràn viền.
+  - Gán `PageStorageKey` độc lập cho từng tab, ngăn chặn việc kế thừa sai lệch scroll position khi chuyển đổi qua lại giữa các tab.
+  - Bổ sung đồng bộ giá trị thanh trượt Glassmorphism theo thời gian thực khi bấm chọn Graphic Tier (Auto, Ultra, Balanced, Lite).
+- **📦 Bộ cài đặt & Gỡ bỏ chuẩn Windows (Non-Admin Standard Suite)**:
+  - Bổ sung `install.bat`, `uninstall.bat`, và `uninstall.ps1` theo chuẩn `dart-build-pro`.
+  - Hỗ trợ cài đặt vào `%LOCALAPPDATA%\Programs\JA_MES_Tool` hoặc thư mục tùy chọn mà không cần quyền Administrator.
+  - Tự động tạo Shortcut trên Desktop và Start Menu; đăng ký thông tin gỡ cài đặt chuẩn xác trong Windows Registry `Uninstall` key.
+- **🌐 Bản địa hóa toàn diện (Full Multilingual Localization)**:
+  - Bổ sung từ điển đa ngữ cho toàn bộ các nhãn thông số hệ thống (`system_engine`, `system_architecture`, `system_cdp_interceptor`, `system_hardware_profile`, `system_license`, `open_logs_folder`).
+
+### 🧪 Verification & Testing
+- **✅ Widget Tests Mới**: Bổ sung `test/settings_dialog_tabs_test.dart` kiểm tra hiển thị 3 tab, chuyển đổi tab mượt mà và cập nhật live glass khi đổi graphic tier.
+- **✅ 100% Tests Pass**: Toàn bộ 42/42 tests vượt qua thành công (`flutter test`).
+- **✅ 0 Issues Found**: `flutter analyze` đạt 0 lỗi, 0 cảnh báo.
+
 ## [2.9.8] - 2026-09-21
 
 ### 🚀 Major Features & Enhancements

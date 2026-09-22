@@ -13,6 +13,29 @@ import '../../../widgets/app_toast.dart';
 import '../../services/ota_update_service.dart';
 import 'glass_update_dialog.dart';
 
+String _formatSettingsTranslation(
+  String key,
+  String lang,
+  Map<String, String> values,
+) {
+  var text = Translations.get(key, lang);
+  for (final entry in values.entries) {
+    text = text.replaceAll('{${entry.key}}', entry.value);
+  }
+  return text;
+}
+
+String _localizedHardwareTier(HardwareTier tier, String lang) {
+  switch (tier) {
+    case HardwareTier.ultra:
+      return Translations.get('hardware_tier_ultra', lang);
+    case HardwareTier.balanced:
+      return Translations.get('hardware_tier_balanced', lang);
+    case HardwareTier.lite:
+      return Translations.get('hardware_tier_lite', lang);
+  }
+}
+
 Future<void> showAppSettingsDialog(
   BuildContext context,
   AppLogic logic,
@@ -72,6 +95,9 @@ Future<void> showAppSettingsDialog(
               final activeColors = theme.colors;
 
               void rollbackAndClose() {
+                // Restore the profile first because changing a tier also applies
+                // that tier's default glass values.
+                theme.setPerfTierMode(origPerfMode);
                 theme.setLiveGlassmorphism(
                   cardBlur: origCardBlur,
                   cardOpacity: origCardOpacity,
@@ -80,7 +106,6 @@ Future<void> showAppSettingsDialog(
                   dropdownBlur: origDropdownBlur,
                   dropdownOpacity: origDropdownOpacity,
                 );
-                theme.setPerfTierMode(origPerfMode);
                 Navigator.pop(dialogCtx);
               }
 
@@ -392,6 +417,7 @@ Widget _buildCurrentTabContent({
     case 0:
       return _buildMesApiTab(
         context,
+        dialogCtx,
         logic,
         theme,
         colors,
@@ -444,6 +470,7 @@ Widget _buildCurrentTabContent({
 
 Widget _buildMesApiTab(
   BuildContext context,
+  BuildContext dialogCtx,
   AppLogic logic,
   ThemeProvider theme,
   AppColors colors,
@@ -561,6 +588,7 @@ Widget _buildMesApiTab(
                             setDialogState(() => isSyncingCdp = true);
                             final creds =
                                 await BrowserHelper.fetchCredentialsFromBrowser();
+                            if (!dialogCtx.mounted) return;
                             setDialogState(() => isSyncingCdp = false);
                             if (creds != null &&
                                 creds.token != null &&
@@ -685,12 +713,17 @@ Widget _buildMesApiTab(
                       testUuid: uuidCtrl.text.trim(),
                       testCookie: cookieCtrl.text.trim(),
                     );
+                    if (!dialogCtx.mounted) return;
                     setDialogState(() {
                       isTestingConnection = false;
                       connectionTestResult = ok;
                       connectionTestMsg = ok
                           ? Translations.get('connection_valid', logic.lang)
-                          : logic.connectionError ?? 'Failed to connect';
+                          : logic.connectionError ??
+                                Translations.get(
+                                  'connection_failed',
+                                  logic.lang,
+                                );
                     });
                   },
           ),
@@ -754,6 +787,18 @@ Widget _buildDisplayAndGlassTab(
   })
   onSliderChange,
 ) {
+  void selectPerfTier(PerfTierMode mode) {
+    theme.setPerfTierMode(mode);
+    onSliderChange(
+      cardBlur: theme.cardBlur,
+      cardOpacity: theme.cardOpacity,
+      dialogBlur: theme.dialogBlur,
+      dialogOpacity: theme.dialogOpacity,
+      dropdownBlur: theme.dropdownBlur,
+      dropdownOpacity: theme.dropdownOpacity,
+    );
+  }
+
   return ListView(
     key: const PageStorageKey('settings_tab_display_glass'),
     physics: const BouncingScrollPhysics(),
@@ -823,44 +868,47 @@ Widget _buildDisplayAndGlassTab(
         children: [
           _buildTierTile(
             mode: PerfTierMode.auto,
-            title: 'Auto (Hệ thống tự nhận diện: ${theme.effectiveTier.label})',
-            desc:
-                'CPU: ${theme.cpuCores} Cores • Điểm phần cứng: ${theme.hardwareScore}/100',
+            title: _formatSettingsTranslation('perf_auto_title', logic.lang, {
+              'tier': _localizedHardwareTier(theme.effectiveTier, logic.lang),
+            }),
+            desc: _formatSettingsTranslation('perf_auto_desc', logic.lang, {
+              'cores': theme.cpuCores.toString(),
+              'score': theme.hardwareScore.toString(),
+            }),
             icon: Icons.auto_awesome_rounded,
             currentMode: theme.perfMode,
             colors: colors,
-            onSelect: () => theme.setPerfTierMode(PerfTierMode.auto),
+            onSelect: () => selectPerfTier(PerfTierMode.auto),
           ),
           const SizedBox(height: 8),
           _buildTierTile(
             mode: PerfTierMode.ultra,
             title: Translations.get('tier_ultra', logic.lang),
-            desc:
-                'Hiệu ứng kính mờ đầy đủ, GPU mesh orbs, chuyển động 120 FPS tối đa',
+            desc: Translations.get('tier_ultra_desc', logic.lang),
             icon: Icons.bolt_rounded,
             currentMode: theme.perfMode,
             colors: colors,
-            onSelect: () => theme.setPerfTierMode(PerfTierMode.ultra),
+            onSelect: () => selectPerfTier(PerfTierMode.ultra),
           ),
           const SizedBox(height: 8),
           _buildTierTile(
             mode: PerfTierMode.balanced,
             title: Translations.get('tier_balanced', logic.lang),
-            desc: 'Tối ưu cho Laptop pin, 60 FPS mượt mà, giảm blur và orb nền',
+            desc: Translations.get('tier_balanced_desc', logic.lang),
             icon: Icons.balance_rounded,
             currentMode: theme.perfMode,
             colors: colors,
-            onSelect: () => theme.setPerfTierMode(PerfTierMode.balanced),
+            onSelect: () => selectPerfTier(PerfTierMode.balanced),
           ),
           const SizedBox(height: 8),
           _buildTierTile(
             mode: PerfTierMode.lite,
             title: Translations.get('tier_lite', logic.lang),
-            desc: 'Tắt chuyển động nền, loại bỏ 100% giật lag cho máy yếu',
+            desc: Translations.get('tier_lite_desc', logic.lang),
             icon: Icons.eco_rounded,
             currentMode: theme.perfMode,
             colors: colors,
-            onSelect: () => theme.setPerfTierMode(PerfTierMode.lite),
+            onSelect: () => selectPerfTier(PerfTierMode.lite),
           ),
         ],
       ),
@@ -899,12 +947,12 @@ Widget _buildDisplayAndGlassTab(
                   onTap: () {
                     theme.resetToDefaults();
                     onSliderChange(
-                      cardBlur: 20.0,
-                      cardOpacity: 0.25,
-                      dialogBlur: 20.0,
-                      dialogOpacity: 0.85,
-                      dropdownBlur: 20.0,
-                      dropdownOpacity: 0.86,
+                      cardBlur: theme.cardBlur,
+                      cardOpacity: theme.cardOpacity,
+                      dialogBlur: theme.dialogBlur,
+                      dialogOpacity: theme.dialogOpacity,
+                      dropdownBlur: theme.dropdownBlur,
+                      dropdownOpacity: theme.dropdownOpacity,
                     );
                   },
                   borderRadius: BorderRadius.circular(6),
@@ -1284,6 +1332,7 @@ Widget _buildAboutAndUpdatesTab(
         overrideServerPath: path,
         isManual: true,
       );
+      if (!dialogCtx.mounted) return;
       onUpdateCheckStateChanged(false, result);
       if (result.hasUpdate && result.packageInfo != null && dialogCtx.mounted) {
         showGlassUpdateDialog(
@@ -1293,6 +1342,7 @@ Widget _buildAboutAndUpdatesTab(
         );
       }
     } catch (e) {
+      if (!dialogCtx.mounted) return;
       onUpdateCheckStateChanged(
         false,
         UpdateCheckResult(
@@ -1370,7 +1420,7 @@ Widget _buildAboutAndUpdatesTab(
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Build: $timestamp • ${otaConfig.lastCheckTime != null ? '${Translations.get('last_checked', logic.lang)}: ${otaConfig.lastCheckTime!.hour.toString().padLeft(2, '0')}:${otaConfig.lastCheckTime!.minute.toString().padLeft(2, '0')} ${otaConfig.lastCheckTime!.day}/${otaConfig.lastCheckTime!.month}/${otaConfig.lastCheckTime!.year}' : Translations.get('never_checked', logic.lang)}',
+                        '${Translations.get('build_label', logic.lang)}: $timestamp • ${otaConfig.lastCheckTime != null ? '${Translations.get('last_checked', logic.lang)}: ${otaConfig.lastCheckTime!.hour.toString().padLeft(2, '0')}:${otaConfig.lastCheckTime!.minute.toString().padLeft(2, '0')} ${otaConfig.lastCheckTime!.day}/${otaConfig.lastCheckTime!.month}/${otaConfig.lastCheckTime!.year}' : Translations.get('never_checked', logic.lang)}',
                         style: TextStyle(
                           fontSize: 11.5,
                           color: colors.textSecondary,
@@ -1713,26 +1763,33 @@ Widget _buildAboutAndUpdatesTab(
             ),
             const SizedBox(height: 10),
             _buildAboutRow(
-              'Engine',
+              Translations.get('system_engine', logic.lang),
               'Dart 3.12 / Flutter 3.x Desktop (Windows)',
               colors,
             ),
             _buildAboutRow(
-              'Architecture',
+              Translations.get('system_architecture', logic.lang),
               'Bento Glassmorphism + Dynamic Island',
               colors,
             ),
             _buildAboutRow(
-              'CDP Interceptor',
+              Translations.get('system_cdp_interceptor', logic.lang),
               'Edge / Chrome DevTools Protocol',
               colors,
             ),
             _buildAboutRow(
-              'Hardware Profile',
-              '${theme.cpuCores} Cores (${theme.effectiveTier.label})',
+              Translations.get('system_hardware_profile', logic.lang),
+              _formatSettingsTranslation('hardware_profile_value', logic.lang, {
+                'cores': theme.cpuCores.toString(),
+                'tier': _localizedHardwareTier(theme.effectiveTier, logic.lang),
+              }),
               colors,
             ),
-            _buildAboutRow('License', 'Internal Tool • JA Tech', colors),
+            _buildAboutRow(
+              Translations.get('system_license', logic.lang),
+              'Internal Tool • JA Tech',
+              colors,
+            ),
           ],
         ),
       ),
@@ -1754,9 +1811,9 @@ Widget _buildAboutAndUpdatesTab(
                 ),
               ),
               icon: const Icon(Icons.folder_open_rounded, size: 16),
-              label: const Text(
-                'Open Logs Folder',
-                style: TextStyle(fontSize: 12),
+              label: Text(
+                Translations.get('open_logs_folder', logic.lang),
+                style: const TextStyle(fontSize: 12),
               ),
               onPressed: () {
                 final exeDir = File(Platform.resolvedExecutable).parent.path;
