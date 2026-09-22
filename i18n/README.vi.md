@@ -1,12 +1,12 @@
-# 🤖 JA MES Tool v2.9.8 - Tiếng Việt
+# 🤖 JA MES Tool v2.9.9 - Tiếng Việt
 
 <p align="center">
   <br>
-  <i><b>Ứng dụng desktop hiệu năng cao phát triển bằng Dart & Flutter giúp tự động hóa tra cứu, kiểm tra và xuất báo cáo dữ liệu kiểm thử, lịch sử công đoạn/barcode, và truy vết linh kiện BOM từ hệ thống Foxconn CloudMES với giao diện Bento Glassmorphism.</b></i>
+  <i><b>Ứng dụng desktop Windows hiệu năng cao phát triển bằng Dart & Flutter phục vụ tra cứu tự động kết quả kiểm tra CloudMES, lịch sử công đoạn và truy vết linh kiện BOM với giao diện Bento Glassmorphism.</b></i>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.8-blue.svg" alt="Phiên bản 2.9.8">
+  <img src="https://img.shields.io/badge/phien_ban-2.9.9-blue.svg" alt="Phiên bản 2.9.9">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -229,6 +229,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.9.9]** — **Hợp nhất Settings Dialog thành 3 tab Bento Grid & Bộ cài đặt Windows Chuẩn**: Tối ưu hóa 5 tab cũ thành 3 tab Bento cân đối (`CloudMES & CDP`, `Giao diện & Kính mờ`, `Thông tin & Cập nhật`) với thanh tab `Expanded` chống tràn viền và vị trí cuộn `PageStorageKey` độc lập; bổ sung bộ cài đặt/gỡ bỏ không cần quyền admin (`install.bat`, `uninstall.bat`, `uninstall.ps1`), cập nhật live glass khi chuyển graphic tier và đa ngữ toàn diện thông số hệ thống.
 - **[2.9.8]** — **Tích hợp LAN Over-The-Air (OTA) Update**: Tự động kiểm tra bản phát hành mới qua thư mục chia sẻ mạng LAN / UNC Share, so sánh phiên bản chuẩn Semantic Versioning kèm build number, quy trình cập nhật Hot-Swap an toàn bằng Robocopy, hộp thoại Bento Glass Update Dialog và tab Cập nhật trong Cài đặt.
 - **[2.9.7]** — Bổ sung đầy đủ các trường Barcode History & WIP Components từ CloudMES (Line, Internal SN, Thiết bị, Phiên bản, Kế hoạch, Ghi chú, Vị trí linh kiện), mở rộng xuất CSV, card SN 2 dòng tinh tế và hiệu ứng marquee nảy.
 - **[2.9.6]** — Thêm hàng đợi FIFO tối đa 6 tác vụ song song, bảo vệ stale-result, chia sẻ SN Master và khôi phục bố cục desktop gọn với native caption controls của Windows.

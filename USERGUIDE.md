@@ -1,4 +1,4 @@
-# 📘 Hướng dẫn Sử dụng JA MES Tool v2.9.8
+# 📘 Hướng dẫn Sử dụng JA MES Tool v2.9.9
 
 > **Ứng dụng Windows Desktop hiệu năng cao tra cứu dữ liệu kiểm thử, lịch sử công đoạn và truy vết linh kiện Foxconn CloudMES với giao diện Bento Glassmorphism.**
 
@@ -9,8 +9,8 @@
 2. [Thiết lập Tài khoản & Đồng bộ Token (CDP Sync)](#2-thiết-lập-tài-khoản--đồng-bộ-token-cdp-sync)
 3. [Tra cứu Dữ liệu & Quản lý Hàng đợi SN](#3-tra-cứu-dữ-liệu--quản-lý-hàng-đợi-sn)
 4. [Bảng Lệnh Nhanh (Command Palette - Ctrl+K)](#4-bảng-lệnh-nhanh-command-palette---ctrlk)
-5. [Hệ thống Tự động Cập nhật qua Mạng nội bộ (LAN OTA Update)](#5-hệ-thống-tự-động-cập-nhật-qua-mạng-nội-bộ-lan-ota-update)
-6. [Tùy chỉnh Giao diện Kính mờ (Bento Glassmorphism)](#6-tùy-chỉnh-giao-diện-kính-mờ-bento-glassmorphism)
+5. [Cài đặt 3 Tab Bento & Tùy chỉnh Kính mờ (Glassmorphism)](#5-cài-đặt-3-tab-bento--tùy-chỉnh-kính-mờ-glassmorphism)
+6. [Hệ thống Tự động Cập nhật qua Mạng nội bộ (LAN OTA Update)](#6-hệ-thống-tự-động-cập-nhật-qua-mạng-nội-bộ-lan-ota-update)
 7. [Nhập/Xuất Báo cáo Excel & CSV](#7-nhậpxuất-báo-cáo-excel--csv)
 
 ---
@@ -22,10 +22,15 @@
 - Trình duyệt: Google Chrome hoặc Microsoft Edge (dùng để đồng bộ Token tự động)
 - Kết nối mạng: Truy cập được mạng nội bộ nhà máy hoặc VPN Foxconn CloudMES
 
-### Cài đặt nhanh (Portable)
-1. Tải gói phát hành `JA_MES_Tool_v2.9.8_Windows_x64.zip` từ thư mục chia sẻ nội bộ hoặc bản phát hành.
-2. Giải nén toàn bộ tệp tin vào một thư mục làm việc cố định (ví dụ: `D:\Tools\JA_MES_Tool`).
-3. Khởi chạy trực tiếp `ja_mes_tool.exe` mà không cần quyền Quản trị viên (Administrator).
+### Cách 1: Cài đặt chuẩn Windows không cần Admin (Khuyên dùng)
+1. Tải gói phát hành `JA_MES_Tool_v2.9.9_Windows_x64.zip`.
+2. Giải nén và nhấp đúp chạy file **`install.bat`**.
+3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel.
+4. Khi muốn gỡ cài đặt, chạy **`uninstall.bat`** hoặc gỡ trực tiếp qua Windows Installed Apps.
+
+### Cách 2: Chạy trực tiếp Portable
+1. Giải nén toàn bộ tệp tin vào một thư mục làm việc cố định (ví dụ: `D:\Tools\JA_MES_Tool`).
+2. Khởi chạy trực tiếp `ja_mes_tool.exe` mà không cần quyền Quản trị viên (Administrator).
 
 ---
 
@@ -71,12 +76,28 @@ Bảng Lệnh Nhanh mang trải nghiệm tìm kiếm tiện lợi như Spotlight
 
 ---
 
-## 5. Hệ thống Tự động Cập nhật qua Mạng nội bộ (LAN OTA Update)
+## 5. Cài đặt 3 Tab Bento & Tùy chỉnh Kính mờ (Glassmorphism)
 
-Phiên bản **v2.9.8** bổ sung tính năng kiểm tra và cập nhật ứng dụng tự động qua mạng nội bộ:
+Từ phiên bản **v2.9.9**, menu **Cài đặt ⚙️** được hợp nhất thành 3 tab Bento Grid rộng rãi, chống tràn viền và giữ vị trí cuộn độc lập:
+
+1. **Tab 1: CloudMES & CDP (`tab_mes_api`)**:
+   - Tích hợp tính năng đồng bộ tự động Token, UUID, Operation-ID, Cookie qua trình duyệt (Chrome/Edge).
+   - Ô nhập thủ công thông số MES API, nút xác minh kết nối trực tiếp và huy hiệu trạng thái xanh/vàng.
+2. **Tab 2: Giao diện & Kính mờ (`tab_display_glass`)**:
+   - **Chọn ngôn ngữ**: Chuyển đổi linh hoạt giữa Tiếng Việt 🇻🇳, English 🇬🇧 và 中文 🇨🇳.
+   - **Graphic Performance Tier**: Chọn cấu hình đồ họa (Auto, Ultra 120 FPS, Balanced 60 FPS, Lite chống lag) — tự động cập nhật hệ thống thanh trượt kính mờ tương ứng.
+   - **Bộ tinh chỉnh Kính mờ 6 thanh trượt (Live-Preview)**: Tùy biến Card Blur/Opacity, Dialog Blur/Opacity, Dropdown Blur/Opacity theo thời gian thực kèm nút **Mặc định** và khôi phục khi hủy bỏ.
+3. **Tab 3: Thông tin & Cập nhật (`tab_about_updates`)**:
+   - Thẻ thông tin phiên bản, trạng thái cập nhật LAN OTA và nút **Kiểm tra cập nhật ngay**.
+   - Cấu hình máy chủ chia sẻ mạng nội bộ (UNC path, chu kỳ kiểm tra, tài khoản mạng).
+   - Thẻ thông số kỹ thuật hệ thống (Engine, Architecture, CDP Status, Hardware Profile, License) và nút mở nhanh thư mục `logs/` và thư mục cài đặt.
+
+---
+
+## 6. Hệ thống Tự động Cập nhật qua Mạng nội bộ (LAN OTA Update)
 
 ### Cấu hình đường dẫn chia sẻ LAN
-1. Vào **Cài đặt ⚙️** -> Chọn tab **Cập nhật (OTA)** (Tab 5).
+1. Vào **Cài đặt ⚙️** -> Chọn tab **Thông tin & Cập nhật** (Tab 3).
 2. Nhập đường dẫn thư mục chia sẻ mạng (UNC Path hoặc ổ đĩa mạng):
    - Ví dụ: `\\10.81.141.226\temp\JA_MES_Tool` hoặc `Z:\Releases\JA_MES_Tool`.
 3. Nhập tài khoản/mật khẩu mạng nếu thư mục chia sẻ yêu cầu xác thực.
@@ -93,19 +114,6 @@ Phiên bản **v2.9.8** bổ sung tính năng kiểm tra và cập nhật ứng 
   2. Tự động kích hoạt kịch bản PowerShell nền sử dụng `robocopy` để hoán đổi an toàn các file nhị phân.
   3. Tự động bảo toàn dữ liệu cá nhân của bạn (`config.json`, `logs/`).
   4. Khởi động lại ứng dụng mới mà không cần cấp quyền Administrator.
-
----
-
-## 6. Tùy chỉnh Giao diện Kính mờ (Bento Glassmorphism)
-
-JA MES Tool tích hợp bộ điều chỉnh hiệu ứng kính mờ 4 trục độc quyền:
-1. Vào **Cài đặt ⚙️** -> Chọn tab **Nâng cao**.
-2. Kéo các thanh trượt với chế độ xem trước trực tiếp (Live-Preview):
-   - **Độ mờ thẻ Bento (Card Blur)**: Điều chỉnh từ `0px` (trong suốt hoàn toàn) đến `40px` (mờ mịn sâu).
-   - **Độ đục thẻ Bento (Card Opacity)**: Tinh chỉnh nền thẻ từ nhẹ nhàng sang đậm nét.
-   - **Độ mờ Hộp thoại (Dialog Blur)**: Tùy biến độ nhòe nền đằng sau các popup.
-   - **Độ đục Hộp thoại (Dialog Opacity)**: Đảm bảo độ tương phản chữ rõ nét khi hiển thị dialog.
-3. Nhấn nút **Mặc định** nếu muốn khôi phục về cấu hình gốc tiêu chuẩn của ứng dụng.
 
 ---
 

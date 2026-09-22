@@ -126,7 +126,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool' -Name 'EstimatedSize' -Value $kb -Type DWord -ErrorAction SilentlyContinue; " ^
   "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool' -Name 'InstallDate' -Value $date -Type String -ErrorAction SilentlyContinue" >nul 2>&1
 
-powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'; $q=[char]34; $bat=Join-Path $env:TARGET_DIR 'uninstall.bat'; Set-ItemProperty $key UninstallString ('cmd.exe /c '+$q+$q+$bat+$q+$q); Set-ItemProperty $key QuietUninstallString ('cmd.exe /c '+$q+$q+$bat+$q+' /silent'+$q); $ver=(Get-Item -LiteralPath (Join-Path $env:TARGET_DIR 'ja_mes_tool.exe')).VersionInfo.ProductVersion; if (-not $ver) { $ver = '2.9.8' }; Set-ItemProperty $key DisplayVersion $ver; if ((Get-ItemProperty $key).InstallLocation -ne $env:TARGET_DIR) { throw 'Install registration failed' }"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'; $q=[char]34; $bat=Join-Path $env:TARGET_DIR 'uninstall.bat'; Set-ItemProperty $key UninstallString ('cmd.exe /c '+$q+$q+$bat+$q+$q); Set-ItemProperty $key QuietUninstallString ('cmd.exe /c '+$q+$q+$bat+$q+' /silent'+$q); $ver=(Get-Item -LiteralPath (Join-Path $env:TARGET_DIR 'ja_mes_tool.exe')).VersionInfo.ProductVersion; if (-not $ver) { $ver = '2.9.9' }; Set-ItemProperty $key DisplayVersion $ver; if ((Get-ItemProperty $key).InstallLocation -ne $env:TARGET_DIR) { throw 'Install registration failed' }"
 if errorlevel 1 goto install_error
 
 echo.

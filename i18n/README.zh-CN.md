@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.8 - 中文说明
+# 🤖 JA MES Tool v2.9.9 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.9.8-blue.svg" alt="版本 2.9.8">
+  <img src="https://img.shields.io/badge/banben-2.9.9-blue.svg" alt="版本 2.9.9">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -226,6 +226,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.9.9]** — **合并设置对话框为 3 个 Bento 标签页 & Windows 标准安装套件**：优化原有 5 个溢出标签页为 3 个平衡的 Bento 卡片标签页 (`CloudMES 与 CDP`, `界面与毛玻璃`, `关于与更新`)，采用防溢出 `Expanded` 标签栏与独立的 `PageStorageKey` 滚动位置；新增免管理员标准安装与卸载套件 (`install.bat`, `uninstall.bat`, `uninstall.ps1`)，切换图形性能等级时实时联动毛玻璃预览滑块，并全面中英越三语本地化系统规格信息。
 - **[2.9.8]** — **集成局域网在线升级系统 (LAN OTA Update)**：支持局域网 UNC 共享目录版本自动检测、带 build number 的 SemVer 语义化版本比对、基于 Robocopy 的后台静默热替换升级、Bento 毛玻璃升级弹窗及设置 Tab 5 专属管理页。
 - **[2.9.7]** — 完整解析并映射 CloudMES 条码历史与 WIP 组件全部关键字段 (产线、内部条码、设备编号、产品版本、工单计划号、备注、物料位置)，扩充 CSV 导出，重构双行致密 SN 卡片并新增弹性回弹跑马灯。
 - **[2.9.6]** — 新增最多 6 个任务并行的 FIFO 查询队列、共享 SN Master 解析、过期结果保护，并恢复带原生 Windows 标题栏控制的紧凑桌面布局。
