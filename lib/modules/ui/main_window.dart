@@ -31,6 +31,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   bool _isMaximized = false;
   Timer? _tokenCheckTimer;
   Timer? _otaCheckTimer;
+  bool _otaCheckRunning = false;
+  bool _otaHoldRetry = false;
+  static const Duration _otaStartupDelay = Duration(milliseconds: 2500);
+  static const Duration _otaRetryDelay = Duration(minutes: 15);
 
   final _ListViewState _testRecordListState = _ListViewState();
   final _BarcodeListViewState _barcodeListState = _BarcodeListViewState();
@@ -47,14 +51,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     windowManager.isMaximized().then((value) {
       if (mounted) setState(() => _isMaximized = value);
     });
+    OtaUpdateService().addListener(_onOtaServiceChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialToken();
-      _checkOtaUpdateOnStartup();
+      _primeOtaSchedule();
     });
   }
 
   @override
   void dispose() {
+    OtaUpdateService().removeListener(_onOtaServiceChanged);
     _tokenCheckTimer?.cancel();
     _otaCheckTimer?.cancel();
     windowManager.removeListener(this);
@@ -89,33 +95,133 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     });
   }
 
-  void _checkOtaUpdateOnStartup() {
+  void _onOtaServiceChanged() {
+    if (!mounted) return;
+    setState(() {});
+    if (_otaCheckRunning) return;
+    _otaHoldRetry = false;
+    _armOtaCheck(allowStartupBurst: false);
+  }
+
+  Future<void> _primeOtaSchedule() async {
+    try {
+      await OtaUpdateService().loadConfig();
+    } catch (e) {
+      debugPrint('[OtaUpdate] Load config error: $e');
+    }
+    if (!mounted) return;
+    setState(() {});
+    _armOtaCheck(allowStartupBurst: true);
+  }
+
+  void _armOtaCheck({required bool allowStartupBurst}) {
     _otaCheckTimer?.cancel();
-    _otaCheckTimer = Timer(const Duration(milliseconds: 2500), () async {
-      if (!mounted) return;
-      try {
-        final otaService = OtaUpdateService();
-        final cfg = await otaService.loadConfig();
-        if (cfg.checkInterval == 'off') return;
-        if (cfg.checkInterval == 'startup' ||
-            otaService.shouldCheckForUpdates(
-              interval: cfg.checkInterval,
-              lastCheckTime: cfg.lastCheckTime,
-            )) {
-          final result = await otaService.checkForUpdates();
-          if (result.hasUpdate && result.packageInfo != null && mounted) {
+    _otaCheckTimer = null;
+    final service = OtaUpdateService();
+    final cfg = service.currentConfig;
+    if (cfg.checkInterval == 'off') return;
+
+    if (cfg.checkInterval == 'startup') {
+      if (!allowStartupBurst) return;
+      _otaCheckTimer = Timer(_otaStartupDelay, _runScheduledOtaCheck);
+      return;
+    }
+
+    final wait =
+        service.timeUntilNextCheck(
+          interval: cfg.checkInterval,
+          lastCheckTime: cfg.lastCheckTime,
+        ) ??
+        Duration.zero;
+    final delay = allowStartupBurst && wait < _otaStartupDelay
+        ? _otaStartupDelay
+        : wait;
+    _otaCheckTimer = Timer(delay, _runScheduledOtaCheck);
+  }
+
+  void _scheduleOtaRetry() {
+    _otaHoldRetry = true;
+    _otaCheckTimer?.cancel();
+    _otaCheckTimer = Timer(_otaRetryDelay, () {
+      _otaHoldRetry = false;
+      _runScheduledOtaCheck();
+    });
+  }
+
+  Future<void> _runScheduledOtaCheck() async {
+    if (!mounted || _otaCheckRunning) return;
+    _otaCheckRunning = true;
+    var retryLater = false;
+    var scheduleNext = true;
+    try {
+      final otaService = OtaUpdateService();
+      final cfg = await otaService.loadConfig();
+      if (!mounted || cfg.checkInterval == 'off') {
+        scheduleNext = false;
+      } else if (cfg.checkInterval == 'startup' ||
+          otaService.shouldCheckForUpdates(
+            interval: cfg.checkInterval,
+            lastCheckTime: cfg.lastCheckTime,
+          )) {
+        final result = await otaService.checkForUpdates();
+        if (!mounted) {
+          scheduleNext = false;
+        } else {
+          final package = result.packageInfo;
+          if (result.hasUpdate && package != null) {
             final logic = context.read<AppLogic>();
             showGlassUpdateDialog(
               context: context,
-              packageInfo: result.packageInfo!,
+              packageInfo: package,
               lang: logic.lang,
             );
+          } else if (!result.isConnectionSuccess &&
+              cfg.checkInterval != 'startup') {
+            retryLater = true;
           }
         }
-      } catch (e) {
-        debugPrint('[OtaUpdate] Startup check error: $e');
       }
-    });
+    } catch (e) {
+      debugPrint('[OtaUpdate] Scheduled check error: $e');
+      final interval = OtaUpdateService().currentConfig.checkInterval;
+      if (interval != 'startup' && interval != 'off') retryLater = true;
+    } finally {
+      _otaCheckRunning = false;
+    }
+    if (!mounted || !scheduleNext) return;
+    if (retryLater) {
+      _scheduleOtaRetry();
+    } else if (!_otaHoldRetry) {
+      _armOtaCheck(allowStartupBurst: false);
+    }
+  }
+
+  Future<void> _openPendingOtaUpdate() async {
+    final logic = context.read<AppLogic>();
+    final pending = OtaUpdateService().pendingPackage;
+    if (pending != null) {
+      if (!mounted) return;
+      showGlassUpdateDialog(
+        context: context,
+        packageInfo: pending,
+        lang: logic.lang,
+      );
+      return;
+    }
+    try {
+      final result = await OtaUpdateService().checkForUpdates(isManual: true);
+      if (!mounted) return;
+      final package = result.packageInfo;
+      if (result.hasUpdate && package != null) {
+        showGlassUpdateDialog(
+          context: context,
+          packageInfo: package,
+          lang: logic.lang,
+        );
+      }
+    } catch (e) {
+      debugPrint('[OtaUpdate] Badge check error: $e');
+    }
   }
 
   @override
@@ -463,6 +569,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
     final isConnValid = logic.isConnectionValid == true;
     final isConnError = logic.isConnectionValid == false;
+    final otaLabel = OtaUpdateService().advertisedUpdateLabel;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -561,6 +668,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               ],
             ),
           ),
+
+          if (otaLabel != null) ...[
+            const SizedBox(width: 8),
+            _OtaUpdateBadge(
+              label: otaLabel,
+              colors: colors,
+              tooltip: Translations.get('update_available', logic.lang),
+              onTap: _openPendingOtaUpdate,
+            ),
+          ],
 
           const SizedBox(width: 16),
 
@@ -4171,6 +4288,43 @@ class _HoverChipState extends State<_HoverChip> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OtaUpdateBadge extends StatelessWidget {
+  const _OtaUpdateBadge({
+    required this.label,
+    required this.colors,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final String label;
+  final AppColors colors;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: PillBadge(
+            label: label,
+            color: colors.accentEmerald,
+            bg: colors.accentEmerald.withValues(alpha: 0.15),
+            border: colors.accentEmerald.withValues(alpha: 0.45),
+            icon: Icons.system_update_alt_rounded,
+            showDot: true,
+            fontSize: 10,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           ),
         ),
       ),

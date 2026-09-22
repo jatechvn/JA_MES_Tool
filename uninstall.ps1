@@ -62,6 +62,23 @@ try {
     Set-Location -LiteralPath $env:TEMP
     [System.IO.Directory]::SetCurrentDirectory($env:TEMP)
     Start-Sleep -Milliseconds 500
+    # Default uninstall removes the program only. config.json stays in the
+    # install folder so the next install still has the previous settings.
+    $keepNames = @('config.json', 'config.ini', 'update_config.json')
+    $stash = Join-Path $env:TEMP ('JA_MES_Uninstall_Keep_' + [guid]::NewGuid().ToString('N'))
+    if (-not $purge -and (Test-Path -LiteralPath $target)) {
+        New-Item -ItemType Directory -Path $stash | Out-Null
+        foreach ($name in $keepNames) {
+            $src = Join-Path $target $name
+            if (Test-Path -LiteralPath $src -PathType Leaf) {
+                Copy-Item -LiteralPath $src -Destination (Join-Path $stash $name) -Force
+            }
+        }
+        $logs = Join-Path $target 'logs'
+        if (Test-Path -LiteralPath $logs -PathType Container) {
+            Copy-Item -LiteralPath $logs -Destination (Join-Path $stash 'logs') -Recurse -Force
+        }
+    }
     if (Test-Path -LiteralPath $target) {
         $deleted = $false
         for ($retry = 0; $retry -lt 5; $retry++) {
@@ -76,6 +93,17 @@ try {
         if (-not $deleted -and (Test-Path -LiteralPath $target)) {
             cmd.exe /c "rd /s /q `"$target`""
         }
+    }
+    if (-not $purge -and (Test-Path -LiteralPath $stash)) {
+        $kept = @(Get-ChildItem -LiteralPath $stash -Force -ErrorAction SilentlyContinue)
+        if ($kept.Count -gt 0) {
+            New-Item -ItemType Directory -Path $target -Force | Out-Null
+            foreach ($item in $kept) {
+                Copy-Item -LiteralPath $item.FullName -Destination (Join-Path $target $item.Name) -Recurse -Force
+            }
+            Write-Host 'Kept config.json, update settings and logs in the install folder.'
+        }
+        Remove-Item -LiteralPath $stash -Recurse -Force
     }
     if ($purge) {
         foreach ($dir in $dataDirs) { if (Test-Path -LiteralPath $dir) { Remove-Item -LiteralPath $dir -Recurse -Force } }

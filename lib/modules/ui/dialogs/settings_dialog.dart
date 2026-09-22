@@ -25,6 +25,23 @@ String _formatSettingsTranslation(
   return text;
 }
 
+String _shareProbeMessage(SmbConnectResult result, String lang) {
+  if (!result.connected) {
+    return result.errorMessage ??
+        Translations.get('share_connect_failed', lang);
+  }
+  switch (result.accessMode) {
+    case ShareAccessMode.currentSession:
+      return Translations.get('share_connected_session', lang);
+    case ShareAccessMode.credentials:
+      return Translations.get('share_connected_credentials', lang);
+    case ShareAccessMode.localPath:
+      return Translations.get('share_connected_local', lang);
+    case ShareAccessMode.none:
+      return Translations.get('share_connected', lang);
+  }
+}
+
 String _localizedHardwareTier(HardwareTier tier, String lang) {
   switch (tier) {
     case HardwareTier.ultra:
@@ -67,9 +84,15 @@ Future<void> showAppSettingsDialog(
   final otaServerPathCtrl = TextEditingController(text: otaConfig.serverPath);
   final otaUsernameCtrl = TextEditingController(text: otaConfig.username);
   final otaPasswordCtrl = TextEditingController(text: otaConfig.password);
-  String otaInterval = otaConfig.checkInterval;
+  const knownOtaIntervals = {'startup', 'daily', 'weekly', 'off'};
+  String otaInterval = knownOtaIntervals.contains(otaConfig.checkInterval)
+      ? otaConfig.checkInterval
+      : 'daily';
   bool isCheckingForUpdates = false;
   UpdateCheckResult? manualUpdateCheckResult;
+  bool isTestingShare = false;
+  bool? shareTestOk;
+  String? shareTestMessage;
 
   int currentTab = 0;
   bool isTestingConnection = false;
@@ -255,6 +278,9 @@ Future<void> showAppSettingsDialog(
                             otaInterval: otaInterval,
                             isCheckingForUpdates: isCheckingForUpdates,
                             manualUpdateCheckResult: manualUpdateCheckResult,
+                            isTestingShare: isTestingShare,
+                            shareTestOk: shareTestOk,
+                            shareTestMessage: shareTestMessage,
                             setDialogState: setDialogState,
                             onIntervalChanged: (val) {
                               setDialogState(() => otaInterval = val);
@@ -263,6 +289,13 @@ Future<void> showAppSettingsDialog(
                               setDialogState(() {
                                 isCheckingForUpdates = checking;
                                 manualUpdateCheckResult = result;
+                              });
+                            },
+                            onShareTestStateChanged: (checking, ok, message) {
+                              setDialogState(() {
+                                isTestingShare = checking;
+                                shareTestOk = ok;
+                                shareTestMessage = message;
                               });
                             },
                             onSliderChange:
@@ -400,9 +433,13 @@ Widget _buildCurrentTabContent({
   required String otaInterval,
   required bool isCheckingForUpdates,
   required UpdateCheckResult? manualUpdateCheckResult,
+  required bool isTestingShare,
+  required bool? shareTestOk,
+  required String? shareTestMessage,
   required StateSetter setDialogState,
   required void Function(String) onIntervalChanged,
   required void Function(bool, UpdateCheckResult?) onUpdateCheckStateChanged,
+  required void Function(bool, bool?, String?) onShareTestStateChanged,
   required void Function({
     double? cardBlur,
     double? cardOpacity,
@@ -459,9 +496,13 @@ Widget _buildCurrentTabContent({
         otaInterval,
         isCheckingForUpdates,
         manualUpdateCheckResult,
+        isTestingShare,
+        shareTestOk,
+        shareTestMessage,
         setDialogState,
         onIntervalChanged,
         onUpdateCheckStateChanged,
+        onShareTestStateChanged,
       );
     default:
       return const SizedBox.shrink();
@@ -975,70 +1016,103 @@ Widget _buildDisplayAndGlassTab(
             ),
             const SizedBox(height: 14),
 
-            // Bento Card Sliders
-            _buildSliderTile(
-              label: Translations.get('card_blur_label', logic.lang),
-              value: tempCardBlur,
-              min: 0,
-              max: 40,
-              colors: colors,
-              onChanged: (v) => onSliderChange(cardBlur: v),
+            // Bento Card Sliders (Row 1: Card Blur & Opacity)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSliderTile(
+                    label: Translations.get('card_blur_label', logic.lang),
+                    value: tempCardBlur,
+                    min: 0,
+                    max: 40,
+                    colors: colors,
+                    labelWidth: 105,
+                    onChanged: (v) => onSliderChange(cardBlur: v),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildSliderTile(
+                    label: Translations.get('card_opacity_label', logic.lang),
+                    value: tempCardOpacity,
+                    min: 0.05,
+                    max: 1.0,
+                    isPercent: true,
+                    colors: colors,
+                    labelWidth: 105,
+                    onChanged: (v) => onSliderChange(cardOpacity: v),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
-            _buildSliderTile(
-              label: Translations.get('card_opacity_label', logic.lang),
-              value: tempCardOpacity,
-              min: 0.05,
-              max: 1.0,
-              isPercent: true,
-              colors: colors,
-              onChanged: (v) => onSliderChange(cardOpacity: v),
-            ),
-            const SizedBox(height: 8),
             Divider(color: colors.borderDefault, height: 1),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-            // Dialog Sliders
-            _buildSliderTile(
-              label: Translations.get('dialog_blur', logic.lang),
-              value: tempDialogBlur,
-              min: 0,
-              max: 40,
-              colors: colors,
-              onChanged: (v) => onSliderChange(dialogBlur: v),
+            // Dialog Sliders (Row 2: Dialog Blur & Opacity)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSliderTile(
+                    label: Translations.get('dialog_blur', logic.lang),
+                    value: tempDialogBlur,
+                    min: 0,
+                    max: 40,
+                    colors: colors,
+                    labelWidth: 105,
+                    onChanged: (v) => onSliderChange(dialogBlur: v),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildSliderTile(
+                    label: Translations.get('dialog_opacity', logic.lang),
+                    value: tempDialogOpacity,
+                    min: 0.1,
+                    max: 1.0,
+                    isPercent: true,
+                    colors: colors,
+                    labelWidth: 105,
+                    onChanged: (v) => onSliderChange(dialogOpacity: v),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
-            _buildSliderTile(
-              label: Translations.get('dialog_opacity', logic.lang),
-              value: tempDialogOpacity,
-              min: 0.1,
-              max: 1.0,
-              isPercent: true,
-              colors: colors,
-              onChanged: (v) => onSliderChange(dialogOpacity: v),
-            ),
-            const SizedBox(height: 8),
             Divider(color: colors.borderDefault, height: 1),
-            const SizedBox(height: 8),
-
-            // Dropdown Sliders
-            _buildSliderTile(
-              label: Translations.get('dropdown_blur_label', logic.lang),
-              value: tempDropdownBlur,
-              min: 0,
-              max: 40,
-              colors: colors,
-              onChanged: (v) => onSliderChange(dropdownBlur: v),
-            ),
             const SizedBox(height: 6),
-            _buildSliderTile(
-              label: Translations.get('dropdown_opacity_label', logic.lang),
-              value: tempDropdownOpacity,
-              min: 0.1,
-              max: 1.0,
-              isPercent: true,
-              colors: colors,
-              onChanged: (v) => onSliderChange(dropdownOpacity: v),
+
+            // Dropdown Sliders (Row 3: Dropdown Blur & Opacity)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSliderTile(
+                    label: Translations.get('dropdown_blur_label', logic.lang),
+                    value: tempDropdownBlur,
+                    min: 0,
+                    max: 40,
+                    colors: colors,
+                    labelWidth: 105,
+                    onChanged: (v) => onSliderChange(dropdownBlur: v),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildSliderTile(
+                    label: Translations.get(
+                      'dropdown_opacity_label',
+                      logic.lang,
+                    ),
+                    value: tempDropdownOpacity,
+                    min: 0.1,
+                    max: 1.0,
+                    isPercent: true,
+                    colors: colors,
+                    labelWidth: 105,
+                    onChanged: (v) => onSliderChange(dropdownOpacity: v),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1083,6 +1157,60 @@ Widget _buildLanguageChoice({
                 fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? colors.textPrimary : colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildIntervalChoice({
+  required String label,
+  required IconData icon,
+  required String value,
+  required String currentValue,
+  required AppColors colors,
+  required VoidCallback onSelect,
+}) {
+  final isSelected = value == currentValue;
+  return Expanded(
+    child: InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colors.accentColor.withValues(alpha: 0.15)
+              : colors.subCardBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? colors.accentColor : colors.borderDefault,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isSelected ? colors.accentColor : colors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? colors.textPrimary : colors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -1223,6 +1351,7 @@ Widget _buildSliderTile({
   required AppColors colors,
   required ValueChanged<double> onChanged,
   bool isPercent = false,
+  double labelWidth = 105,
 }) {
   final displayValue = isPercent
       ? '${(value * 100).toInt()}%'
@@ -1230,7 +1359,7 @@ Widget _buildSliderTile({
   return Row(
     children: [
       SizedBox(
-        width: 140,
+        width: labelWidth,
         child: Text(
           label,
           style: TextStyle(
@@ -1238,6 +1367,8 @@ Widget _buildSliderTile({
             fontWeight: FontWeight.w600,
             color: colors.textSecondary,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
       Expanded(
@@ -1316,9 +1447,13 @@ Widget _buildAboutAndUpdatesTab(
   String otaInterval,
   bool isCheckingForUpdates,
   UpdateCheckResult? manualUpdateCheckResult,
+  bool isTestingShare,
+  bool? shareTestOk,
+  String? shareTestMessage,
   StateSetter setDialogState,
   void Function(String) onIntervalChanged,
   void Function(bool, UpdateCheckResult?) onUpdateCheckStateChanged,
+  void Function(bool, bool?, String?) onShareTestStateChanged,
 ) {
   final isDark = theme.isDark;
   final otaConfig = OtaUpdateService().currentConfig;
@@ -1329,7 +1464,9 @@ Widget _buildAboutAndUpdatesTab(
     final path = otaServerPathCtrl.text.trim();
     try {
       final result = await OtaUpdateService().checkForUpdates(
-        overrideServerPath: path,
+        overrideServerPath: path.isEmpty ? null : path,
+        overrideUsername: otaUsernameCtrl.text.trim(),
+        overridePassword: otaPasswordCtrl.text,
         isManual: true,
       );
       if (!dialogCtx.mounted) return;
@@ -1351,6 +1488,30 @@ Widget _buildAboutAndUpdatesTab(
           isConnectionSuccess: false,
           errorMessage: e.toString().replaceFirst('Exception: ', ''),
         ),
+      );
+    }
+  }
+
+  Future<void> testShareConnection() async {
+    onShareTestStateChanged(true, null, null);
+    try {
+      final result = await OtaUpdateService().testConnection(
+        path: otaServerPathCtrl.text.trim(),
+        username: otaUsernameCtrl.text.trim(),
+        password: otaPasswordCtrl.text,
+      );
+      if (!dialogCtx.mounted) return;
+      onShareTestStateChanged(
+        false,
+        result.connected,
+        _shareProbeMessage(result, logic.lang),
+      );
+    } catch (e) {
+      if (!dialogCtx.mounted) return;
+      onShareTestStateChanged(
+        false,
+        false,
+        e.toString().replaceFirst('Exception: ', ''),
       );
     }
   }
@@ -1469,6 +1630,41 @@ Widget _buildAboutAndUpdatesTab(
                 ),
               ],
             ),
+            if (manualUpdateCheckResult == null &&
+                shareTestMessage == null &&
+                OtaUpdateService().sessionConnected == false &&
+                (OtaUpdateService().sessionDetail?.isNotEmpty ?? false)) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.accentRose.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: colors.accentRose.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 18,
+                      color: colors.accentRose,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        OtaUpdateService().sessionDetail!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.accentRose,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (manualUpdateCheckResult != null) ...[
               const SizedBox(height: 14),
               if (manualUpdateCheckResult.hasUpdate &&
@@ -1625,7 +1821,81 @@ Widget _buildAboutAndUpdatesTab(
               colors: colors,
               hintText: Translations.get('server_path_hint', logic.lang),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: isTestingShare ? null : testShareConnection,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.accentColor,
+                    side: BorderSide(
+                      color: colors.accentColor.withValues(alpha: 0.5),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                  icon: isTestingShare
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.accentColor,
+                          ),
+                        )
+                      : const Icon(Icons.lan_rounded, size: 16),
+                  label: Text(
+                    isTestingShare
+                        ? Translations.get(
+                            'testing_share_connection',
+                            logic.lang,
+                          )
+                        : Translations.get('test_share_connection', logic.lang),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (shareTestMessage != null) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          shareTestOk == true
+                              ? Icons.check_circle_rounded
+                              : Icons.error_outline_rounded,
+                          color: shareTestOk == true
+                              ? colors.accentEmerald
+                              : colors.accentRose,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            shareTestMessage,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: shareTestOk == true
+                                  ? colors.accentEmerald
+                                  : colors.accentRose,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Icon(
@@ -1644,72 +1914,75 @@ Widget _buildAboutAndUpdatesTab(
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              decoration: BoxDecoration(
-                color: colors.subCardBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colors.subCardBorder),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: otaInterval,
-                  isExpanded: true,
-                  dropdownColor: isDark
-                      ? const Color(0xFF1E293B)
-                      : Colors.white,
-                  items: [
-                    DropdownMenuItem(
-                      value: 'startup',
-                      child: Text(
-                        Translations.get('interval_startup', logic.lang),
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'daily',
-                      child: Text(
-                        Translations.get('interval_daily', logic.lang),
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'weekly',
-                      child: Text(
-                        Translations.get('interval_weekly', logic.lang),
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'off',
-                      child: Text(
-                        Translations.get('interval_disabled', logic.lang),
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      onIntervalChanged(val);
-                    }
-                  },
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildIntervalChoice(
+                  label: Translations.get('interval_startup', logic.lang),
+                  icon: Icons.rocket_launch_rounded,
+                  value: 'startup',
+                  currentValue: otaInterval,
+                  colors: colors,
+                  onSelect: () => onIntervalChanged('startup'),
                 ),
+                const SizedBox(width: 8),
+                _buildIntervalChoice(
+                  label: Translations.get('interval_daily', logic.lang),
+                  icon: Icons.today_rounded,
+                  value: 'daily',
+                  currentValue: otaInterval,
+                  colors: colors,
+                  onSelect: () => onIntervalChanged('daily'),
+                ),
+                const SizedBox(width: 8),
+                _buildIntervalChoice(
+                  label: Translations.get('interval_weekly', logic.lang),
+                  icon: Icons.date_range_rounded,
+                  value: 'weekly',
+                  currentValue: otaInterval,
+                  colors: colors,
+                  onSelect: () => onIntervalChanged('weekly'),
+                ),
+                const SizedBox(width: 8),
+                _buildIntervalChoice(
+                  label: Translations.get('interval_disabled', logic.lang),
+                  icon: Icons.block_rounded,
+                  value: 'off',
+                  currentValue: otaInterval,
+                  colors: colors,
+                  onSelect: () => onIntervalChanged('off'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 15,
+                  color: colors.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  Translations.get('ota_credentials', logic.lang),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              Translations.get('ota_credentials_hint', logic.lang),
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.35,
+                color: colors.textMuted,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(

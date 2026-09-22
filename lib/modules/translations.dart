@@ -172,6 +172,18 @@ class Translations {
       'never_checked': 'Never checked',
       'check_updates_now': 'Check for Updates',
       'checking_updates': 'Checking updates...',
+      'test_share_connection': 'Test Connection',
+      'testing_share_connection': 'Testing connection...',
+      'share_connected': 'Share folder is reachable',
+      'share_connected_session':
+          'Opened with the current Windows session. No account needed.',
+      'share_connected_credentials':
+          'Signed in to the share with the account above.',
+      'share_connected_local':
+          'Local folder is reachable. No network account needed.',
+      'share_connect_failed': 'Cannot reach the share folder',
+      'ota_credentials_hint':
+          'Leave blank when this PC can already open the share. Fill these in only when the check says the folder is unreachable.',
       'no_updates_available': 'You are using the latest version',
       'update_available': 'New version available!',
       'update_now': 'Update Now',
@@ -373,6 +385,18 @@ class Translations {
       'never_checked': 'Chưa từng kiểm tra',
       'check_updates_now': 'Kiểm tra cập nhật ngay',
       'checking_updates': 'Đang kiểm tra cập nhật...',
+      'test_share_connection': 'Kiểm tra kết nối',
+      'testing_share_connection': 'Đang kiểm tra kết nối...',
+      'share_connected': 'Đã kết nối được thư mục share',
+      'share_connected_session':
+          'Đã mở bằng phiên Windows hiện tại. Không cần tài khoản.',
+      'share_connected_credentials':
+          'Đã đăng nhập share bằng tài khoản vừa nhập.',
+      'share_connected_local':
+          'Thư mục local mở được. Không cần tài khoản mạng.',
+      'share_connect_failed': 'Không kết nối được thư mục share',
+      'ota_credentials_hint':
+          'Để trống nếu máy này đã mở được thư mục share. Chỉ điền khi kiểm tra báo không vào được.',
       'no_updates_available': 'Bạn đang sử dụng phiên bản mới nhất',
       'update_available': 'Đã có phiên bản mới!',
       'update_now': 'Cập nhật ngay',
@@ -567,6 +591,14 @@ class Translations {
       'never_checked': '从未检查',
       'check_updates_now': '立即检查更新',
       'checking_updates': '正在检查更新...',
+      'test_share_connection': '测试连接',
+      'testing_share_connection': '正在测试连接...',
+      'share_connected': '可以访问共享文件夹',
+      'share_connected_session': '已用当前 Windows 会话打开，无需填写账号。',
+      'share_connected_credentials': '已使用上方账号登录共享。',
+      'share_connected_local': '本地文件夹可访问，无需网络账号。',
+      'share_connect_failed': '无法访问共享文件夹',
+      'ota_credentials_hint': '如果这台电脑已经能打开共享目录，请留空。只有检查提示无法访问时才需要填写。',
       'no_updates_available': '您正在使用最新版本',
       'update_available': '发现新版本！',
       'update_now': '立即更新',

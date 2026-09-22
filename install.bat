@@ -55,6 +55,16 @@ if not exist "%TARGET_DIR%\" (
 )
 
 echo [3/5] Copying application files...
+:: Park user data before copy, then put the same files back. Robocopy /XF
+:: already skips them; the extra copy survives a later overwrite.
+set "KEEP_DIR=%TEMP%\JA_MES_Install_Keep_%RANDOM%%RANDOM%"
+mkdir "%KEEP_DIR%" >nul 2>&1
+for %%F in (config.json config.ini update_config.json) do (
+    if exist "%TARGET_DIR%\%%F" copy /y "%TARGET_DIR%\%%F" "%KEEP_DIR%\%%F" >nul
+)
+if exist "%TARGET_DIR%\logs" (
+    robocopy "%TARGET_DIR%\logs" "%KEEP_DIR%\logs" /E /R:1 /W:1 >nul
+)
 :: Preserve runtime configuration; back up program files before replacement
 if exist "%TARGET_DIR%\ja_mes_tool.exe" (
     powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $backup=Join-Path $env:TEMP ('JA_MES_Install_Backup_' + [guid]::NewGuid()); & robocopy $env:TARGET_DIR $backup /E /R:1 /W:1 /XD logs /XF update_config.json config.json config.ini *.log *.key > $null; if ($LASTEXITCODE -ge 8) { exit 1 }; Write-Host ('Backup: ' + $backup); exit 0"
@@ -66,6 +76,16 @@ if errorlevel 8 (
     if "%SILENT_MODE%"=="0" pause
     exit /b 1
 )
+for %%F in (config.json config.ini update_config.json) do (
+    if exist "%KEEP_DIR%\%%F" (
+        copy /y "%KEEP_DIR%\%%F" "%TARGET_DIR%\%%F" >nul
+        echo       Kept %%F
+    )
+)
+if exist "%KEEP_DIR%\logs" (
+    robocopy "%KEEP_DIR%\logs" "%TARGET_DIR%\logs" /E /R:1 /W:1 >nul
+)
+rmdir /s /q "%KEEP_DIR%" >nul 2>&1
 copy /y "%SCRIPT_DIR%\uninstall.ps1" "%TARGET_DIR%\uninstall.ps1" >nul
 if errorlevel 1 goto install_error
 
@@ -126,7 +146,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool' -Name 'EstimatedSize' -Value $kb -Type DWord -ErrorAction SilentlyContinue; " ^
   "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool' -Name 'InstallDate' -Value $date -Type String -ErrorAction SilentlyContinue" >nul 2>&1
 
-powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'; $q=[char]34; $bat=Join-Path $env:TARGET_DIR 'uninstall.bat'; Set-ItemProperty $key UninstallString ('cmd.exe /c '+$q+$q+$bat+$q+$q); Set-ItemProperty $key QuietUninstallString ('cmd.exe /c '+$q+$q+$bat+$q+' /silent'+$q); $ver=(Get-Item -LiteralPath (Join-Path $env:TARGET_DIR 'ja_mes_tool.exe')).VersionInfo.ProductVersion; if (-not $ver) { $ver = '2.9.9' }; Set-ItemProperty $key DisplayVersion $ver; if ((Get-ItemProperty $key).InstallLocation -ne $env:TARGET_DIR) { throw 'Install registration failed' }"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'; $q=[char]34; $bat=Join-Path $env:TARGET_DIR 'uninstall.bat'; Set-ItemProperty $key UninstallString ('cmd.exe /c '+$q+$q+$bat+$q+$q); Set-ItemProperty $key QuietUninstallString ('cmd.exe /c '+$q+$q+$bat+$q+' /silent'+$q); $ver=(Get-Item -LiteralPath (Join-Path $env:TARGET_DIR 'ja_mes_tool.exe')).VersionInfo.ProductVersion; if (-not $ver) { $ver = '2.10.0' }; Set-ItemProperty $key DisplayVersion $ver; if ((Get-ItemProperty $key).InstallLocation -ne $env:TARGET_DIR) { throw 'Install registration failed' }"
 if errorlevel 1 goto install_error
 
 echo.

@@ -2,7 +2,7 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.9.9
+Version      : v2.10.0
 Release Date : 2026-09-22
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
@@ -14,6 +14,13 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Bento Quick-Select Interval & 2-Column Glass Controls: Replaced long droplist with
+  4 instant-click Bento buttons (startup, daily, weekly, off), converted 6 glassmorphism
+  live-tuning sliders into a compact 2-column grid, and unified server test row.
+- Live Main Window OTA Update Badge: Dynamic interactive pill badge surfaces on the
+  app bar whenever an update is available, allowing 1-click update dialog launch.
+- Installer User Data Preservation: Automatically safeguards and restores
+  config.json, config.ini, update_config.json, and logs/ across installations and updates.
 - Consolidated 3-Tab Settings Bento Dialog: Re-architected settings into 3
   balanced Bento Grid tabs (CloudMES & CDP, Display & Appearance, About & Updates)
   with responsive Expanded navigation, independent PageStorageKey scroll positions,

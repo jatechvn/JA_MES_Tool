@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.9
+# 🤖 JA MES Tool v2.10.0
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.9-blue.svg" alt="Version 2.9.9">
+  <img src="https://img.shields.io/badge/version-2.10.0-blue.svg" alt="Version 2.10.0">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -261,6 +261,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.10.0]** — Replaced long droplist with 4 instant-click Bento Quick-Select buttons (`startup`, `daily`, `weekly`, `off`), converted 6 glassmorphism live-tuning sliders into a compact 2-column grid, added live OTA Update Badge on the main app bar, preserved user config/logs during install and uninstall, and streamlined network share settings with optional credentials notes.
 - **[2.9.9]** — Consolidated Settings Dialog from 5 overflowing tabs into 3 balanced Bento Grid tabs (`CloudMES & CDP`, `Display & Appearance`, `About & Updates`) with responsive `Expanded` buttons and independent `PageStorageKey` scroll positions; added standard Windows non-admin installer & uninstaller suite (`install.bat`, `uninstall.bat`, `uninstall.ps1`), dynamic graphic tier live-preview slider updates, and full trilingual system spec localization.
 - **[2.9.8]** — Enterprise-grade LAN Over-The-Air (OTA) update system with SemVer engine, UNC/SMB share connectivity, Robocopy installer generation (`apply_update.bat`) with config/logs protection and auto-rollback, Bento Frosted Glass update prompt, Settings Tab 5, and non-blocking startup auto-check.
 - **[2.9.7]** — Barcode History & WIP Components manufacturing fields enrichment, dense 2-line SN sidebar cards, translucent glass highlights, asymmetric bounce marquee, and streamlined records header.

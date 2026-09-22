@@ -184,6 +184,93 @@ void main() {
         ),
         isTrue,
       );
+
+      expect(
+        service.timeUntilNextCheck(
+          interval: 'daily',
+          lastCheckTime: now.subtract(const Duration(hours: 10)),
+          now: now,
+        ),
+        const Duration(hours: 14),
+      );
+      expect(
+        service.timeUntilNextCheck(
+          interval: 'weekly',
+          lastCheckTime: now.subtract(const Duration(days: 6)),
+          now: now,
+        ),
+        const Duration(days: 1),
+      );
+      expect(
+        service.timeUntilNextCheck(
+          interval: 'startup',
+          lastCheckTime: null,
+          now: now,
+        ),
+        isNull,
+      );
+      expect(
+        service.timeUntilNextCheck(
+          interval: 'off',
+          lastCheckTime: null,
+          now: now,
+        ),
+        isNull,
+      );
+      expect(
+        service.shouldCheckForUpdates(
+          interval: 'startup',
+          lastCheckTime: now.subtract(const Duration(hours: 1)),
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test(
+      'blank credentials are unused when Windows can already open the share',
+      () {
+        expect(
+          OtaUpdateService.accessModeForOpenPath(
+            r'\\10.81.141.226\temp\FBT\JA_PROJECT\JA_Update\JA_MES_Tool',
+            viaCredentials: false,
+          ),
+          ShareAccessMode.currentSession,
+        );
+        expect(
+          OtaUpdateService.accessModeForOpenPath(
+            r'D:\Local\Releases',
+            viaCredentials: false,
+          ),
+          ShareAccessMode.localPath,
+        );
+        expect(
+          OtaUpdateService.accessModeForOpenPath(
+            r'\\server\share',
+            viaCredentials: true,
+          ),
+          ShareAccessMode.credentials,
+        );
+      },
+    );
+
+    test('builds net use arguments with the real username', () {
+      expect(
+        OtaUpdateService.smbUseArguments(
+          shareRoot: r'\\10.81.141.226\temp',
+          username: 'operator',
+          password: 'secret',
+        ),
+        ['use', r'\\10.81.141.226\temp', 'secret', '/user:operator'],
+      );
+      expect(
+        OtaUpdateService.smbUseArguments(
+          shareRoot: r'\\10.81.141.226\temp',
+          username: '',
+          password: '',
+        ),
+        ['use', r'\\10.81.141.226\temp'],
+      );
     });
   });
 
@@ -200,6 +287,7 @@ void main() {
     });
 
     tearDown(() {
+      service.resetSessionForTesting();
       service.setCustomConfigFileForTesting(null);
       service.setCustomServerDirForTesting(null);
       if (tempDir.existsSync()) {
@@ -291,6 +379,55 @@ void main() {
         checkResult.packageInfo!.releaseNotes,
         contains('Major performance improvements'),
       );
+
+      final persisted = jsonDecode(testConfigFile.readAsStringSync()) as Map;
+      expect(persisted['lastCheckTime'], isNotNull);
+      expect(persisted['cachedUpdateVersion'], '2.9.9');
+      service.setCustomConfigFileForTesting(testConfigFile);
+      final reloaded = await service.loadConfig();
+      expect(reloaded.cachedUpdateVersion, '2.9.9');
+      expect(reloaded.lastCheckTime, isNotNull);
+    });
+
+    test('does not advance the cycle when the share cannot be reached', () async {
+      final missing = Directory.systemTemp.path;
+      final missingPath =
+          '$missing\\missing_ota_share_${DateTime.now().microsecondsSinceEpoch}';
+      final result = await service.checkForUpdates(
+        overrideServerPath: missingPath,
+      );
+
+      expect(result.isConnectionSuccess, isFalse);
+      expect(result.errorMessage, isNotEmpty);
+      expect(service.sessionConnected, isFalse);
+      expect(service.sessionDetail, isNotEmpty);
+      final cfg = await service.loadConfig();
+      expect(cfg.lastCheckTime, isNull);
+    });
+
+    test('share probe does not move lastCheckTime', () async {
+      final stamped = DateTime(2026, 9, 1, 8);
+      testConfigFile.writeAsStringSync(
+        jsonEncode({
+          'serverPath': r'D:\Missing\OtaShare',
+          'username': 'operator',
+          'checkInterval': 'weekly',
+          'lastCheckTime': stamped.toIso8601String(),
+        }),
+      );
+      service.setCustomConfigFileForTesting(testConfigFile);
+
+      final result = await service.testConnection(
+        path:
+            '${Directory.systemTemp.path}\\missing_ota_probe_${DateTime.now().microsecondsSinceEpoch}',
+        username: 'operator',
+        password: 'secret',
+      );
+
+      expect(result.connected, isFalse);
+      final persisted = jsonDecode(testConfigFile.readAsStringSync()) as Map;
+      expect(persisted['lastCheckTime'], stamped.toIso8601String());
+      expect(persisted.containsKey('password'), isFalse);
     });
 
     test(
@@ -364,6 +501,7 @@ void main() {
 
         // Verify restarting app
         expect(script, contains('start "" "%DST_DIR%\\%EXE_NAME%"'));
+        expect(script, contains('config.json.keep'));
       },
     );
   });
