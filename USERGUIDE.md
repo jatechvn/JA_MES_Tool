@@ -1,4 +1,4 @@
-# 📘 Hướng dẫn Sử dụng JA MES Tool v2.9.9
+# 📘 Hướng dẫn Sử dụng JA MES Tool v2.10.0
 
 > **Ứng dụng Windows Desktop hiệu năng cao tra cứu dữ liệu kiểm thử, lịch sử công đoạn và truy vết linh kiện Foxconn CloudMES với giao diện Bento Glassmorphism.**
 
@@ -23,9 +23,9 @@
 - Kết nối mạng: Truy cập được mạng nội bộ nhà máy hoặc VPN Foxconn CloudMES
 
 ### Cách 1: Cài đặt chuẩn Windows không cần Admin (Khuyên dùng)
-1. Tải gói phát hành `JA_MES_Tool_v2.9.9_Windows_x64.zip`.
+1. Tải gói phát hành `JA_MES_Tool_v2.10.0_Windows_x64.zip`.
 2. Giải nén và nhấp đúp chạy file **`install.bat`**.
-3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel.
+3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel (tự động bảo toàn cấu hình người dùng).
 4. Khi muốn gỡ cài đặt, chạy **`uninstall.bat`** hoặc gỡ trực tiếp qua Windows Installed Apps.
 
 ### Cách 2: Chạy trực tiếp Portable
@@ -86,10 +86,11 @@ Từ phiên bản **v2.9.9**, menu **Cài đặt ⚙️** được hợp nhất 
 2. **Tab 2: Giao diện & Kính mờ (`tab_display_glass`)**:
    - **Chọn ngôn ngữ**: Chuyển đổi linh hoạt giữa Tiếng Việt 🇻🇳, English 🇬🇧 và 中文 🇨🇳.
    - **Graphic Performance Tier**: Chọn cấu hình đồ họa (Auto, Ultra 120 FPS, Balanced 60 FPS, Lite chống lag) — tự động cập nhật hệ thống thanh trượt kính mờ tương ứng.
-   - **Bộ tinh chỉnh Kính mờ 6 thanh trượt (Live-Preview)**: Tùy biến Card Blur/Opacity, Dialog Blur/Opacity, Dropdown Blur/Opacity theo thời gian thực kèm nút **Mặc định** và khôi phục khi hủy bỏ.
+   - **Graphic Performance Tier**: Chọn cấu hình đồ họa (Auto, Ultra 120 FPS, Balanced 60 FPS, Lite chống lag) — tự động cập nhật hệ thống thanh trượt kính mờ tương ứng.
+   - **Bộ tinh chỉnh Kính mờ 4 thanh trượt 2 Cột Bento (Live-Preview)**: Tùy biến Card Blur & Opacity, Dialog Blur & Opacity theo thời gian thực theo bố cục 2 cột cân đối, kèm nút **Mặc định** và khôi phục khi hủy bỏ.
 3. **Tab 3: Thông tin & Cập nhật (`tab_about_updates`)**:
    - Thẻ thông tin phiên bản, trạng thái cập nhật LAN OTA và nút **Kiểm tra cập nhật ngay**.
-   - Cấu hình máy chủ chia sẻ mạng nội bộ (UNC path, chu kỳ kiểm tra, tài khoản mạng).
+   - Cấu hình máy chủ chia sẻ mạng nội bộ (UNC path, 4 nút chọn nhanh chu kỳ kiểm tra, tài khoản mạng tùy chọn và nút kiểm tra kết nối mạng tích hợp).
    - Thẻ thông số kỹ thuật hệ thống (Engine, Architecture, CDP Status, Hardware Profile, License) và nút mở nhanh thư mục `logs/` và thư mục cài đặt.
 
 ---
@@ -100,11 +101,16 @@ Từ phiên bản **v2.9.9**, menu **Cài đặt ⚙️** được hợp nhất 
 1. Vào **Cài đặt ⚙️** -> Chọn tab **Thông tin & Cập nhật** (Tab 3).
 2. Nhập đường dẫn thư mục chia sẻ mạng (UNC Path hoặc ổ đĩa mạng):
    - Ví dụ: `\\10.81.141.226\temp\JA_MES_Tool` hoặc `Z:\Releases\JA_MES_Tool`.
-3. Nhập tài khoản/mật khẩu mạng nếu thư mục chia sẻ yêu cầu xác thực.
-4. Chọn chu kỳ tự động kiểm tra:
+   - Nhấn nút **Kiểm tra** cạnh đường dẫn để xác thực quyền truy cập ngay lập tức.
+3. Nhập tài khoản/mật khẩu mạng nếu thư mục chia sẻ yêu cầu xác thực riêng.
+4. Chọn chu kỳ tự động kiểm tra bằng **4 nút Bento chọn nhanh**:
    - **Khi khởi động (Khuyên dùng)**: Tự động kiểm tra ngầm sau 3 giây khi bật ứng dụng.
    - **Hàng ngày** hoặc **Hàng tuần**.
-   - **Tắt tự động kiểm tra** (nếu chỉ muốn kiểm tra thủ công).
+   - **Tắt**: Tắt tự động kiểm tra định kỳ (chỉ kiểm tra thủ công).
+
+### Thông báo cập nhật trên Thanh tiêu đề (Live Badge)
+- Khi phát hiện có bản cập nhật mới, một badge phát sáng **Cập nhật** sẽ xuất hiện trực tiếp trên thanh tiêu đề ứng dụng (cạnh nút Settings).
+- Nhấp vào badge để mở ngay hộp thoại chi tiết cập nhật mà không cần vào menu cài đặt.
 
 ### Quá trình cập nhật Hot-Swap
 - Khi có bản phát hành mới hơn phiên bản hiện tại, hộp thoại kính mờ **Cập nhật Phần mềm** sẽ xuất hiện.
@@ -112,7 +118,7 @@ Từ phiên bản **v2.9.9**, menu **Cài đặt ⚙️** được hợp nhất 
 - Nhấn **Cập nhật ngay**:
   1. Ứng dụng tải file `.zip` vào thư mục tạm `%TEMP%`.
   2. Tự động kích hoạt kịch bản PowerShell nền sử dụng `robocopy` để hoán đổi an toàn các file nhị phân.
-  3. Tự động bảo toàn dữ liệu cá nhân của bạn (`config.json`, `logs/`).
+  3. Tự động bảo toàn dữ liệu cấu hình và lịch sử cá nhân của bạn (`config.json`, `config.ini`, `update_config.json`, `logs/`).
   4. Khởi động lại ứng dụng mới mà không cần cấp quyền Administrator.
 
 ---

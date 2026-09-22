@@ -230,6 +230,7 @@ class OtaUpdateConfig {
     bool? autoDownload,
     DateTime? lastCheckTime,
     String? cachedUpdateVersion,
+    bool clearCachedUpdateVersion = false,
   }) {
     return OtaUpdateConfig(
       serverPath: serverPath ?? this.serverPath,
@@ -238,9 +239,29 @@ class OtaUpdateConfig {
       checkInterval: checkInterval ?? this.checkInterval,
       autoDownload: autoDownload ?? this.autoDownload,
       lastCheckTime: lastCheckTime ?? this.lastCheckTime,
-      cachedUpdateVersion: cachedUpdateVersion ?? this.cachedUpdateVersion,
+      cachedUpdateVersion: clearCachedUpdateVersion
+          ? null
+          : (cachedUpdateVersion ?? this.cachedUpdateVersion),
     );
   }
+}
+
+/// How a share folder was opened. Credentials are skipped when Windows can
+/// already read the path with the signed-in session.
+enum ShareAccessMode { none, currentSession, credentials, localPath }
+
+/// Result of a share reachability probe. [errorMessage] is safe to show in
+/// the update tab: it never includes the password.
+class SmbConnectResult {
+  final bool connected;
+  final String? errorMessage;
+  final ShareAccessMode accessMode;
+
+  const SmbConnectResult({
+    required this.connected,
+    this.errorMessage,
+    this.accessMode = ShareAccessMode.none,
+  });
 }
 
 /// Service managing checking, downloading and applying LAN OTA updates
@@ -288,9 +309,52 @@ class OtaUpdateService {
   factory OtaUpdateService() => _instance;
   OtaUpdateService._internal();
 
+  final List<VoidCallback> _listeners = [];
+
+  /// Package found by the latest successful scan, kept for the top-bar badge.
+  UpdatePackageInfo? pendingPackage;
+
+  /// `false` after a share probe or scan could not reach the folder.
+  /// `true` after a completed scan. `null` before the first attempt.
+  bool? sessionConnected;
+  String? sessionDetail;
+
   File? _customConfigFileForTesting;
   Directory? _customServerDirForTesting;
   OtaUpdateConfig? _cachedConfig;
+
+  void addListener(VoidCallback listener) {
+    _listeners.add(listener);
+  }
+
+  void removeListener(VoidCallback listener) {
+    _listeners.remove(listener);
+  }
+
+  void _notifyListeners() {
+    for (final listener in List<VoidCallback>.of(_listeners)) {
+      listener();
+    }
+  }
+
+  /// Version label for the top-bar badge, or null when nothing newer is known.
+  String? get advertisedUpdateLabel {
+    final pending = pendingPackage;
+    if (pending != null) return pending.version.displayVersion;
+    final cached = SemanticVersion.tryParse(currentConfig.cachedUpdateVersion);
+    final current = SemanticVersion.tryParse(appVersion);
+    if (cached != null && current != null && cached > current) {
+      return cached.displayVersion;
+    }
+    return null;
+  }
+
+  @visibleForTesting
+  void resetSessionForTesting() {
+    pendingPackage = null;
+    sessionConnected = null;
+    sessionDetail = null;
+  }
 
   @visibleForTesting
   void setCustomConfigFileForTesting(File? file) {
@@ -370,6 +434,7 @@ class OtaUpdateService {
     } catch (e) {
       debugPrint('[OtaUpdateService] Save config error: $e');
     }
+    _notifyListeners();
   }
 
   /// Current cached configuration or defaults
@@ -414,9 +479,61 @@ class OtaUpdateService {
         return elapsed.inDays >= 7;
       case 'monthly':
         return elapsed.inDays >= 30;
+      case 'startup':
+      case 'off':
+        return false;
       default:
         return elapsed.inHours >= 24;
     }
+  }
+
+  /// How long until the next in-session scan. `null` for `off` and `startup`
+  /// (those modes do not poll while the window stays open). [Duration.zero]
+  /// means the check is already due.
+  Duration? timeUntilNextCheck({
+    required String interval,
+    DateTime? lastCheckTime,
+    DateTime? now,
+  }) {
+    if (interval == 'off' || interval == 'startup') return null;
+    if (shouldCheckForUpdates(
+      interval: interval,
+      lastCheckTime: lastCheckTime,
+      now: now,
+    )) {
+      return Duration.zero;
+    }
+    final currentTime = now ?? DateTime.now();
+    final elapsed = currentTime.difference(lastCheckTime!);
+    final window = switch (interval) {
+      'weekly' => const Duration(days: 7),
+      'monthly' => const Duration(days: 30),
+      _ => const Duration(hours: 24),
+    };
+    final remaining = window - elapsed;
+    if (remaining <= Duration.zero) return Duration.zero;
+    return remaining;
+  }
+
+  /// Arguments for `net use`, without a shell. Empty credentials are omitted
+  /// so a blank password is not sent as a literal argument.
+  @visibleForTesting
+  static List<String> smbUseArguments({
+    required String shareRoot,
+    required String username,
+    required String password,
+  }) {
+    final args = <String>['use', shareRoot];
+    if (password.isNotEmpty) args.add(password);
+    if (username.isNotEmpty) args.add('/user:$username');
+    return args;
+  }
+
+  static String _shortNetMessage(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (cleaned.isEmpty) return 'net use failed';
+    if (cleaned.length <= 280) return cleaned;
+    return '${cleaned.substring(0, 280)}…';
   }
 
   /// Extracts SMB share root from a UNC path (e.g. '\\10.81.141.226\temp')
@@ -429,64 +546,166 @@ class OtaUpdateService {
     return '\\\\${parts[0]}\\${parts[1]}';
   }
 
-  /// Connects to SMB network share using `net use` if required on Windows
-  Future<bool> connectSmbShare({
+  /// UNC paths that are already readable use the Windows session. A drive
+  /// letter or local folder never needs a network account.
+  @visibleForTesting
+  static ShareAccessMode accessModeForOpenPath(
+    String targetPath, {
+    required bool viaCredentials,
+  }) {
+    if (viaCredentials) return ShareAccessMode.credentials;
+    final normalized = targetPath.replaceAll('/', '\\');
+    if (normalized.startsWith(r'\\')) return ShareAccessMode.currentSession;
+    return ShareAccessMode.localPath;
+  }
+
+  /// Connects to an SMB share with `net use` when credentials are present.
+  /// A folder that is already reachable is left alone.
+  Future<SmbConnectResult> connectSmbShare({
     String? path,
     String? username,
     String? password,
   }) async {
     if (_customServerDirForTesting != null) {
-      return await _customServerDirForTesting!.exists();
+      final exists = await _customServerDirForTesting!.exists();
+      return SmbConnectResult(
+        connected: exists,
+        errorMessage: exists ? null : 'Server directory does not exist',
+      );
     }
 
     final cfg = await loadConfig();
-    final targetPath = path ?? cfg.serverPath;
+    final targetPath = (path ?? cfg.serverPath).trim();
     final user = username ?? cfg.username;
     final pass = password ?? cfg.password;
+    if (targetPath.isEmpty) {
+      return const SmbConnectResult(
+        connected: false,
+        errorMessage: 'Update server path is empty',
+      );
+    }
 
     final normalized = targetPath.replaceAll('/', '\\');
     if (!normalized.startsWith(r'\\')) {
-      return await Directory(targetPath).exists();
+      try {
+        final exists = await Directory(targetPath).exists();
+        return SmbConnectResult(
+          connected: exists,
+          accessMode: exists ? ShareAccessMode.localPath : ShareAccessMode.none,
+          errorMessage: exists
+              ? null
+              : 'Server directory does not exist: $targetPath',
+        );
+      } catch (e) {
+        return SmbConnectResult(
+          connected: false,
+          errorMessage: 'Cannot access $targetPath: $e',
+        );
+      }
     }
 
-    // 1. Direct access check
     try {
       if (await Directory(targetPath).exists()) {
-        return true;
+        return SmbConnectResult(
+          connected: true,
+          accessMode: accessModeForOpenPath(targetPath, viaCredentials: false),
+        );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[OtaUpdateService] Share exists check failed: $e');
+    }
 
-    // 2. Net use for SMB share root
     final shareRoot = extractSmbShareRoot(targetPath);
-    if (shareRoot != null && Platform.isWindows) {
+    if (shareRoot != null &&
+        Platform.isWindows &&
+        (user.isNotEmpty || pass.isNotEmpty)) {
       try {
-        final result = await Process.run('net', [
-          'use',
-          shareRoot,
-          pass,
-          '/user:$user',
-        ]);
+        final result = await Process.run(
+          'net',
+          smbUseArguments(shareRoot: shareRoot, username: user, password: pass),
+        );
+        final out = _shortNetMessage('${result.stdout} ${result.stderr}');
         if (result.exitCode == 0) {
-          return await Directory(targetPath).exists();
+          final exists = await Directory(targetPath).exists();
+          return SmbConnectResult(
+            connected: exists,
+            accessMode: exists
+                ? ShareAccessMode.credentials
+                : ShareAccessMode.none,
+            errorMessage: exists
+                ? null
+                : 'Share authenticated but folder is missing: $targetPath',
+          );
         }
-        final out = '${result.stdout} ${result.stderr}';
         if (out.contains('1219')) {
-          // Already connected with credentials
-          return await Directory(targetPath).exists();
+          final exists = await Directory(targetPath).exists();
+          if (exists) {
+            return SmbConnectResult(
+              connected: true,
+              accessMode: accessModeForOpenPath(
+                targetPath,
+                viaCredentials: false,
+              ),
+            );
+          }
+          return SmbConnectResult(
+            connected: false,
+            errorMessage:
+                'Share is already connected with different credentials (1219): $shareRoot',
+          );
         }
+        return SmbConnectResult(connected: false, errorMessage: out);
       } catch (e) {
         debugPrint('[OtaUpdateService] net use error: $e');
+        return SmbConnectResult(
+          connected: false,
+          errorMessage: 'net use error: $e',
+        );
       }
     }
 
-    return await Directory(targetPath).exists();
+    return SmbConnectResult(
+      connected: false,
+      errorMessage: 'Cannot connect to server share: $targetPath',
+    );
   }
 
-  /// Checks for available updates on the server
+  /// Probes the share folder only. Does not scan packages and does not move
+  /// [OtaUpdateConfig.lastCheckTime].
+  Future<SmbConnectResult> testConnection({
+    String? path,
+    String? username,
+    String? password,
+  }) async {
+    final result = await connectSmbShare(
+      path: path,
+      username: username,
+      password: password,
+    );
+    sessionConnected = result.connected;
+    sessionDetail = result.connected ? null : result.errorMessage;
+    _notifyListeners();
+    return result;
+  }
+
+  void _markUnreachable(String message) {
+    sessionConnected = false;
+    sessionDetail = message;
+    _notifyListeners();
+  }
+
+  /// Checks for available updates on the server.
+  ///
+  /// [isManual] still records the schedule after a completed scan. Share
+  /// probes must use [testConnection], which leaves the cycle untouched.
+  /// A failed connection does not advance [OtaUpdateConfig.lastCheckTime].
   Future<UpdateCheckResult> checkForUpdates({
     String? overrideServerPath,
+    String? overrideUsername,
+    String? overridePassword,
     String? overrideCurrentVersion,
     bool isManual = false,
+    bool recordCheckTime = true,
   }) async {
     final cfg = await loadConfig();
     final serverPath = overrideServerPath ?? cfg.serverPath;
@@ -495,27 +714,54 @@ class OtaUpdateService {
         SemanticVersion.tryParse(currentVerStr) ??
         const SemanticVersion(major: 1, minor: 0, patch: 0, raw: '1.0.0');
 
-    // 1. Connect to SMB / Directory
-    final connected = await connectSmbShare(path: serverPath);
-    if (!connected) {
+    Future<void> rememberCompletedCheck({
+      required bool hasUpdate,
+      required UpdatePackageInfo? package,
+    }) async {
+      pendingPackage = hasUpdate ? package : null;
+      sessionConnected = true;
+      sessionDetail = null;
+      var next = cfg;
+      // Manual and scheduled scans both stamp the cycle. The stamp is applied
+      // together with cachedUpdateVersion so a later write cannot roll it back.
+      if (recordCheckTime || isManual) {
+        next = next.copyWith(lastCheckTime: DateTime.now());
+      }
+      if (hasUpdate && package != null) {
+        next = next.copyWith(cachedUpdateVersion: package.version.toString());
+      } else {
+        next = next.copyWith(clearCachedUpdateVersion: true);
+      }
+      await saveConfig(next);
+    }
+
+    final connection = await connectSmbShare(
+      path: serverPath,
+      username: overrideUsername,
+      password: overridePassword,
+    );
+    if (!connection.connected) {
+      final message =
+          connection.errorMessage ??
+          'Cannot connect to server share: $serverPath';
+      _markUnreachable(message);
       return UpdateCheckResult(
         hasUpdate: false,
         currentVersion: currentVerStr,
         isConnectionSuccess: false,
-        errorMessage: 'Cannot connect to server share: $serverPath',
+        errorMessage: message,
       );
     }
 
-    // Update last check time
-    await saveConfig(cfg.copyWith(lastCheckTime: DateTime.now()));
-
     final Directory dir = _customServerDirForTesting ?? Directory(serverPath);
     if (!await dir.exists()) {
+      const message = 'Server directory does not exist';
+      _markUnreachable('$message: $serverPath');
       return UpdateCheckResult(
         hasUpdate: false,
         currentVersion: currentVerStr,
         isConnectionSuccess: false,
-        errorMessage: 'Server directory does not exist: $serverPath',
+        errorMessage: '$message: $serverPath',
       );
     }
 
@@ -552,11 +798,7 @@ class OtaUpdateService {
               releaseNotes: notes,
               releaseDate: dateStr != null ? DateTime.tryParse(dateStr) : null,
             );
-            if (hasUpdate) {
-              await saveConfig(
-                cfg.copyWith(cachedUpdateVersion: serverSemVer.toString()),
-              );
-            }
+            await rememberCompletedCheck(hasUpdate: hasUpdate, package: pkg);
             return UpdateCheckResult(
               hasUpdate: hasUpdate,
               packageInfo: pkg,
@@ -598,6 +840,7 @@ class OtaUpdateService {
       }
 
       if (candidates.isEmpty) {
+        await rememberCompletedCheck(hasUpdate: false, package: null);
         return UpdateCheckResult(
           hasUpdate: false,
           currentVersion: currentVerStr,
@@ -610,11 +853,7 @@ class OtaUpdateService {
       final latestPkg = candidates.first;
       final hasUpdate = latestPkg.version > currentSemVer;
 
-      if (hasUpdate) {
-        await saveConfig(
-          cfg.copyWith(cachedUpdateVersion: latestPkg.version.toString()),
-        );
-      }
+      await rememberCompletedCheck(hasUpdate: hasUpdate, package: latestPkg);
 
       return UpdateCheckResult(
         hasUpdate: hasUpdate,
@@ -622,11 +861,13 @@ class OtaUpdateService {
         currentVersion: currentVerStr,
       );
     } catch (e) {
+      final message = 'Error scanning update packages: $e';
+      _markUnreachable(message);
       return UpdateCheckResult(
         hasUpdate: false,
         currentVersion: currentVerStr,
         isConnectionSuccess: false,
-        errorMessage: 'Error scanning update packages: $e',
+        errorMessage: message,
       );
     }
   }
@@ -810,10 +1051,16 @@ if not errorlevel 1 goto wait_loop
 timeout /t 1 /nobreak >nul
 
 echo [2/3] Updating application files (preserving config.json and logs)...
+if exist "%DST_DIR%\\config.json" copy /y "%DST_DIR%\\config.json" "%~dp0config.json.keep" >nul
+if exist "%DST_DIR%\\config.ini" copy /y "%DST_DIR%\\config.ini" "%~dp0config.ini.keep" >nul
+if exist "%DST_DIR%\\update_config.json" copy /y "%DST_DIR%\\update_config.json" "%~dp0update_config.json.keep" >nul
 robocopy "%DST_DIR%" "%BACKUP_DIR%" /E /NP /R:2 /W:1 /XD logs /XF config.json config.ini update_config.json >"%~dp0backup.log"
 if errorlevel 8 exit /b 13
 robocopy "%SRC_DIR%" "%DST_DIR%" /E /IS /IT /NP /R:5 /W:2 /XD logs /XF config.json config.ini update_config.json >"%~dp0apply.log"
 if errorlevel 8 goto rollback
+if exist "%~dp0config.json.keep" copy /y "%~dp0config.json.keep" "%DST_DIR%\\config.json" >nul
+if exist "%~dp0config.ini.keep" copy /y "%~dp0config.ini.keep" "%DST_DIR%\\config.ini" >nul
+if exist "%~dp0update_config.json.keep" copy /y "%~dp0update_config.json.keep" "%DST_DIR%\\update_config.json" >nul
 
 echo [3/3] Launching updated application...
 start "" "%DST_DIR%\\%EXE_NAME%"
@@ -824,6 +1071,9 @@ exit /b 0
 :rollback
 robocopy "%BACKUP_DIR%" "%DST_DIR%" /E /IS /IT /NP /R:2 /W:1 >"%~dp0rollback.log"
 if errorlevel 8 exit /b 14
+if exist "%~dp0config.json.keep" copy /y "%~dp0config.json.keep" "%DST_DIR%\\config.json" >nul
+if exist "%~dp0config.ini.keep" copy /y "%~dp0config.ini.keep" "%DST_DIR%\\config.ini" >nul
+if exist "%~dp0update_config.json.keep" copy /y "%~dp0update_config.json.keep" "%DST_DIR%\\update_config.json" >nul
 start "" "%DST_DIR%\\%EXE_NAME%"
 exit /b 15
 ''';

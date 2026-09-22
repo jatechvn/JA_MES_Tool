@@ -5,6 +5,33 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-09-22
+
+### 🚀 Nâng cấp & Tính năng mới
+- **⚡ 4 Nút Chọn Nhanh Chu kỳ OTA (Bento Quick-Select Interval)**:
+  - Loại bỏ hoàn toàn `DropdownButton` cũ (bị thừa khoảng trống ngang dài), thay thế bằng hàng 4 nút Bento Pill (`Row` + `Expanded`) 1-chạm trực tiếp:
+    - 🚀 **Khi khởi động** (`startup`) — Icon `rocket_launch_rounded`
+    - 📅 **Hàng ngày** (`daily`) — Icon `today_rounded`
+    - 🗓️ **Hàng tuần** (`weekly`) — Icon `date_range_rounded`
+    - 🚫 **Tắt** (`off`) — Icon `block_rounded`
+  - Nút được chọn có viền sáng `accentColor` (1.5px) và nền highlight tinh tế, đồng bộ chuẩn thiết kế Bento.
+- **🪟 Bố cục 2 Cột (2-Column Grid) cho Thanh Trượt Kính mờ (Tab 2)**:
+  - Xếp 6 thanh trượt thành 3 hàng x 2 cột cân xứng (Cột trái: Độ mờ Blur `0 - 40px`, Cột phải: Độ đục Opacity `5% - 100%`) cho Khối Bento, Hộp thoại và Menu.
+  - Giảm hơn 50% chiều cao của thẻ Kính mờ, hiển thị trọn vẹn mà không cần cuộn chuột dài.
+- **🔔 Huy hiệu Cập nhật OTA Trực tiếp trên Thanh Tiêu đề (Live Main Window Badge)**:
+  - Bổ sung `_OtaUpdateBadge` (icon `system_update_alt_rounded` + dot xanh ngọc lục bảo) hiển thị tức thì trên thanh tiêu đề ứng dụng khi có bản cập nhật mới.
+  - Bấm 1 chạm để mở ngay hộp thoại cập nhật Bento Glass Dialog.
+- **🛡️ Bảo toàn Cấu hình Người dùng trong Bộ Cài đặt (`install.bat` & `uninstall.ps1`)**:
+  - `install.bat` tự động sao lưu và khôi phục `config.json`, `config.ini`, `update_config.json`, và `logs/` trong quá trình ghi đè cập nhật.
+  - `uninstall.ps1` mặc định giữ lại dữ liệu cấu hình khi gỡ bỏ (trừ khi dùng tham số `-purge`), giúp cài lại mà không bị mất thiết lập cũ.
+- **⚙️ Tinh gọn Kiểm tra Máy chủ OTA & Chú thích Tài khoản Mạng**:
+  - Gộp nút "Kiểm tra kết nối chia sẻ" và chip hiển thị kết quả (icon xanh/đỏ + message) lên cùng một hàng ngang đồng nhất.
+  - Thêm tiêu đề nhận diện rõ ràng `Xác thực mạng LAN (Tùy chọn)` / `Network Authentication (Optional)`.
+
+### 🧪 Verification & Testing
+- **✅ Test Suite Đầy Đủ**: 47/47 tests vượt qua thành công (`flutter test`), bổ sung ca kiểm thử tương tác cho 4 nút chọn chu kỳ OTA và kiểm thử chu kỳ hẹn giờ cập nhật.
+- **✅ 0 Issues**: `flutter analyze` đạt 0 lỗi, 0 cảnh báo.
+
 ## [2.9.9] - 2026-09-22
 
 ### 🚀 Nâng cấp & Tính năng mới

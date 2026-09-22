@@ -152,6 +152,32 @@ void main() {
         find.text(Translations.get('server_path', logic.lang)),
         findsOneWidget,
       );
+      expect(
+        find.text(Translations.get('check_interval', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('interval_startup', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('interval_daily', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('interval_weekly', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('interval_disabled', logic.lang)),
+        findsOneWidget,
+      );
+
+      // Tap quick interval button
+      await tester.tap(
+        find.text(Translations.get('interval_daily', logic.lang)),
+      );
+      await tester.pumpAndSettle();
 
       // Scroll down to reveal System Specs card
       await tester.drag(find.byType(ListView), const Offset(0, -350));

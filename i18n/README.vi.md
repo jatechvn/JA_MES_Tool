@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.9.9 - Tiếng Việt
+# 🤖 JA MES Tool v2.10.0 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.9.9-blue.svg" alt="Phiên bản 2.9.9">
+  <img src="https://img.shields.io/badge/phien_ban-2.10.0-blue.svg" alt="Phiên bản 2.10.0">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -229,6 +229,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.10.0]** — **Nút chọn nhanh chu kỳ OTA, giao diện kính mờ 2 cột & Live OTA Update Badge**: Thay thế dropdown chu kỳ cập nhật OTA bằng 4 nút Bento chọn nhanh trực quan (`Khởi động`, `Hàng ngày`, `Hàng tuần`, `Tắt`); sắp xếp bộ 4 thanh trượt kính mờ thành layout 2 cột Bento Card cân đối; đồng bộ nút kiểm tra kết nối thư mục chia sẻ mạng; hiển thị badge OTA Update tương tác trực tiếp trên thanh tiêu đề ứng dụng khi có bản phát hành mới; nâng cấp trình cài đặt/gỡ cài đặt bảo toàn toàn diện cấu hình và nhật ký người dùng.
 - **[2.9.9]** — **Hợp nhất Settings Dialog thành 3 tab Bento Grid & Bộ cài đặt Windows Chuẩn**: Tối ưu hóa 5 tab cũ thành 3 tab Bento cân đối (`CloudMES & CDP`, `Giao diện & Kính mờ`, `Thông tin & Cập nhật`) với thanh tab `Expanded` chống tràn viền và vị trí cuộn `PageStorageKey` độc lập; bổ sung bộ cài đặt/gỡ bỏ không cần quyền admin (`install.bat`, `uninstall.bat`, `uninstall.ps1`), cập nhật live glass khi chuyển graphic tier và đa ngữ toàn diện thông số hệ thống.
 - **[2.9.8]** — **Tích hợp LAN Over-The-Air (OTA) Update**: Tự động kiểm tra bản phát hành mới qua thư mục chia sẻ mạng LAN / UNC Share, so sánh phiên bản chuẩn Semantic Versioning kèm build number, quy trình cập nhật Hot-Swap an toàn bằng Robocopy, hộp thoại Bento Glass Update Dialog và tab Cập nhật trong Cài đặt.
 - **[2.9.7]** — Bổ sung đầy đủ các trường Barcode History & WIP Components từ CloudMES (Line, Internal SN, Thiết bị, Phiên bản, Kế hoạch, Ghi chú, Vị trí linh kiện), mở rộng xuất CSV, card SN 2 dòng tinh tế và hiệu ứng marquee nảy.
