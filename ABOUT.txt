@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.10.0
-Release Date : 2026-09-22
+Version      : v2.10.1
+Release Date : 2026-09-29
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,9 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Reverse SN Queue Order (Newest on Top): Serial numbers are now rendered
+  in reverse insertion order so that newly added or scanned units immediately
+  appear at the top of the sidebar list without requiring scrolling.
 - Bento Quick-Select Interval & 2-Column Glass Controls: Replaced long droplist with
   4 instant-click Bento buttons (startup, daily, weekly, off), converted 6 glassmorphism
   live-tuning sliders into a compact 2-column grid, and unified server test row.

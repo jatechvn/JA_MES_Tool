@@ -5,6 +5,17 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.1] - 2026-09-29
+
+### 🚀 Nâng cấp & Tối ưu hóa UI/UX
+- **🔝 Đảo ngược thứ tự hiển thị danh sách Serial Number (Newest on Top)**:
+  - Danh sách Serial Number trên thanh điều hướng bên trái (Sidebar Queue) được sắp xếp đảo ngược theo thứ tự bổ sung (`logic.snList.length - 1 - index`).
+  - Các SN vừa nhập hoặc vừa quét kiểm tra sẽ tự động hiển thị ngay ở hàng đầu tiên của danh sách thay vì nằm ở cuối, giúp kỹ sư dễ dàng quan sát kết quả kiểm thử ngay lập tức mà không cần cuộn trang.
+  - Vẫn bảo toàn đầy đủ các hiệu ứng highlight trạng thái, thẻ cảnh báo, icon lỗi/pass và badge số lượng bản ghi tương ứng.
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.10.1+25` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.10.0] - 2026-09-22
 
 ### 🚀 Nâng cấp & Tính năng mới

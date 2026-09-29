@@ -1075,7 +1075,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         itemCount: logic.snList.length,
         separatorBuilder: (ctx, idx) => const SizedBox(height: 5),
         itemBuilder: (context, index) {
-          final sn = logic.snList[index];
+          final sn = logic.snList[logic.snList.length - 1 - index];
           final isSelected = sn == logic.selectedSn;
           final isLoading = logic.loadingStatus[sn] == true;
           final dataStatus = logic.snDataStatus(sn);
