@@ -1,4 +1,4 @@
-# 📘 Hướng dẫn Sử dụng JA MES Tool v2.10.0
+# 📘 Hướng dẫn Sử dụng JA MES Tool v2.10.1
 
 > **Ứng dụng Windows Desktop hiệu năng cao tra cứu dữ liệu kiểm thử, lịch sử công đoạn và truy vết linh kiện Foxconn CloudMES với giao diện Bento Glassmorphism.**
 
@@ -23,7 +23,7 @@
 - Kết nối mạng: Truy cập được mạng nội bộ nhà máy hoặc VPN Foxconn CloudMES
 
 ### Cách 1: Cài đặt chuẩn Windows không cần Admin (Khuyên dùng)
-1. Tải gói phát hành `JA_MES_Tool_v2.10.0_Windows_x64.zip`.
+1. Tải gói phát hành `JA_MES_Tool_v2.10.1_Windows_x64.zip`.
 2. Giải nén và nhấp đúp chạy file **`install.bat`**.
 3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel (tự động bảo toàn cấu hình người dùng).
 4. Khi muốn gỡ cài đặt, chạy **`uninstall.bat`** hoặc gỡ trực tiếp qua Windows Installed Apps.
@@ -55,6 +55,7 @@
 - Nhập SN trực tiếp vào ô tìm kiếm ở thanh bên trái và nhấn Enter.
 - Nhập hàng loạt SN từ clipboard hoặc dán danh sách ngăn cách bằng dấu phẩy, khoảng trắng hoặc xuống dòng.
 - Nhập từ file danh sách bằng nút **Import CSV**.
+- **Hiển thị SN mới nhất lên đầu**: Danh sách hàng đợi SN tự động xếp các mã SN vừa nhập/quét lên hàng đầu tiên, giúp theo dõi kết quả kiểm thử ngay tức thì mà không cần cuộn trang.
 
 ### Các chế độ xem dữ liệu
 1. **Test Record**: Hiển thị bảng chi tiết kết quả kiểm tra từng trạm kiểm thử của sản phẩm (Trạm test, Kết quả PASS/FAIL, Thời gian kiểm tra, Kỹ thuật viên, Mã lỗi...).
