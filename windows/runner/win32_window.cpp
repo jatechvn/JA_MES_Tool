@@ -172,6 +172,15 @@ bool Win32Window::Create(const std::wstring& title,
     return false;
   }
 
+  HICON hIconBig = (HICON)LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), 0);
+  HICON hIconSmall = (HICON)LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
+  if (hIconBig) {
+    SendMessage(window, WM_SETICON, ICON_BIG, (LPARAM)hIconBig);
+  }
+  if (hIconSmall) {
+    SendMessage(window, WM_SETICON, ICON_SMALL, (LPARAM)hIconSmall);
+  }
+
   UpdateTheme(window);
 
   return OnCreate();
@@ -236,7 +245,7 @@ Win32Window::MessageHandler(HWND hwnd,
     }
 
     case WM_ACTIVATE:
-      if (child_content_ != nullptr) {
+      if (child_content_ != nullptr && LOWORD(wparam) != WA_INACTIVE) {
         SetFocus(child_content_);
       }
       return 0;

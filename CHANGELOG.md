@@ -5,6 +5,38 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-10-02
+
+### ⚡ Tối ưu hóa GPU/CPU & Quản lý Năng lượng Toàn diện (Flutter Power Optimizer)
+- **🎛️ Bộ điều phối tập trung `AppPowerManager` (Single Source of Truth)**:
+  - Thiết lập ma trận chính sách năng lượng 4 trạng thái (Focused, Inactive, Minimized, User Idle).
+  - Tự động đóng băng và dừng các hiệu ứng đồ họa liên tục (`MeshOrb`, `WaveIndicator`, `BorderBeam`, `GlassMarquee`) khi cửa sổ mất focus hoặc thu nhỏ, triệt tiêu 100% khung hình render không cần thiết (0 continuous draw calls), giải phóng hoàn toàn tải GPU/CPU.
+  - Các tác vụ nghiệp vụ mạng ngầm (tra cứu SN, CDP sync, kiểm tra token 3 phút, kiểm tra OTA) tiếp tục chạy bình thường 100% độc lập với trạng thái cửa sổ.
+- **🔄 Bảo toàn chiều chuyển động Animation (Direction & Leg Preservation)**:
+  - Khắc phục hiện tượng đổi hướng đột ngột khi khôi phục animation (snapping forward) bằng cách kiểm tra trạng thái pha di chuyển (`AnimationStatus.reverse`) và tiếp tục leg tương ứng khi resume, kết hợp `addStatusListener` để duy trì chu kỳ ping-pong hoàn hảo.
+- **🛡️ Session Epoch Guard cho Chữ cuộn `GlassMarquee`**:
+  - Tích hợp biến thế hệ `_sessionEpoch` và đóng băng offset tức thì `_scrollController.jumpTo(currentOffset)` khi pause.
+  - Loại bỏ hoàn toàn ghost callback từ `Future` dở dang của `animateTo` và rò rỉ timer khi cửa sổ blur, khôi phục cuộn mượt mà từ offset cũ khi focus trở lại.
+- **💤 Chế độ Ngủ Rảnh Tay (12s Idle Sleep Mode)**:
+  - Tự động tạm dừng khối cầu gradient nền nặng (`MeshOrb`) khi người dùng không thao tác chuột/bàn phím trong 12 giây (hoặc 30s/60s), giữ nguyên các chỉ báo trạng thái và chữ cuộn.
+  - Bộ bắt sự kiện toàn cục tại gốc ứng dụng (`Listener` + `Focus`) với cơ chế throttle 600ms giúp đánh thức ngay khi có thao tác chuột hoặc phím.
+  - Bổ sung thẻ điều khiển BentoCard trong `SettingsDialog` (Tab Giao diện & Kính mờ) với Switch bật/tắt, Chips chọn mốc thời gian và cơ chế an toàn **Rollback on Cancel**.
+- **🪟 Sửa lỗi Win32 Focus Native (`win32_window.cpp`)**:
+  - Khắc phục lỗi cướp focus trong sự kiện `WM_ACTIVATE` khi `LOWORD(wparam) == WA_INACTIVE`.
+
+### 🎨 Nhận diện Thương hiệu & Logo Mới
+- **💎 Cập nhật Logo & App Icon Mới Hiện Đại**:
+  - Thay thế biểu tượng ứng dụng Windows (`app_icon.ico`) và các asset đồ họa mới sắc nét, đồng bộ phong cách Bento Glassmorphism hiện đại.
+
+### 📦 Phát hành & Tự Động Hóa Checksum
+- **🔒 Tự động đồng bộ mã băm toàn vẹn SHA256 (`dist/SHA256SUMS.txt`)**:
+  - Script đóng gói `scripts/stage_release.py` và `build.bat` tự động tính toán mã băm SHA-256 của gói ZIP phát hành và cập nhật vào `dist/SHA256SUMS.txt`, ngăn ngừa lỗi lệch hash khi phân phối hoặc cập nhật qua mạng LAN.
+- **🧪 Kiểm chứng toàn diện (Verification Pass)**:
+  - 65/65 tests vượt qua thành công (100% pass) bao gồm test giữ hướng animation, test session epoch marquee, và test tương tác Switch Settings.
+  - `dart format .`: Chuẩn hóa 100% mã nguồn.
+  - `flutter analyze`: Đạt 0 issues found.
+- Đồng bộ phiên bản `2.11.0+26` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.10.1] - 2026-09-29
 
 ### 🚀 Nâng cấp & Tối ưu hóa UI/UX

@@ -40,6 +40,12 @@ class ConfigService {
           'dropdownBlur': data['dropdownBlur'],
           'dropdownOpacity': data['dropdownOpacity'],
           'perfMode': data['perfMode']?.toString() ?? 'auto',
+          'enableIdleSleep': data['enableIdleSleep'] is bool
+              ? data['enableIdleSleep'] as bool
+              : true,
+          'idleTimeoutSeconds': data['idleTimeoutSeconds'] is num
+              ? (data['idleTimeoutSeconds'] as num).toInt()
+              : 12,
         };
       }
     } catch (e) {
@@ -61,6 +67,8 @@ class ConfigService {
       'dropdownBlur': null,
       'dropdownOpacity': null,
       'perfMode': 'auto',
+      'enableIdleSleep': true,
+      'idleTimeoutSeconds': 12,
     };
   }
 

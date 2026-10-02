@@ -11,6 +11,7 @@ import '../../../widgets/glass_widgets.dart';
 import '../../../widgets/glass_dialog.dart';
 import '../../../widgets/app_toast.dart';
 import '../../services/ota_update_service.dart';
+import '../../services/app_power_manager.dart';
 import 'glass_update_dialog.dart';
 
 String _formatSettingsTranslation(
@@ -66,6 +67,8 @@ Future<void> showAppSettingsDialog(
   final origDropdownBlur = theme.dropdownBlur;
   final origDropdownOpacity = theme.dropdownOpacity;
   final origPerfMode = theme.perfMode;
+  final origEnableIdleSleep = logic.enableIdleSleep;
+  final origIdleTimeoutSeconds = logic.idleTimeoutSeconds;
 
   double tempCardBlur = origCardBlur;
   double tempCardOpacity = origCardOpacity;
@@ -73,6 +76,8 @@ Future<void> showAppSettingsDialog(
   double tempDialogOpacity = origDialogOpacity;
   double tempDropdownBlur = origDropdownBlur;
   double tempDropdownOpacity = origDropdownOpacity;
+  bool tempEnableIdleSleep = origEnableIdleSleep;
+  int tempIdleTimeoutSeconds = origIdleTimeoutSeconds;
 
   final tokenCtrl = TextEditingController(text: logic.token);
   final opIdCtrl = TextEditingController(text: logic.operationId);
@@ -129,6 +134,16 @@ Future<void> showAppSettingsDialog(
                   dropdownBlur: origDropdownBlur,
                   dropdownOpacity: origDropdownOpacity,
                 );
+                if (tempEnableIdleSleep != origEnableIdleSleep) {
+                  AppPowerManager.instance.setEnableIdleSleep(
+                    origEnableIdleSleep,
+                  );
+                }
+                if (tempIdleTimeoutSeconds != origIdleTimeoutSeconds) {
+                  AppPowerManager.instance.setIdleTimeout(
+                    Duration(seconds: origIdleTimeoutSeconds),
+                  );
+                }
                 Navigator.pop(dialogCtx);
               }
 
@@ -170,6 +185,8 @@ Future<void> showAppSettingsDialog(
                         dialogOpacity: tempDialogOpacity,
                         dropdownBlur: tempDropdownBlur,
                         dropdownOpacity: tempDropdownOpacity,
+                        enableIdleSleep: tempEnableIdleSleep,
+                        idleTimeoutSeconds: tempIdleTimeoutSeconds,
                       );
                       await OtaUpdateService().updateConfig(
                         serverPath: otaServerPathCtrl.text.trim(),
@@ -281,6 +298,8 @@ Future<void> showAppSettingsDialog(
                             isTestingShare: isTestingShare,
                             shareTestOk: shareTestOk,
                             shareTestMessage: shareTestMessage,
+                            tempEnableIdleSleep: tempEnableIdleSleep,
+                            tempIdleTimeoutSeconds: tempIdleTimeoutSeconds,
                             setDialogState: setDialogState,
                             onIntervalChanged: (val) {
                               setDialogState(() => otaInterval = val);
@@ -297,6 +316,18 @@ Future<void> showAppSettingsDialog(
                                 shareTestOk = ok;
                                 shareTestMessage = message;
                               });
+                            },
+                            onIdleSleepChanged: (val) {
+                              setDialogState(() => tempEnableIdleSleep = val);
+                              AppPowerManager.instance.setEnableIdleSleep(val);
+                            },
+                            onIdleTimeoutChanged: (val) {
+                              setDialogState(
+                                () => tempIdleTimeoutSeconds = val,
+                              );
+                              AppPowerManager.instance.setIdleTimeout(
+                                Duration(seconds: val),
+                              );
                             },
                             onSliderChange:
                                 ({
@@ -436,10 +467,14 @@ Widget _buildCurrentTabContent({
   required bool isTestingShare,
   required bool? shareTestOk,
   required String? shareTestMessage,
+  required bool tempEnableIdleSleep,
+  required int tempIdleTimeoutSeconds,
   required StateSetter setDialogState,
   required void Function(String) onIntervalChanged,
   required void Function(bool, UpdateCheckResult?) onUpdateCheckStateChanged,
   required void Function(bool, bool?, String?) onShareTestStateChanged,
+  required void Function(bool) onIdleSleepChanged,
+  required void Function(int) onIdleTimeoutChanged,
   required void Function({
     double? cardBlur,
     double? cardOpacity,
@@ -480,8 +515,12 @@ Widget _buildCurrentTabContent({
         tempDialogOpacity,
         tempDropdownBlur,
         tempDropdownOpacity,
+        tempEnableIdleSleep,
+        tempIdleTimeoutSeconds,
         setDialogState,
         onSliderChange,
+        onIdleSleepChanged,
+        onIdleTimeoutChanged,
       );
     case 2:
       return _buildAboutAndUpdatesTab(
@@ -817,6 +856,8 @@ Widget _buildDisplayAndGlassTab(
   double tempDialogOpacity,
   double tempDropdownBlur,
   double tempDropdownOpacity,
+  bool tempEnableIdleSleep,
+  int tempIdleTimeoutSeconds,
   StateSetter setDialogState,
   void Function({
     double? cardBlur,
@@ -827,6 +868,8 @@ Widget _buildDisplayAndGlassTab(
     double? dropdownOpacity,
   })
   onSliderChange,
+  void Function(bool) onIdleSleepChanged,
+  void Function(int) onIdleTimeoutChanged,
 ) {
   void selectPerfTier(PerfTierMode mode) {
     theme.setPerfTierMode(mode);
@@ -1117,7 +1160,166 @@ Widget _buildDisplayAndGlassTab(
           ],
         ),
       ),
+      const SizedBox(height: 18),
+
+      // 4. Idle Power Saving Mode (Sleep Mode) BentoCard
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.energy_savings_leaf_rounded,
+                      size: 18,
+                      color: colors.accentEmerald,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      Translations.get('idle_sleep_title', logic.lang),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Transform.scale(
+                  scale: 0.85,
+                  child: Switch(
+                    value: tempEnableIdleSleep,
+                    activeThumbColor: colors.accentEmerald,
+                    activeTrackColor: colors.accentEmerald.withValues(
+                      alpha: 0.35,
+                    ),
+                    inactiveThumbColor: colors.textSecondary.withValues(
+                      alpha: 0.7,
+                    ),
+                    inactiveTrackColor: colors.subCardBg,
+                    onChanged: (val) {
+                      onIdleSleepChanged(val);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              Translations.get('idle_sleep_desc', logic.lang),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: colors.textSecondary,
+                height: 1.3,
+              ),
+            ),
+            if (tempEnableIdleSleep) ...[
+              const SizedBox(height: 12),
+              Divider(color: colors.borderDefault, height: 1),
+              const SizedBox(height: 12),
+              Text(
+                Translations.get('idle_timeout_label', logic.lang),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildIdleTimeoutChoice(
+                    label: Translations.get('idle_12s', logic.lang),
+                    icon: Icons.timer_outlined,
+                    value: 12,
+                    currentValue: tempIdleTimeoutSeconds,
+                    colors: colors,
+                    onSelect: () => onIdleTimeoutChanged(12),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildIdleTimeoutChoice(
+                    label: Translations.get('idle_30s', logic.lang),
+                    icon: Icons.timer_outlined,
+                    value: 30,
+                    currentValue: tempIdleTimeoutSeconds,
+                    colors: colors,
+                    onSelect: () => onIdleTimeoutChanged(30),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildIdleTimeoutChoice(
+                    label: Translations.get('idle_60s', logic.lang),
+                    icon: Icons.timer_outlined,
+                    value: 60,
+                    currentValue: tempIdleTimeoutSeconds,
+                    colors: colors,
+                    onSelect: () => onIdleTimeoutChanged(60),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     ],
+  );
+}
+
+Widget _buildIdleTimeoutChoice({
+  required String label,
+  required IconData icon,
+  required int value,
+  required int currentValue,
+  required AppColors colors,
+  required VoidCallback onSelect,
+}) {
+  final isSelected = value == currentValue;
+  return Expanded(
+    child: InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colors.accentColor.withValues(alpha: 0.15)
+              : colors.subCardBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? colors.accentColor : colors.borderDefault,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isSelected ? colors.accentColor : colors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? colors.textPrimary : colors.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 

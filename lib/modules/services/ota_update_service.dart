@@ -91,9 +91,13 @@ class SemanticVersion implements Comparable<SemanticVersion> {
       }
       if (a.length != b.length) return a.length.compareTo(b.length);
     }
-    final b1 = build ?? 0;
-    final b2 = other.build ?? 0;
-    return b1.compareTo(b2);
+    if (build != null && other.build != null) {
+      final b1 = build!;
+      final b2 = other.build!;
+      final bComp = b1.compareTo(b2);
+      if (bComp != 0) return bComp;
+    }
+    return 0;
   }
 
   bool operator >(SemanticVersion other) => compareTo(other) > 0;
@@ -342,7 +346,9 @@ class OtaUpdateService {
     final pending = pendingPackage;
     if (pending != null) return pending.version.displayVersion;
     final cached = SemanticVersion.tryParse(currentConfig.cachedUpdateVersion);
-    final current = SemanticVersion.tryParse(appVersion);
+    final current =
+        SemanticVersion.tryParse(fullAppVersion) ??
+        SemanticVersion.tryParse(appVersion);
     if (cached != null && current != null && cached > current) {
       return cached.displayVersion;
     }
@@ -709,7 +715,9 @@ class OtaUpdateService {
   }) async {
     final cfg = await loadConfig();
     final serverPath = overrideServerPath ?? cfg.serverPath;
-    final currentVerStr = overrideCurrentVersion ?? appVersion;
+    final currentVerStr =
+        overrideCurrentVersion ??
+        (fullAppVersion.isNotEmpty ? fullAppVersion : appVersion);
     final currentSemVer =
         SemanticVersion.tryParse(currentVerStr) ??
         const SemanticVersion(major: 1, minor: 0, patch: 0, raw: '1.0.0');
@@ -1043,11 +1051,13 @@ echo [1/3] Waiting for old process (PID %OLD_PID%) to terminate...
 
 :wait_loop
 set /a WAIT_COUNT+=1
+if %WAIT_COUNT% GEQ 10 taskkill /f /pid %OLD_PID% 2>nul
 if %WAIT_COUNT% GEQ 60 exit /b 12
 timeout /t 1 /nobreak >nul
 tasklist /fi "PID eq %OLD_PID%" 2>nul | findstr /i "%OLD_PID%" >nul
 if not errorlevel 1 goto wait_loop
 
+taskkill /f /im %EXE_NAME% 2>nul
 timeout /t 1 /nobreak >nul
 
 echo [2/3] Updating application files (preserving config.json and logs)...
@@ -1056,7 +1066,7 @@ if exist "%DST_DIR%\\config.ini" copy /y "%DST_DIR%\\config.ini" "%~dp0config.in
 if exist "%DST_DIR%\\update_config.json" copy /y "%DST_DIR%\\update_config.json" "%~dp0update_config.json.keep" >nul
 robocopy "%DST_DIR%" "%BACKUP_DIR%" /E /NP /R:2 /W:1 /XD logs /XF config.json config.ini update_config.json >"%~dp0backup.log"
 if errorlevel 8 exit /b 13
-robocopy "%SRC_DIR%" "%DST_DIR%" /E /IS /IT /NP /R:5 /W:2 /XD logs /XF config.json config.ini update_config.json >"%~dp0apply.log"
+robocopy "%SRC_DIR%" "%DST_DIR%" /E /IS /IT /IM /NP /R:5 /W:2 /XD logs /XF config.json config.ini update_config.json >"%~dp0apply.log"
 if errorlevel 8 goto rollback
 if exist "%~dp0config.json.keep" copy /y "%~dp0config.json.keep" "%DST_DIR%\\config.json" >nul
 if exist "%~dp0config.ini.keep" copy /y "%~dp0config.ini.keep" "%DST_DIR%\\config.ini" >nul

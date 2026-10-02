@@ -22,35 +22,59 @@ class _MeshOrbState extends State<MeshOrb> with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.duration,
-  )..repeat(reverse: true);
-
-  late final AppLifecycleListener _lifecycleListener;
+  );
 
   @override
   void initState() {
     super.initState();
-    // Stops the drift while the window is minimized/hidden, mirroring the
-    // Page Visibility low-power sleep mode added to UI_DESIGN_Sample.html
-    // (`visibilitychange` -> orb.animationPlayState = 'paused', 0% background CPU).
-    _lifecycleListener = AppLifecycleListener(
-      onStateChange: (state) {
-        switch (state) {
-          case AppLifecycleState.hidden:
-          case AppLifecycleState.paused:
-            _controller.stop();
-          case AppLifecycleState.resumed:
-            _controller.repeat(reverse: true);
-          case AppLifecycleState.inactive:
-          case AppLifecycleState.detached:
-            break;
-        }
-      },
+    _controller.addStatusListener(_onAnimationStatusChanged);
+    final shouldAnimate = AppPowerManager.instance.shouldAnimateBackground;
+    if (shouldAnimate) {
+      _resumeAnimation();
+    }
+    AppPowerManager.instance.backgroundAnimationNotifier.addListener(
+      _onPowerPolicyChanged,
     );
+  }
+
+  void _onPowerPolicyChanged() {
+    if (!mounted) return;
+    final shouldAnimate =
+        AppPowerManager.instance.backgroundAnimationNotifier.value;
+    if (shouldAnimate) {
+      if (!_controller.isAnimating) {
+        _resumeAnimation();
+      }
+    } else {
+      if (_controller.isAnimating) {
+        _controller.stop(canceled: false);
+      }
+    }
+  }
+
+  void _resumeAnimation() {
+    // stop() retains status; resume the same leg instead of restarting forward.
+    if (_controller.status == AnimationStatus.reverse ||
+        _controller.status == AnimationStatus.completed) {
+      _controller.reverse();
+    } else {
+      _controller.forward();
+    }
+  }
+
+  void _onAnimationStatusChanged(AnimationStatus status) {
+    if (!AppPowerManager.instance.shouldAnimateBackground) return;
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      _resumeAnimation();
+    }
   }
 
   @override
   void dispose() {
-    _lifecycleListener.dispose();
+    AppPowerManager.instance.backgroundAnimationNotifier.removeListener(
+      _onPowerPolicyChanged,
+    );
     _controller.dispose();
     super.dispose();
   }

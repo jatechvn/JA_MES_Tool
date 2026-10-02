@@ -1,4 +1,4 @@
-# 📘 Hướng dẫn Sử dụng JA MES Tool v2.10.1
+# 📘 Hướng dẫn Sử dụng JA MES Tool v2.11.0
 
 > **Ứng dụng Windows Desktop hiệu năng cao tra cứu dữ liệu kiểm thử, lịch sử công đoạn và truy vết linh kiện Foxconn CloudMES với giao diện Bento Glassmorphism.**
 
@@ -23,7 +23,7 @@
 - Kết nối mạng: Truy cập được mạng nội bộ nhà máy hoặc VPN Foxconn CloudMES
 
 ### Cách 1: Cài đặt chuẩn Windows không cần Admin (Khuyên dùng)
-1. Tải gói phát hành `JA_MES_Tool_v2.10.1_Windows_x64.zip`.
+1. Tải gói phát hành `JA_MES_Tool_v2.11.0_Windows_x64.zip`.
 2. Giải nén và nhấp đúp chạy file **`install.bat`**.
 3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel (tự động bảo toàn cấu hình người dùng).
 4. Khi muốn gỡ cài đặt, chạy **`uninstall.bat`** hoặc gỡ trực tiếp qua Windows Installed Apps.
@@ -87,7 +87,7 @@ Từ phiên bản **v2.9.9**, menu **Cài đặt ⚙️** được hợp nhất 
 2. **Tab 2: Giao diện & Kính mờ (`tab_display_glass`)**:
    - **Chọn ngôn ngữ**: Chuyển đổi linh hoạt giữa Tiếng Việt 🇻🇳, English 🇬🇧 và 中文 🇨🇳.
    - **Graphic Performance Tier**: Chọn cấu hình đồ họa (Auto, Ultra 120 FPS, Balanced 60 FPS, Lite chống lag) — tự động cập nhật hệ thống thanh trượt kính mờ tương ứng.
-   - **Graphic Performance Tier**: Chọn cấu hình đồ họa (Auto, Ultra 120 FPS, Balanced 60 FPS, Lite chống lag) — tự động cập nhật hệ thống thanh trượt kính mờ tương ứng.
+   - **Chế độ Ngủ Rảnh Tay (Idle Sleep Mode)**: Tự động đóng băng khối cầu gradient nền nặng khi không thao tác trong 12 giây (hoặc 30s/60s), giúp đưa mức sử dụng GPU/CPU về xấp xỉ 0%. Khi bạn rê chuột hoặc bấm phím, giao diện sẽ thức dậy mượt mà ngay lập tức.
    - **Bộ tinh chỉnh Kính mờ 4 thanh trượt 2 Cột Bento (Live-Preview)**: Tùy biến Card Blur & Opacity, Dialog Blur & Opacity theo thời gian thực theo bố cục 2 cột cân đối, kèm nút **Mặc định** và khôi phục khi hủy bỏ.
 3. **Tab 3: Thông tin & Cập nhật (`tab_about_updates`)**:
    - Thẻ thông tin phiên bản, trạng thái cập nhật LAN OTA và nút **Kiểm tra cập nhật ngay**.
