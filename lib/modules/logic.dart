@@ -6,6 +6,7 @@ import 'api_client.dart';
 import 'config_service.dart';
 import 'constants.dart';
 import 'query_queue.dart';
+import 'services/app_power_manager.dart';
 
 final _logger = Logger('AppLogic');
 
@@ -196,6 +197,28 @@ class AppLogic extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _enableIdleSleep = true;
+  bool get enableIdleSleep => _enableIdleSleep;
+
+  int _idleTimeoutSeconds = 12;
+  int get idleTimeoutSeconds => _idleTimeoutSeconds;
+
+  void setEnableIdleSleep(bool value) {
+    if (_enableIdleSleep != value) {
+      _enableIdleSleep = value;
+      AppPowerManager.instance.setEnableIdleSleep(value);
+      notifyListeners();
+    }
+  }
+
+  void setIdleTimeoutSeconds(int value) {
+    if (_idleTimeoutSeconds != value) {
+      _idleTimeoutSeconds = value;
+      AppPowerManager.instance.setIdleTimeout(Duration(seconds: value));
+      notifyListeners();
+    }
+  }
+
   List<String> _snList = [];
   List<String> get snList => _snList;
 
@@ -299,6 +322,16 @@ class AppLogic extends ChangeNotifier {
     _dialogOpacity = _parseDouble(config['dialogOpacity'], 0.85);
     _dropdownBlur = _parseDouble(config['dropdownBlur'], 20.0);
     _dropdownOpacity = _parseDouble(config['dropdownOpacity'], 0.86);
+    _enableIdleSleep = config['enableIdleSleep'] is bool
+        ? config['enableIdleSleep'] as bool
+        : true;
+    _idleTimeoutSeconds = config['idleTimeoutSeconds'] is num
+        ? (config['idleTimeoutSeconds'] as num).toInt()
+        : 12;
+    AppPowerManager.instance.setEnableIdleSleep(_enableIdleSleep);
+    AppPowerManager.instance.setIdleTimeout(
+      Duration(seconds: _idleTimeoutSeconds),
+    );
 
     if (config['sns'] != null) {
       _snList = List<String>.from(config['sns']);
@@ -388,6 +421,8 @@ class AppLogic extends ChangeNotifier {
       'dialogOpacity': _dialogOpacity,
       'dropdownBlur': _dropdownBlur,
       'dropdownOpacity': _dropdownOpacity,
+      'enableIdleSleep': _enableIdleSleep,
+      'idleTimeoutSeconds': _idleTimeoutSeconds,
     };
   }
 
@@ -552,6 +587,8 @@ class AppLogic extends ChangeNotifier {
     double? dialogOpacity,
     double? dropdownBlur,
     double? dropdownOpacity,
+    bool? enableIdleSleep,
+    int? idleTimeoutSeconds,
   }) async {
     await updateSettings(
       token: token,
@@ -565,6 +602,8 @@ class AppLogic extends ChangeNotifier {
       dialogOpacity: dialogOpacity,
       dropdownBlur: dropdownBlur,
       dropdownOpacity: dropdownOpacity,
+      enableIdleSleep: enableIdleSleep,
+      idleTimeoutSeconds: idleTimeoutSeconds,
     );
   }
 
@@ -580,6 +619,8 @@ class AppLogic extends ChangeNotifier {
     double? dialogOpacity,
     double? dropdownBlur,
     double? dropdownOpacity,
+    bool? enableIdleSleep,
+    int? idleTimeoutSeconds,
   }) async {
     final revision = ++_credentialsRevision;
     _invalidateAll(includeTrace: true);
@@ -594,6 +635,16 @@ class AppLogic extends ChangeNotifier {
     if (dialogOpacity != null) _dialogOpacity = dialogOpacity;
     if (dropdownBlur != null) _dropdownBlur = dropdownBlur;
     if (dropdownOpacity != null) _dropdownOpacity = dropdownOpacity;
+    if (enableIdleSleep != null) {
+      _enableIdleSleep = enableIdleSleep;
+      AppPowerManager.instance.setEnableIdleSleep(enableIdleSleep);
+    }
+    if (idleTimeoutSeconds != null) {
+      _idleTimeoutSeconds = idleTimeoutSeconds;
+      AppPowerManager.instance.setIdleTimeout(
+        Duration(seconds: idleTimeoutSeconds),
+      );
+    }
     await _saveConfig(_exportConfigMap());
     if (_disposed || revision != _credentialsRevision) return;
     await _validateNow();

@@ -104,17 +104,18 @@ set "START_MENU_UNINST_LNK=%START_MENU_DIR%\Uninstall JA MES Tool.lnk"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference = 'Stop'; $ws = New-Object -ComObject WScript.Shell; " ^
   "$exe = Join-Path $env:TARGET_DIR 'ja_mes_tool.exe'; " ^
+  "$ico = Join-Path $env:TARGET_DIR 'app_icon.ico'; if (-not (Test-Path $ico)) { $ico = $exe + ',0' }; " ^
   "$uninst = Join-Path $env:TARGET_DIR 'uninstall.bat'; " ^
   "$d = $ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'JA MES Tool.lnk')); " ^
   "$d.TargetPath = $exe; " ^
   "$d.WorkingDirectory = $env:TARGET_DIR; " ^
-  "$d.IconLocation = $exe + ',0'; " ^
+  "$d.IconLocation = $ico; " ^
   "$d.Description = 'JA MES Tool - Manufacturing Execution System Tool'; " ^
   "$d.Save(); " ^
   "$m = $ws.CreateShortcut($env:START_MENU_APP_LNK); " ^
   "$m.TargetPath = $exe; " ^
   "$m.WorkingDirectory = $env:TARGET_DIR; " ^
-  "$m.IconLocation = $exe + ',0'; " ^
+  "$m.IconLocation = $ico; " ^
   "$m.Description = 'JA MES Tool - Manufacturing Execution System Tool'; " ^
   "$m.Save(); " ^
   "$u = $ws.CreateShortcut($env:START_MENU_UNINST_LNK); " ^
@@ -126,12 +127,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$u.Save();"
 if errorlevel 1 goto install_error
 
+ie4uinit.exe -show >nul 2>&1
+
 echo [5/5] Registering application in Windows Control Panel...
 set "REG_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool"
 
 reg add "%REG_KEY%" /v "DisplayName" /t REG_SZ /d "JA MES Tool" /f >nul
 reg add "%REG_KEY%" /v "Publisher" /t REG_SZ /d "JA Tech" /f >nul
-reg add "%REG_KEY%" /v "DisplayIcon" /t REG_SZ /d "%TARGET_DIR%\ja_mes_tool.exe,0" /f >nul
+if exist "%TARGET_DIR%\app_icon.ico" (
+    reg add "%REG_KEY%" /v "DisplayIcon" /t REG_SZ /d "%TARGET_DIR%\app_icon.ico" /f >nul
+) else (
+    reg add "%REG_KEY%" /v "DisplayIcon" /t REG_SZ /d "%TARGET_DIR%\ja_mes_tool.exe,0" /f >nul
+)
 reg add "%REG_KEY%" /v "InstallLocation" /t REG_SZ /d "%TARGET_DIR%" /f >nul
 reg add "%REG_KEY%" /v "HelpLink" /t REG_SZ /d "https://github.com/jatechvn/JA_MES_Tool" /f >nul
 reg add "%REG_KEY%" /v "URLInfoAbout" /t REG_SZ /d "https://github.com/jatechvn/JA_MES_Tool" /f >nul
@@ -146,7 +153,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool' -Name 'EstimatedSize' -Value $kb -Type DWord -ErrorAction SilentlyContinue; " ^
   "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool' -Name 'InstallDate' -Value $date -Type String -ErrorAction SilentlyContinue" >nul 2>&1
 
-powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'; $q=[char]34; $bat=Join-Path $env:TARGET_DIR 'uninstall.bat'; Set-ItemProperty $key UninstallString ('cmd.exe /c '+$q+$q+$bat+$q+$q); Set-ItemProperty $key QuietUninstallString ('cmd.exe /c '+$q+$q+$bat+$q+' /silent'+$q); $ver=(Get-Item -LiteralPath (Join-Path $env:TARGET_DIR 'ja_mes_tool.exe')).VersionInfo.ProductVersion; if (-not $ver) { $ver = '2.10.1' }; Set-ItemProperty $key DisplayVersion $ver; if ((Get-ItemProperty $key).InstallLocation -ne $env:TARGET_DIR) { throw 'Install registration failed' }"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\JA_MES_Tool'; $q=[char]34; $bat=Join-Path $env:TARGET_DIR 'uninstall.bat'; Set-ItemProperty $key UninstallString ('cmd.exe /c '+$q+$q+$bat+$q+$q); Set-ItemProperty $key QuietUninstallString ('cmd.exe /c '+$q+$q+$bat+$q+' /silent'+$q); $ver=(Get-Item -LiteralPath (Join-Path $env:TARGET_DIR 'ja_mes_tool.exe')).VersionInfo.ProductVersion; if (-not $ver) { $ver = '2.11.0' }; Set-ItemProperty $key DisplayVersion $ver; if ((Get-ItemProperty $key).InstallLocation -ne $env:TARGET_DIR) { throw 'Install registration failed' }"
 if errorlevel 1 goto install_error
 
 echo.

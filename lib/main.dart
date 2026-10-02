@@ -9,6 +9,7 @@ import 'modules/ui/main_window.dart';
 import 'theme/theme_provider.dart';
 
 import 'theme/language_provider.dart';
+import 'modules/services/app_power_manager.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +56,27 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor:
             Colors.transparent, // Required for Aero/Acrylic
       ),
+      builder: (context, child) {
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) =>
+              AppPowerManager.instance.recordUserInteraction(),
+          onPointerMove: (_) =>
+              AppPowerManager.instance.recordUserInteraction(),
+          onPointerHover: (_) =>
+              AppPowerManager.instance.recordUserInteraction(),
+          onPointerSignal: (_) =>
+              AppPowerManager.instance.recordUserInteraction(),
+          child: Focus(
+            autofocus: false,
+            onKeyEvent: (_, _) {
+              AppPowerManager.instance.recordUserInteraction();
+              return KeyEventResult.ignored;
+            },
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
       home: const MainWindow(),
     );
   }

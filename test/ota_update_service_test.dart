@@ -60,6 +60,13 @@ void main() {
       expect(v297b22 > v297b21, isTrue);
       expect(v297b21 < v297b22, isTrue);
 
+      // When one side has no build number, consider equal in precedence (SemVer 2.0.0 Rule 10)
+      final v2101 = SemanticVersion.tryParse('2.10.1')!;
+      final v2101b25 = SemanticVersion.tryParse('2.10.1+25')!;
+      expect(v2101b25 > v2101, isFalse);
+      expect(v2101 > v2101b25, isFalse);
+      expect(v2101 == v2101b25, isTrue);
+
       // Equality
       final v297Copy = SemanticVersion.tryParse('v2.9.7')!;
       expect(v297 == v297Copy, isTrue);

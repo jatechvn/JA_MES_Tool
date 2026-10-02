@@ -14,70 +14,96 @@ class _WaveIndicatorState extends State<WaveIndicator>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
-
-  late final AppLifecycleListener _lifecycleListener;
+  );
 
   @override
   void initState() {
     super.initState();
-    // Stops the equalizer bars while the window is minimized/hidden,
-    // mirroring the Page Visibility low-power sleep mode added to
-    // UI_DESIGN_Sample.html (0% background CPU when document.hidden).
-    _lifecycleListener = AppLifecycleListener(
-      onStateChange: (state) {
-        switch (state) {
-          case AppLifecycleState.hidden:
-          case AppLifecycleState.paused:
-            _controller.stop();
-          case AppLifecycleState.resumed:
-            _controller.repeat(reverse: true);
-          case AppLifecycleState.inactive:
-          case AppLifecycleState.detached:
-            break;
-        }
-      },
+    _controller.addStatusListener(_onAnimationStatusChanged);
+    final shouldAnimate = AppPowerManager.instance.shouldAnimateIndicators;
+    if (shouldAnimate) {
+      _resumeAnimation();
+    }
+    AppPowerManager.instance.indicatorsAnimationNotifier.addListener(
+      _onPowerPolicyChanged,
     );
+  }
+
+  void _onPowerPolicyChanged() {
+    if (!mounted) return;
+    final shouldAnimate =
+        AppPowerManager.instance.indicatorsAnimationNotifier.value;
+    if (shouldAnimate) {
+      if (!_controller.isAnimating) {
+        _resumeAnimation();
+      }
+    } else {
+      if (_controller.isAnimating) {
+        _controller.stop(canceled: false);
+      }
+    }
+  }
+
+  void _resumeAnimation() {
+    // Preserve the current leg and remaining duration across policy pauses.
+    if (_controller.status == AnimationStatus.reverse ||
+        _controller.status == AnimationStatus.completed) {
+      _controller.reverse();
+    } else {
+      _controller.forward();
+    }
+  }
+
+  void _onAnimationStatusChanged(AnimationStatus status) {
+    if (!AppPowerManager.instance.shouldAnimateIndicators) return;
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      _resumeAnimation();
+    }
   }
 
   @override
   void dispose() {
-    _lifecycleListener.dispose();
+    AppPowerManager.instance.indicatorsAnimationNotifier.removeListener(
+      _onPowerPolicyChanged,
+    );
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final val = _controller.value;
-        final h1 = (widget.height * (0.3 + 0.7 * val)).clamp(
-          3.0,
-          widget.height,
-        );
-        final h2 = (widget.height * (0.9 - 0.6 * val)).clamp(
-          3.0,
-          widget.height,
-        );
-        final h3 = (widget.height * (0.4 + 0.5 * (1 - val))).clamp(
-          3.0,
-          widget.height,
-        );
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final val = _controller.value;
+          final h1 = (widget.height * (0.3 + 0.7 * val)).clamp(
+            3.0,
+            widget.height,
+          );
+          final h2 = (widget.height * (0.9 - 0.6 * val)).clamp(
+            3.0,
+            widget.height,
+          );
+          final h3 = (widget.height * (0.4 + 0.5 * (1 - val))).clamp(
+            3.0,
+            widget.height,
+          );
 
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _buildBar(h1),
-            const SizedBox(width: 2),
-            _buildBar(h2),
-            const SizedBox(width: 2),
-            _buildBar(h3),
-          ],
-        );
-      },
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _buildBar(h1),
+              const SizedBox(width: 2),
+              _buildBar(h2),
+              const SizedBox(width: 2),
+              _buildBar(h3),
+            ],
+          );
+        },
+      ),
     );
   }
 

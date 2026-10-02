@@ -35,36 +35,76 @@ class _AsymmetricMarqueeTextState extends State<AsymmetricMarqueeText> {
   final ScrollController _scrollController = ScrollController();
   Timer? _timer;
   bool _isDisposed = false;
+  bool _isPaused = false;
+  int _sessionEpoch = 0;
 
   @override
   void initState() {
     super.initState();
+    _isPaused = !AppPowerManager.instance.shouldAnimateMarquee;
+    AppPowerManager.instance.marqueeAnimationNotifier.addListener(
+      _onPolicyChanged,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isDisposed && mounted) {
+      if (!_isDisposed && mounted && !_isPaused) {
         _scheduleStart();
       }
     });
+  }
+
+  void _onPolicyChanged() {
+    if (_isDisposed || !mounted) return;
+    final shouldAnimate =
+        AppPowerManager.instance.marqueeAnimationNotifier.value;
+    if (shouldAnimate) {
+      _resumeMarquee();
+    } else {
+      _pauseMarquee();
+    }
+  }
+
+  void _pauseMarquee() {
+    if (_isPaused) return;
+    _isPaused = true;
+    _sessionEpoch++; // Vô hiệu hóa ngay lập tức mọi timer và future callbacks của session cũ
+    _timer?.cancel();
+    _timer = null;
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(_scrollController.offset);
+    }
+  }
+
+  void _resumeMarquee() {
+    if (!_isPaused) return;
+    _isPaused = false;
+    _sessionEpoch++;
+    _scheduleStart();
   }
 
   @override
   void didUpdateWidget(covariant AsymmetricMarqueeText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text) {
+      _sessionEpoch++;
       _timer?.cancel();
+      _timer = null;
       if (_scrollController.hasClients) {
         _scrollController.jumpTo(0);
       }
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_isDisposed && mounted) {
-          _scheduleStart();
-        }
-      });
+      if (!_isPaused) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_isDisposed && mounted && !_isPaused) {
+            _scheduleStart();
+          }
+        });
+      }
     }
   }
 
   void _scheduleStart() {
     _timer?.cancel();
-    if (_isDisposed || !mounted) return;
+    _timer = null;
+    if (_isDisposed || !mounted || _isPaused) return;
     if (!_scrollController.hasClients) {
       _timer = Timer(const Duration(milliseconds: 150), _scheduleStart);
       return;
@@ -73,12 +113,24 @@ class _AsymmetricMarqueeTextState extends State<AsymmetricMarqueeText> {
     final maxScroll = _scrollController.position.maxScrollExtent;
     if (maxScroll <= 0) return;
 
-    _timer = Timer(widget.pauseStart, _animateForward);
+    final currentEpoch = _sessionEpoch;
+    _timer = Timer(widget.pauseStart, () {
+      if (_isDisposed ||
+          !mounted ||
+          _isPaused ||
+          currentEpoch != _sessionEpoch) {
+        return;
+      }
+      _animateForward();
+    });
   }
 
   void _animateForward() {
     _timer?.cancel();
-    if (_isDisposed || !mounted || !_scrollController.hasClients) return;
+    _timer = null;
+    if (_isDisposed || !mounted || _isPaused || !_scrollController.hasClients) {
+      return;
+    }
     final maxScroll = _scrollController.position.maxScrollExtent;
     if (maxScroll <= 0) return;
 
@@ -89,17 +141,34 @@ class _AsymmetricMarqueeTextState extends State<AsymmetricMarqueeText> {
           .toInt(),
     );
 
+    final currentEpoch = _sessionEpoch;
     _scrollController
         .animateTo(maxScroll, duration: duration, curve: widget.forwardCurve)
         .then((_) {
-          if (_isDisposed || !mounted) return;
-          _timer = Timer(widget.pauseEnd, _animateReturn);
+          if (_isDisposed ||
+              !mounted ||
+              _isPaused ||
+              currentEpoch != _sessionEpoch) {
+            return;
+          }
+          _timer = Timer(widget.pauseEnd, () {
+            if (_isDisposed ||
+                !mounted ||
+                _isPaused ||
+                currentEpoch != _sessionEpoch) {
+              return;
+            }
+            _animateReturn();
+          });
         });
   }
 
   void _animateReturn() {
     _timer?.cancel();
-    if (_isDisposed || !mounted || !_scrollController.hasClients) return;
+    _timer = null;
+    if (_isDisposed || !mounted || _isPaused || !_scrollController.hasClients) {
+      return;
+    }
     final maxScroll = _scrollController.position.maxScrollExtent;
     if (maxScroll <= 0) return;
 
@@ -110,18 +179,38 @@ class _AsymmetricMarqueeTextState extends State<AsymmetricMarqueeText> {
           .toInt(),
     );
 
+    final currentEpoch = _sessionEpoch;
     _scrollController
         .animateTo(0, duration: duration, curve: widget.returnCurve)
         .then((_) {
-          if (_isDisposed || !mounted) return;
-          _timer = Timer(widget.pauseStart, _animateForward);
+          if (_isDisposed ||
+              !mounted ||
+              _isPaused ||
+              currentEpoch != _sessionEpoch) {
+            return;
+          }
+          _timer = Timer(widget.pauseStart, () {
+            if (_isDisposed ||
+                !mounted ||
+                _isPaused ||
+                currentEpoch != _sessionEpoch) {
+              return;
+            }
+            _animateForward();
+          });
         });
   }
 
   @override
   void dispose() {
     _isDisposed = true;
+    _isPaused = true;
+    _sessionEpoch++;
+    AppPowerManager.instance.marqueeAnimationNotifier.removeListener(
+      _onPolicyChanged,
+    );
     _timer?.cancel();
+    _timer = null;
     _scrollController.dispose();
     super.dispose();
   }

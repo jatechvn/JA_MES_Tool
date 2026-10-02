@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.10.1
-Release Date : 2026-09-29
+Version      : v2.11.0
+Release Date : 2026-10-02
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,16 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Comprehensive GPU/CPU Power Optimization & Idle Sleep: Centralized AppPowerManager
+  orchestrates 4 window states, freezing repeating animations (MeshOrb, WaveIndicator,
+  BorderBeam, GlassMarquee) when inactive or minimized to eliminate GPU draw calls.
+  Includes Session Epoch Guard against marquee callback leaks, animation direction
+  preservation across blur/focus, and configurable 12s/30s/60s Idle Sleep Mode with
+  rollback protection.
+- Modern App Icon & Brand Identity: Upgraded high-resolution Windows application icon
+  and branding assets.
+- Automated Release Checksum Synchronization: Automated SHA256 computation in release
+  scripts ensures dist/SHA256SUMS.txt always matches the packaged ZIP file.
 - Reverse SN Queue Order (Newest on Top): Serial numbers are now rendered
   in reverse insertion order so that newly added or scanned units immediately
   appear at the top of the sidebar list without requiring scrolling.

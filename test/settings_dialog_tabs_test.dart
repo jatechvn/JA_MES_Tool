@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ja_mes_tool/modules/logic.dart';
 import 'package:ja_mes_tool/modules/translations.dart';
 import 'package:ja_mes_tool/modules/ui/dialogs/settings_dialog.dart';
+import 'package:ja_mes_tool/modules/services/app_power_manager.dart';
 import 'package:ja_mes_tool/theme/theme_provider.dart';
 
 import 'package:provider/provider.dart';
@@ -27,6 +28,13 @@ void main() {
       'system_license',
       'hardware_profile_value',
       'open_logs_folder',
+      'idle_sleep_title',
+      'idle_sleep_desc',
+      'idle_sleep_enable',
+      'idle_timeout_label',
+      'idle_12s',
+      'idle_30s',
+      'idle_60s',
     ];
 
     for (final lang in ['en', 'vn', 'cn']) {
@@ -270,4 +278,130 @@ void main() {
     expect(theme.dropdownBlur, 11);
     expect(theme.dropdownOpacity, 0.7);
   });
+
+  testWidgets(
+    'Idle sleep mode renders, toggles switch, selects timeout, and rollback/save work',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(AppPowerManager.instance.resetForTesting);
+
+      Map<String, dynamic>? savedConfig;
+      final logic = AppLogic(
+        initialize: false,
+        saveConfig: (cfg) async {
+          savedConfig = cfg;
+        },
+      );
+      final theme = ThemeProvider(initialMode: 'light');
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AppLogic>.value(value: logic),
+            ChangeNotifierProvider<ThemeProvider>.value(value: theme),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () =>
+                        showAppSettingsDialog(context, logic, theme),
+                    child: const Text('Open Settings'),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open settings dialog
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+
+      // Switch to Tab 1: Display & Appearance
+      await tester.tap(
+        find.text(Translations.get('tab_display_glass', logic.lang)),
+      );
+      await tester.pumpAndSettle();
+
+      // Scroll down to reveal Idle Power Saving BentoCard
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(Translations.get('idle_sleep_title', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('idle_timeout_label', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('idle_12s', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('idle_30s', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('idle_60s', logic.lang)),
+        findsOneWidget,
+      );
+
+      // Select 30s timeout
+      await tester.tap(find.text(Translations.get('idle_30s', logic.lang)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(AppPowerManager.instance.enableIdleSleep, isFalse);
+      expect(logic.enableIdleSleep, isTrue);
+
+      // Tap Cancel - should rollback and NOT save
+      await tester.tap(find.text(Translations.get('cancel', logic.lang)));
+      await tester.pumpAndSettle();
+
+      expect(savedConfig, isNull);
+      expect(logic.idleTimeoutSeconds, 12);
+      expect(AppPowerManager.instance.enableIdleSleep, isTrue);
+      expect(AppPowerManager.instance.idleTimeout, const Duration(seconds: 12));
+
+      // Reopen dialog, change to 60s and tap Save
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.text(Translations.get('tab_display_glass', logic.lang)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(Translations.get('idle_60s', logic.lang)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(Translations.get('save', logic.lang)));
+      await tester.pumpAndSettle();
+
+      expect(savedConfig, isNotNull);
+      expect(savedConfig!['idleTimeoutSeconds'], 60);
+      expect(savedConfig!['enableIdleSleep'], isFalse);
+      expect(logic.enableIdleSleep, isFalse);
+      expect(AppPowerManager.instance.enableIdleSleep, isFalse);
+      expect(logic.idleTimeoutSeconds, 60);
+      expect(AppPowerManager.instance.idleTimeout, const Duration(seconds: 60));
+
+      AppPowerManager.instance.setEnableIdleSleep(true);
+      AppPowerManager.instance.setIdleTimeout(const Duration(seconds: 12));
+      AppPowerManager.instance.resetForTesting();
+    },
+  );
 }

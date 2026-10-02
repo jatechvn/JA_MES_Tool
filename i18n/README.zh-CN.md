@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.10.1 - 中文说明
+# 🤖 JA MES Tool v2.11.0 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.10.1-blue.svg" alt="版本 2.10.1">
+  <img src="https://img.shields.io/badge/banben-2.11.0-blue.svg" alt="版本 2.11.0">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -226,6 +226,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.11.0]** — **全面 GPU/CPU 性能优化与空闲睡眠模式 (Flutter Power Optimizer)**：集中式调度器 `AppPowerManager` 纳管 4 种窗口状态，失焦 (Inactive) 或最小化 (Minimized) 时自动冻结所有连续渲染动画 (`MeshOrb`, `WaveIndicator`, `BorderBeam`, `GlassMarquee`)，实现 0 额外渲染帧；恢复焦点时保留动画运动方向 (Direction Preservation)；Session Epoch Guard 彻底杜绝跑马灯的计时器与 Ghost 回调泄漏；12秒/30秒/60秒空闲睡眠模式配合设置 Bento 卡片与安全的取消还原机制；全新现代化应用图标；发布构建自动同步 SHA256 校验和 (`dist/SHA256SUMS.txt`)。
 - **[2.10.1]** — **倒序显示序列号队列 (最新 SN 置顶)**：优化左侧侧边栏 SN 列表的渲染顺序 (`logic.snList.length - 1 - index`)，新输入、新扫描或最新查询的序列号立即可在最顶端第一行展示，无需向下滚动即可直观监控测试进度；完整保留状态指示、错误/警告卡片及记录数角标。
 - **[2.10.0]** — **OTA 检查周期快捷选择按钮、双列毛玻璃滑块 & 标题栏实时 OTA 更新徽章**：将 OTA 更新检查周期下拉框重构为 4 个直观的 Bento 快捷按钮 (`开机启动`, `每天`, `每周`, `已关闭`)；将毛玻璃调节滑块重组为对称的 2 列 Bento 卡片布局；统一共享目录连接测试操作行；在主窗口标题栏新增可点击的实时 OTA 更新徽章；全面增强安装与卸载脚本的用户配置与日志安全保护。
 - **[2.9.9]** — **合并设置对话框为 3 个 Bento 标签页 & Windows 标准安装套件**：优化原有 5 个溢出标签页为 3 个平衡的 Bento 卡片标签页 (`CloudMES 与 CDP`, `界面与毛玻璃`, `关于与更新`)，采用防溢出 `Expanded` 标签栏与独立的 `PageStorageKey` 滚动位置；新增免管理员标准安装与卸载套件 (`install.bat`, `uninstall.bat`, `uninstall.ps1`)，切换图形性能等级时实时联动毛玻璃预览滑块，并全面中英越三语本地化系统规格信息。
