@@ -5,6 +5,24 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.1] - 2026-10-03
+
+### 🪟 Đồng bộ Tiêu đề Cửa sổ & Metadata Nhận diện Ứng dụng (App Identity & Metadata)
+- **🏷️ Tiêu đề Cửa sổ Hiển thị Tên Ứng dụng Chuẩn xác**:
+  - Cập nhật hàm khởi tạo cửa sổ Win32 `window.Create(L"JA MES Tool", origin, size)` trong `windows/runner/main.cpp`.
+  - Khắc phục lỗi truyền chuỗi rỗng `L""` trên Windows 10 trong `win32_window.cpp`, truyền trực tiếp `title.c_str()` (`L"JA MES Tool"`) trên mọi phiên bản Windows.
+  - Bổ sung `await windowManager.setTitle(title)` trong `window_helper.dart` trên Windows, bảo đảm tên ứng dụng `JA MES Tool` luôn hiển thị trên Taskbar, Task Manager và Alt+Tab thay vì tên file thực thi `ja_mes_tool.exe`.
+  - Cập nhật `MaterialApp.title` và `initGlassWindow` sử dụng đồng nhất `appName`.
+- **📋 Chuẩn hóa Metadata File Thực thi (`Runner.rc`)**:
+  - Cập nhật thông tin nhận diện tệp trong `windows/runner/Runner.rc`:
+    - `FileDescription`: `JA MES Tool` (thay vì `ja_mes_tool`, giúp Task Manager hiển thị đúng tên app trong danh mục ứng dụng đang chạy).
+    - `ProductName`: `JA MES Tool`.
+    - `CompanyName`: `JA Tech` (thay thế giá trị mặc định `com.example`).
+    - `LegalCopyright`: `Copyright (C) 2026 JA Tech. All rights reserved.`.
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.11.1+27` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.11.0] - 2026-10-02
 
 ### ⚡ Tối ưu hóa GPU/CPU & Quản lý Năng lượng Toàn diện (Flutter Power Optimizer)

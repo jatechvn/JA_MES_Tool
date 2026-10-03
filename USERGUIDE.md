@@ -1,4 +1,4 @@
-# 📘 Hướng dẫn Sử dụng JA MES Tool v2.11.0
+# 📘 Hướng dẫn Sử dụng JA MES Tool v2.11.1
 
 > **Ứng dụng Windows Desktop hiệu năng cao tra cứu dữ liệu kiểm thử, lịch sử công đoạn và truy vết linh kiện Foxconn CloudMES với giao diện Bento Glassmorphism.**
 
@@ -23,7 +23,7 @@
 - Kết nối mạng: Truy cập được mạng nội bộ nhà máy hoặc VPN Foxconn CloudMES
 
 ### Cách 1: Cài đặt chuẩn Windows không cần Admin (Khuyên dùng)
-1. Tải gói phát hành `JA_MES_Tool_v2.11.0_Windows_x64.zip`.
+1. Tải gói phát hành `JA_MES_Tool_v2.11.1_Windows_x64.zip`.
 2. Giải nén và nhấp đúp chạy file **`install.bat`**.
 3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel (tự động bảo toàn cấu hình người dùng).
 4. Khi muốn gỡ cài đặt, chạy **`uninstall.bat`** hoặc gỡ trực tiếp qua Windows Installed Apps.
