@@ -1,22 +1,14 @@
-TAG=v2.11.0
-TITLE=JA MES Tool v2.11.0 — Tối ưu hóa GPU/CPU toàn diện & Chế độ ngủ rảnh tay 12s
+TAG=v2.11.1
+TITLE=JA MES Tool v2.11.1 — Đồng bộ tiêu đề cửa sổ và metadata hiển thị tên ứng dụng JA MES Tool
 BODY=
 ## Điểm nhấn chính
-- **Tối ưu hóa GPU/CPU toàn diện (Flutter Desktop Power Optimizer)**:
-  - Dịch vụ quản lý năng lượng tập trung `AppPowerManager` (Single Source of Truth) điều phối 4 trạng thái cửa sổ.
-  - Tự động đóng băng và dừng các hiệu ứng đồ họa liên tục (`MeshOrb`, `WaveIndicator`, `BorderBeam`, `GlassMarquee`) khi cửa sổ mất focus hoặc thu nhỏ, triệt tiêu 100% khung hình render không cần thiết, đưa mức sử dụng GPU về mức tối thiểu.
-  - Các tiến trình nghiệp vụ mạng ngầm (tra cứu SN, CDP sync, kiểm tra token xác thực 3 phút, kiểm tra OTA) tiếp tục chạy bình thường 100%.
-- **Bảo toàn Chiều Chuyển Động Animation (Direction & Leg Preservation)**:
-  - Khắc phục lỗi đổi hướng đột ngột khi resume bằng cách kiểm tra trạng thái pha di chuyển (`reverse`/`forward`) và tiếp tục chu kỳ ping-pong mượt mà.
-- **Session Epoch Guard cho Chữ Cuộn `GlassMarquee`**:
-  - Đóng băng vị trí cuộn ngay lập tức khi mất focus và triệt tiêu toàn bộ ghost callback từ Future/Timer dở dang, khôi phục cuộn liên tục từ offset cũ.
-- **Chế độ Ngủ Rảnh Tay (12s Idle Sleep Mode)**:
-  - Tự động tạm dừng khối cầu gradient nền nặng khi không thao tác chuột/phím trong 12 giây (hoặc 30s/60s).
-  - Tích hợp thẻ điều khiển BentoCard trong Settings Dialog kèm tính năng Rollback on Cancel an toàn.
-- **Nhận diện Thương hiệu & Logo Mới**:
-  - Biểu tượng ứng dụng `app_icon.ico` và đồ họa hiện đại chuẩn thiết kế Glassmorphism.
-- **Tự động đồng bộ Checksum SHA-256 (`dist/SHA256SUMS.txt`)**:
-  - Script đóng gói tự động tính và cập nhật mã băm SHA256 cho gói ZIP phát hành.
+- **Đồng bộ Tiêu đề Cửa sổ (Window Title) Hiển thị Tên Ứng dụng**:
+  - Khởi tạo Win32 Window với tiêu đề `JA MES Tool` trong `main.cpp` và `win32_window.cpp` trên mọi phiên bản Windows.
+  - Bổ sung `windowManager.setTitle(title)` trong `window_helper.dart` trên Windows, bảo đảm tên ứng dụng luôn xuất hiện nhất quán trên thanh Taskbar, Task Manager và Alt+Tab thay vì hiển thị tên file `ja_mes_tool.exe`.
+  - Đồng bộ `MaterialApp.title` hiển thị `appName`.
+- **Chuẩn hóa Metadata File Thực thi (`Runner.rc`)**:
+  - Cập nhật thông tin nhận diện nhị phân `FileDescription` và `ProductName` thành `JA MES Tool`.
+  - Cập nhật `CompanyName` thành `JA Tech` và `LegalCopyright` bản quyền chính thức `Copyright (C) 2026 JA Tech. All rights reserved.`.
 
 ## Kiểm chứng & Đóng gói
 - `dart format .`: Chuẩn hóa 100% định dạng mã nguồn.
@@ -25,4 +17,4 @@ BODY=
 - `flutter build windows --release`: Biên dịch hoàn chỉnh `ja_mes_tool.exe`.
 
 ### Cài đặt
-Giải nén toàn bộ gói `JA_MES_Tool_v2.11.0_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
+Giải nén toàn bộ gói `JA_MES_Tool_v2.11.1_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.

@@ -21,7 +21,7 @@ void main(List<String> args) async {
   }
 
   await initGlassWindow(
-    title: '$appName v$appVersion',
+    title: appName,
     size: const Size(1280, 840),
     minSize: const Size(840, 560),
   );
@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
     final theme = context.watch<ThemeProvider>();
 
     return MaterialApp(
-      title: '$appName v$appVersion',
+      title: appName,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
