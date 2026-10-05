@@ -22,19 +22,30 @@ class QueryQueue {
     Object key,
     Future<void> Function() action, {
     required bool Function() isCurrent,
+    int Function()? priority,
   }) {
     final existing = _jobs[key];
     if (existing != null) return existing;
     final done = Completer<void>();
     _jobs[key] = done.future;
-    _pending.add(_Job(key, action, isCurrent, done));
+    _pending.add(_Job(key, action, isCurrent, done, priority));
     _drain();
     return done.future;
   }
 
   void _drain() {
     while (_active < concurrency && _pending.isNotEmpty) {
-      final job = _pending.removeFirst();
+      // Equal priorities retain FIFO; priorities can reflect current SN order.
+      var job = _pending.first;
+      var highestPriority = job.priority?.call() ?? 0;
+      for (final candidate in _pending.skip(1)) {
+        final candidatePriority = candidate.priority?.call() ?? 0;
+        if (candidatePriority > highestPriority) {
+          job = candidate;
+          highestPriority = candidatePriority;
+        }
+      }
+      _pending.remove(job);
       if (!job.isCurrent()) {
         _jobs.remove(job.key);
         job.done.complete();
@@ -60,9 +71,10 @@ class QueryQueue {
 }
 
 class _Job {
-  _Job(this.key, this.action, this.isCurrent, this.done);
+  _Job(this.key, this.action, this.isCurrent, this.done, this.priority);
   final Object key;
   final Future<void> Function() action;
   final bool Function() isCurrent;
   final Completer<void> done;
+  final int Function()? priority;
 }

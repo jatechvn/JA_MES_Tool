@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.11.1
-Release Date : 2026-10-03
+Version      : v2.11.2
+Release Date : 2026-10-05
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,11 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Fast Serial Number Copy & Priority-Aware Query Queue: Added 1-click clipboard copy
+  button on each SN queue item with localized tooltips, prioritized newest-first
+  query execution in QueryQueue without breaking storage order, auto-selection of
+  newest SN on startup, and enhanced re-submission behavior to bring previously
+  queried serial numbers to the front as the most recent row.
 - Windows Window Title & Metadata App Identity Synchronization: Configured native
   executable metadata (CompanyName "JA Tech", FileDescription "JA MES Tool",
   ProductName "JA MES Tool", LegalCopyright) and synchronized Win32 window creation

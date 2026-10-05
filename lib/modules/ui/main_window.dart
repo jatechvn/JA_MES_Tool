@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import '../logic.dart';
@@ -1313,6 +1314,23 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         ),
                         const SizedBox(width: 6),
                       ],
+                      IconButton(
+                        key: ValueKey('copy_sn_$sn'),
+                        tooltip: Translations.get('copy_sn', logic.lang),
+                        onPressed: () =>
+                            Clipboard.setData(ClipboardData(text: sn)),
+                        padding: const EdgeInsets.all(2),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 18,
+                          height: 18,
+                        ),
+                        icon: Icon(
+                          Icons.copy_rounded,
+                          color: colors.textMuted,
+                          size: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
                       if (!isLoading) ...[
                         InkWell(
                           onTap: () => logic.refreshSn(sn),

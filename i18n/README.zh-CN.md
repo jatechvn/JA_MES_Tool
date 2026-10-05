@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.11.1 - 中文说明
+# 🤖 JA MES Tool v2.11.2 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.11.1-blue.svg" alt="版本 2.11.1">
+  <img src="https://img.shields.io/badge/banben-2.11.2-blue.svg" alt="版本 2.11.2">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -226,6 +226,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.11.2]** — **快捷复制序列号、查询队列优先级调度 & 启动默认选中最新 SN**：在左侧 SN 队列列表中为每项新增一键剪贴板复制图标按钮并支持多语言提示，升级 `QueryQueue` 支持优先级调度优先执行最新 SN 查询，支持已存在 SN 重新输入时自动置顶并即时选中，并在应用启动时自动选中最新一条 SN。
 - **[2.11.1]** — **窗口标题与应用元数据同步 (App Identity & Metadata)**：更新 Win32 窗口原生标题 (`JA MES Tool`) 与可执行文件元数据 (`FileDescription`, `ProductName`, `CompanyName` "JA Tech", `LegalCopyright`)，确保任务管理器、任务栏与 Alt+Tab 切换窗口时正确显示应用名称，不再显示可执行文件名 `ja_mes_tool.exe`。
 - **[2.11.0]** — **全面 GPU/CPU 性能优化与空闲睡眠模式 (Flutter Power Optimizer)**：集中式调度器 `AppPowerManager` 纳管 4 种窗口状态，失焦 (Inactive) 或最小化 (Minimized) 时自动冻结所有连续渲染动画 (`MeshOrb`, `WaveIndicator`, `BorderBeam`, `GlassMarquee`)，实现 0 额外渲染帧；恢复焦点时保留动画运动方向 (Direction Preservation)；Session Epoch Guard 彻底杜绝跑马灯的计时器与 Ghost 回调泄漏；12秒/30秒/60秒空闲睡眠模式配合设置 Bento 卡片与安全的取消还原机制；全新现代化应用图标；发布构建自动同步 SHA256 校验和 (`dist/SHA256SUMS.txt`)。
 - **[2.10.1]** — **倒序显示序列号队列 (最新 SN 置顶)**：优化左侧侧边栏 SN 列表的渲染顺序 (`logic.snList.length - 1 - index`)，新输入、新扫描或最新查询的序列号立即可在最顶端第一行展示，无需向下滚动即可直观监控测试进度；完整保留状态指示、错误/警告卡片及记录数角标。

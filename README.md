@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.11.1
+# 🤖 JA MES Tool v2.11.2
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.11.1-blue.svg" alt="Version 2.11.1">
+  <img src="https://img.shields.io/badge/version-2.11.2-blue.svg" alt="Version 2.11.2">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -261,6 +261,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.11.2]** — Added 1-click serial number clipboard copy button on sidebar queue items with localized tooltips, priority-aware `QueryQueue` scheduling executing newest queries first without altering storage order, auto-selection of newest SN on startup, and enhanced re-submission behavior to bring existing SNs to the top.
 - **[2.11.1]** — Synchronized native Windows window title (`JA MES Tool`) and executable metadata (`FileDescription`, `ProductName`, `CompanyName` "JA Tech", `LegalCopyright`), ensuring Task Manager, Taskbar, and Alt+Tab display the actual application name instead of the executable filename.
 - **[2.11.0]** — Comprehensive GPU/CPU Power Optimizer (`AppPowerManager` 4-tier policy matrix) freezing repeating animations when inactive/minimized, animation direction preservation across blur/focus, Session Epoch Guard eliminating marquee timer/callback leaks, 12s/30s/60s Idle Sleep Mode with Settings BentoCard control & rollback protection, modern application branding icon, and automated release checksum calculation.
 - **[2.10.1]** — Inverted SN queue rendering (`logic.snList.length - 1 - index`) so newly scanned or queried units immediately appear on top of the sidebar list without requiring vertical scrolling, while maintaining full status indicator and badge parity.
