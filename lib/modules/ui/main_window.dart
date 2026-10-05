@@ -371,21 +371,30 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     vertical: 10,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: colors.accentRose.withValues(
-                                      alpha: 0.12,
-                                    ),
+                                    color:
+                                        (logic.globalMessageIsError
+                                                ? colors.accentRose
+                                                : colors.accentEmerald)
+                                            .withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: colors.accentRose.withValues(
-                                        alpha: 0.35,
-                                      ),
+                                      color:
+                                          (logic.globalMessageIsError
+                                                  ? colors.accentRose
+                                                  : colors.accentEmerald)
+                                              .withValues(alpha: 0.35),
                                     ),
                                   ),
                                   child: Row(
                                     children: [
                                       Icon(
-                                        Icons.error_outline_rounded,
-                                        color: colors.accentRose,
+                                        logic.globalMessageIsError
+                                            ? Icons.error_outline_rounded
+                                            : Icons
+                                                  .check_circle_outline_rounded,
+                                        color: logic.globalMessageIsError
+                                            ? colors.accentRose
+                                            : colors.accentEmerald,
                                         size: 18,
                                       ),
                                       const SizedBox(width: 8),
@@ -393,7 +402,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                         child: Text(
                                           logic.globalError,
                                           style: TextStyle(
-                                            color: colors.accentRose,
+                                            color: logic.globalMessageIsError
+                                                ? colors.accentRose
+                                                : colors.accentEmerald,
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.w600,
                                           ),

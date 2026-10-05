@@ -1,21 +1,21 @@
-TAG=v2.11.2
-TITLE=JA MES Tool v2.11.2 — Nút sao chép nhanh SN, ưu tiên truy vấn SN mới và chọn SN khi khởi động
+TAG=v2.11.3
+TITLE=JA MES Tool v2.11.3 — Chuẩn hóa thông báo CSV thành công màu xanh, đa ngữ hóa thông báo và dọn dẹp khi hủy
 BODY=
 ## Điểm nhấn chính
-- **Nút Sao chép Nhanh Serial Number (Copy SN)**:
-  - Bổ sung icon button sao chép trực tiếp (`Icons.copy_rounded`) trên từng item hàng đợi SN tại sidebar, hỗ trợ đưa SN vào clipboard tức thì.
-  - Hỗ trợ tooltip đa ngôn ngữ (`Copy SN` / `Sao chép SN` / `复制SN`).
-- **Tối ưu hóa Hành vi Tái tra cứu & Khởi động**:
-  - Nhập hoặc quét lại SN đã tồn tại trong danh sách sẽ tự động di chuyển SN lên vị trí mới nhất (trên cùng ở sidebar) và chọn ngay lập tức.
-  - Khởi động ứng dụng tự động chọn mã SN mới nhất được tra cứu thay vì mã đầu tiên cũ nhất.
-- **Hàng đợi Truy vấn Ưu tiên (Priority-Aware Query Queue)**:
-  - Nâng cấp `QueryQueue` với cơ chế tính toán độ ưu tiên linh hoạt (`priority`), ưu tiên nạp và truy vấn các SN mới nhất trước khi làm mới hoặc tải hàng loạt mà không xáo trộn thứ tự lưu trữ gốc.
+- **Chuẩn hóa Màu sắc & Biểu tượng Thông báo CSV**:
+  - Phân tách thông báo thành công (xanh ngọc `accentEmerald` kèm `check_circle_outline_rounded`) và lỗi (đỏ `accentRose` kèm `error_outline_rounded`).
+  - Đường dẫn tệp hoặc chi tiết lỗi được nội suy rõ ràng vào nội dung thông báo.
+- **Đa ngữ hóa Toàn diện Thông báo Thao tác Tệp**:
+  - Hỗ trợ đa ngôn ngữ đầy đủ (Tiếng Việt, Tiếng Anh, Tiếng Trung) cho các hành động tải file mẫu, nhập CSV, xuất CSV và thông báo không tìm thấy tệp.
+  - Tự động xóa thông báo khi người dùng hủy bỏ (Cancel) hộp thoại chọn tệp.
+- **Mở rộng Bộ Kiểm thử Tự động**:
+  - Bổ sung 8 test cases trong `test/csv_notifications_test.dart` bao phủ kiểm tra đa ngữ và màu sắc banner trên cả Light và Dark mode.
 
 ## Kiểm chứng & Đóng gói
 - `dart format .`: Chuẩn hóa 100% định dạng mã nguồn.
 - `flutter analyze`: Đạt 0 issues found.
-- `flutter test`: 73/73 ca kiểm thử vượt qua thành công (100% pass).
+- `flutter test`: 91/91 ca kiểm thử vượt qua thành công (100% pass).
 - `flutter build windows --release`: Biên dịch hoàn chỉnh `ja_mes_tool.exe`.
 
 ### Cài đặt
-Giải nén toàn bộ gói `JA_MES_Tool_v2.11.2_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
+Giải nén toàn bộ gói `JA_MES_Tool_v2.11.3_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.

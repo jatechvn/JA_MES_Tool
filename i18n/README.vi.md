@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.11.2 - Tiếng Việt
+# 🤖 JA MES Tool v2.11.3 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.11.2-blue.svg" alt="Phiên bản 2.11.2">
+  <img src="https://img.shields.io/badge/phien_ban-2.11.3-blue.svg" alt="Phiên bản 2.11.3">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -229,6 +229,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.11.3]** — **Chuẩn hóa thông báo CSV màu xanh khi thành công, đa ngữ hóa & tự dọn khi hủy**: Hiển thị khung màu xanh ngọc bích (`accentEmerald`) kèm icon tích xanh khi tải template/nhập/xuất CSV thành công, hiển thị khung màu đỏ (`accentRose`) khi có lỗi, đa ngữ hóa toàn diện EN/VN/CN kèm đường dẫn tệp và tự động xóa thông báo khi hủy bỏ hộp thoại.
 - **[2.11.2]** — **Nút sao chép nhanh SN, ưu tiên truy vấn SN mới & tự chọn khi khởi động**: Thêm nút icon sao chép nhanh trực tiếp trên từng item hàng đợi SN tại sidebar kèm tooltip đa ngôn ngữ, nâng cấp hàng đợi `QueryQueue` ưu tiên thực thi các SN mới nhất trước khi làm mới hoặc tải hàng loạt, tự động đưa SN đã có lên đầu và chọn ngay khi nhập lại, và tự động chọn SN mới nhất khi khởi động ứng dụng.
 - **[2.11.1]** — **Đồng bộ Tiêu đề Cửa sổ & Metadata Ứng dụng**: Cập nhật tiêu đề cửa sổ Win32 (`JA MES Tool`) và metadata tệp thực thi (`FileDescription`, `ProductName`, `CompanyName` "JA Tech", `LegalCopyright`), giúp Task Manager, thanh Taskbar và Alt+Tab hiển thị đúng tên ứng dụng thay vì tên file thực thi `ja_mes_tool.exe`.
 - **[2.11.0]** — **Tối ưu hóa GPU/CPU toàn diện & Chế độ ngủ rảnh tay (Flutter Power Optimizer)**: Bộ điều phối năng lượng tập trung `AppPowerManager` quản lý 4 trạng thái cửa sổ, đóng băng toàn bộ animation liên tục (`MeshOrb`, `WaveIndicator`, `BorderBeam`, `GlassMarquee`) khi Inactive / Minimized giúp đưa tải render về 0; bảo toàn hướng di chuyển của animation khi resume; cơ chế Session Epoch Guard chống rò rỉ timer/ghost callback ở marquee; chế độ ngủ rảnh tay 12s/30s/60s với thẻ điều khiển BentoCard trong Cài đặt và cơ chế an toàn Rollback on Cancel; biểu tượng ứng dụng Windows mới hiện đại; tự động đồng bộ mã băm toàn vẹn SHA256 (`dist/SHA256SUMS.txt`).
