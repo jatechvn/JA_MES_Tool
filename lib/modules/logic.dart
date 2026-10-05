@@ -250,13 +250,16 @@ class AppLogic extends ChangeNotifier {
   bool _disposed = false;
   int _credentialsRevision = 0;
   final Future<void> Function(Map<String, dynamic>) _saveConfig;
+  final Future<Map<String, dynamic>> Function() _loadConfig;
 
   AppLogic({
     bool initialize = true,
     int queryConcurrency = 6,
     Future<void> Function(Map<String, dynamic>)? saveConfig,
+    Future<Map<String, dynamic>> Function()? loadConfig,
   }) : _queue = QueryQueue(concurrency: queryConcurrency),
-       _saveConfig = saveConfig ?? ConfigService.saveConfig {
+       _saveConfig = saveConfig ?? ConfigService.saveConfig,
+       _loadConfig = loadConfig ?? ConfigService.loadConfig {
     if (initialize) _init();
   }
 
@@ -305,7 +308,7 @@ class AppLogic extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    final config = await ConfigService.loadConfig();
+    final config = await _loadConfig();
     if (_disposed) return;
     _token = config['token'] ?? '';
     _lang = initialLanguage(
@@ -344,7 +347,7 @@ class AppLogic extends ChangeNotifier {
       _token = defaultToken;
     }
     if (_snList.isNotEmpty) {
-      _selectedSn = _snList.first;
+      _selectedSn = _snList.last;
     }
     if (_traceHistory.isNotEmpty) {
       _selectedTraceCsn = _traceHistory.first;
@@ -661,22 +664,23 @@ class AppLogic extends ChangeNotifier {
   }) async {
     final lines = input.split(RegExp(r'[\n\r,;\s]+'));
     final addedSns = <String>[];
+    var hasSubmittedSn = false;
     for (var line in lines) {
       final sn = line.trim().toUpperCase();
       if (sn == 'SN') continue;
-      if (sn.isNotEmpty &&
-          RegExp(r'^[A-Z0-9_-]+$').hasMatch(sn) &&
-          !_snList.contains(sn)) {
+      if (sn.isNotEmpty && RegExp(r'^[A-Z0-9_-]+$').hasMatch(sn)) {
+        if (!_snList.remove(sn)) {
+          addedSns.add(sn);
+        }
+        // Re-submitting an existing SN makes it the most recently checked row.
         _snList.add(sn);
-        addedSns.add(sn);
+        hasSubmittedSn = true;
       }
     }
 
-    if (addedSns.isNotEmpty) {
+    if (hasSubmittedSn) {
+      _selectedSn = _snList.last;
       await _saveConfig(_exportConfigMap());
-      if (_selectedSn.isEmpty) {
-        _selectedSn = _snList.last;
-      }
       if (allowTestRecordFallback) {
         _enableTestRecordFallbackFor(addedSns);
       }
@@ -979,43 +983,49 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     fetch,
   ) async {
     final jobs = <Future<void>>[];
-    for (final sn in List<String>.of(_snList)) {
+    // Storage remains oldest-first; submit requests in the sidebar's order.
+    for (final sn in List<String>.of(_snList).reversed) {
       if (results.containsKey(sn) || errors.containsKey(sn)) continue;
       final revision = _revision('sn:$sn');
       bool current() =>
           !_disposed && _snList.contains(sn) && _revision('sn:$sn') == revision;
       loading[sn] = true;
       jobs.add(
-        _queue.run((view, sn, revision), () async {
-          try {
-            final canonical = await _resolveCanonicalSn(sn, revision);
-            if (!current()) return;
-            final records = await fetch(
-              sn: canonical,
-              token: _token,
-              lang: _lang,
-              operationId: _operationId,
-              uuid: _uuid,
-              cookie: _cookie,
-            );
-            if (!current()) return;
-            results[sn] = records;
-            if (records.isEmpty) errors[sn] = 'No records found';
-          } catch (e) {
-            if (current()) {
-              errors[sn] = e.toString().replaceFirst('Exception: ', '');
-            }
-          } finally {
-            if (current()) {
-              loading[sn] = false;
-              if (view == 'test') {
-                _switchToBarcodeHistoryIfNeeded(sn);
-                _testRecordFallbackEligibleSns.remove(sn);
+        _queue.run(
+          (view, sn, revision),
+          () async {
+            try {
+              final canonical = await _resolveCanonicalSn(sn, revision);
+              if (!current()) return;
+              final records = await fetch(
+                sn: canonical,
+                token: _token,
+                lang: _lang,
+                operationId: _operationId,
+                uuid: _uuid,
+                cookie: _cookie,
+              );
+              if (!current()) return;
+              results[sn] = records;
+              if (records.isEmpty) errors[sn] = 'No records found';
+            } catch (e) {
+              if (current()) {
+                errors[sn] = e.toString().replaceFirst('Exception: ', '');
               }
-              notifyListeners();
+            } finally {
+              if (current()) {
+                loading[sn] = false;
+                if (view == 'test') {
+                  _switchToBarcodeHistoryIfNeeded(sn);
+                  _testRecordFallbackEligibleSns.remove(sn);
+                }
+                notifyListeners();
+              }
             }
-          }
-        }, isCurrent: current),
+          },
+          isCurrent: current,
+          priority: () => _snList.indexOf(sn) + 1,
+        ),
       );
     }
     notifyListeners();

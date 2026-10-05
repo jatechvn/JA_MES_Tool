@@ -5,6 +5,22 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.2] - 2026-10-05
+
+### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)
+- **📋 Nút Sao chép Nhanh Serial Number (`Copy SN`)**:
+  - Bổ sung nút bấm sao chép trực tiếp (`Icons.copy_rounded`) trên từng dòng thẻ SN tại thanh hàng đợi bên trái (Sidebar Queue), cho phép kỹ thuật viên copy nhanh mã SN vào clipboard mà không cần chọn dòng hay thao tác bôi đen thủ công.
+  - Hỗ trợ tooltip đa ngôn ngữ chuẩn hóa (`Copy SN` / `Sao chép SN` / `复制SN`).
+- **⚡ Tối ưu hóa Hành vi Tái tra cứu & Khởi động**:
+  - Khi người dùng nhập lại hoặc quét lại một mã SN đã có sẵn trong danh sách, hệ thống tự động đưa SN đó về cuối danh sách (vị trí trên cùng hiển thị ở sidebar) và kích hoạt chọn ngay lập tức (`_selectedSn = _snList.last`), giúp dễ dàng theo dõi ngay kết quả tra cứu gần nhất.
+  - Khi khởi động ứng dụng, tự động chọn mã SN mới nhất (`_snList.last`) thay vì mã SN đầu tiên cũ nhất trong lịch sử lưu trữ.
+- **🎯 Điều phối Hàng đợi Truy vấn theo Mức độ Ưu tiên (Priority-Aware Query Queue)**:
+  - Nâng cấp `QueryQueue` với hàm callback tính toán độ ưu tiên linh hoạt (`priority`), tự động ưu tiên giải phóng và thực thi truy vấn các SN mới nhất trước (`newest-first`) trong khi vẫn duy trì cấu trúc lưu trữ gốc (`oldest-first`).
+  - Đảm bảo khi bấm "Làm mới tất cả" (`Refresh All`) hoặc nạp hàng loạt SN, các đơn vị vừa thao tác luôn được trả kết quả kiểm tra trước mà không bị chặn bởi các SN cũ phía dưới.
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.11.2+28` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.11.1] - 2026-10-03
 
 ### 🪟 Đồng bộ Tiêu đề Cửa sổ & Metadata Nhận diện Ứng dụng (App Identity & Metadata)

@@ -18,6 +18,163 @@ AppLogic isolated({int concurrency = 6}) => AppLogic(
 );
 
 void main() {
+  test(
+    're-submitted SN becomes newest and selected without duplicate or refetch',
+    () async {
+      Map<String, dynamic>? saved;
+      var requests = 0;
+      await http.runWithClient(
+        () async {
+          final app = AppLogic(
+            initialize: false,
+            saveConfig: (config) async {
+              saved = config;
+            },
+          );
+          addTearDown(app.dispose);
+          await app.addSns('OLD MIDDLE NEW', allowTestRecordFallback: false);
+          await app.queriesIdle;
+          final cached = app.results['OLD'];
+          final previousRequests = requests;
+          await app.addSns(' old old ', allowTestRecordFallback: false);
+          await app.queriesIdle;
+          expect(app.snList, ['MIDDLE', 'NEW', 'OLD']);
+          expect(app.selectedSn, 'OLD');
+          expect(saved!['sns'], ['MIDDLE', 'NEW', 'OLD']);
+          expect(app.results['OLD'], same(cached));
+          expect(requests, previousRequests);
+          app.selectSn('MIDDLE');
+          expect(app.snList, ['MIDDLE', 'NEW', 'OLD']);
+          await app.addSns('NEW FRESH MIDDLE', allowTestRecordFallback: false);
+          await app.queriesIdle;
+          expect(app.snList, ['OLD', 'NEW', 'FRESH', 'MIDDLE']);
+          expect(app.selectedSn, 'MIDDLE');
+        },
+        () => MockClient((r) async {
+          requests++;
+          if (master(r)) return reply({'sn': jsonDecode(r.body)['sn']});
+          return reply([]);
+        }),
+      );
+    },
+  );
+
+  for (final savedSns in <List<String>>[
+    [],
+    ['ONLY'],
+    ['OLD', 'MIDDLE', 'NEW'],
+  ]) {
+    test('startup selects newest saved SN from $savedSns', () async {
+      await http.runWithClient(
+        () async {
+          final loaded = Completer<void>();
+          final app = AppLogic(
+            loadConfig: () async => {
+              'sns': savedSns,
+              'token': 'fake-test-token',
+            },
+            saveConfig: (_) async {},
+          );
+          addTearDown(app.dispose);
+          app.addListener(() {
+            if (!loaded.isCompleted) loaded.complete();
+          });
+          await loaded.future;
+          expect(app.selectedSn, savedSns.isEmpty ? '' : savedSns.last);
+          expect(app.snList, savedSns);
+          await app.queriesIdle;
+          expect(app.selectedSn, savedSns.isEmpty ? '' : savedSns.last);
+        },
+        () => MockClient((r) async {
+          if (master(r)) return reply({'sn': jsonDecode(r.body)['sn']});
+          return reply([]);
+        }),
+      );
+    });
+  }
+
+  test(
+    'batch and refresh load all SN views newest-first without reversing storage',
+    () async {
+      final requests = <String>[];
+      await http.runWithClient(
+        () async {
+          final app = isolated(concurrency: 1);
+          addTearDown(app.dispose);
+          await app.addSns('OLD MIDDLE NEW', allowTestRecordFallback: false);
+          await app.queriesIdle;
+          expect(app.snList, ['OLD', 'MIDDLE', 'NEW']);
+          expect(requests, [
+            'NEW',
+            'NEW',
+            'NEW',
+            'MIDDLE',
+            'MIDDLE',
+            'MIDDLE',
+            'OLD',
+            'OLD',
+            'OLD',
+          ]);
+          requests.clear();
+          await app.refreshAll();
+          await app.queriesIdle;
+          expect(requests, [
+            'NEW',
+            'NEW',
+            'NEW',
+            'MIDDLE',
+            'MIDDLE',
+            'MIDDLE',
+            'OLD',
+            'OLD',
+            'OLD',
+          ]);
+          expect(app.snList, ['OLD', 'MIDDLE', 'NEW']);
+        },
+        () => MockClient((r) async {
+          final sn = r.method == 'GET'
+              ? r.url.queryParameters['sn']!
+              : jsonDecode(r.body)['sn'] as String;
+          if (master(r)) return reply({'sn': sn});
+          requests.add(sn);
+          return reply([]);
+        }),
+      );
+    },
+  );
+
+  test('new SN added during loading overtakes older pending SNs', () async {
+    final firstStarted = Completer<void>();
+    final release = Completer<void>();
+    final resolved = <String>[];
+    await http.runWithClient(
+      () async {
+        final app = isolated(concurrency: 1);
+        addTearDown(app.dispose);
+        await app.addSns('OLD MIDDLE', allowTestRecordFallback: false);
+        await firstStarted.future;
+        await app.addSns('NEW', allowTestRecordFallback: false);
+        expect(resolved, ['MIDDLE']);
+        release.complete();
+        await app.queriesIdle;
+        expect(resolved, ['MIDDLE', 'NEW', 'OLD']);
+        expect(app.snList, ['OLD', 'MIDDLE', 'NEW']);
+      },
+      () => MockClient((r) async {
+        if (master(r)) {
+          final sn = jsonDecode(r.body)['sn'] as String;
+          resolved.add(sn);
+          if (!firstStarted.isCompleted) {
+            firstStarted.complete();
+            await release.future;
+          }
+          return reply({'sn': sn});
+        }
+        return reply([]);
+      }),
+    );
+  });
+
   test('credential change discards late errors and refetches', () async {
     final started = Completer<void>();
     final release = Completer<void>();

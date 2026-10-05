@@ -3,6 +3,42 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ja_mes_tool/modules/query_queue.dart';
 
 void main() {
+  test(
+    'pending priority is newest-first without preempting active work',
+    () async {
+      final queue = QueryQueue(concurrency: 1);
+      final release = Completer<void>();
+      final started = <String>[];
+      final active = queue.run('active', () async {
+        started.add('active');
+        await release.future;
+      }, isCurrent: () => true);
+      final ranks = {'old': 1, 'new': 2};
+      Future<void> enqueue(String key) => queue.run(
+        key,
+        () async {
+          started.add(key);
+        },
+        isCurrent: () => true,
+        priority: () => ranks[key]!,
+      );
+      final old = enqueue('old');
+      final newest = enqueue('new');
+      final equallyNew = queue.run(
+        'tie',
+        () async {
+          started.add('tie');
+        },
+        isCurrent: () => true,
+        priority: () => 2,
+      );
+      expect(started, ['active']);
+      release.complete();
+      await Future.wait([active, old, newest, equallyNew]);
+      expect(started, ['active', 'new', 'tie', 'old']);
+    },
+  );
+
   test('bounds jobs, deduplicates and skips invalid queued jobs', () async {
     final queue = QueryQueue(concurrency: 2);
     final gate = Completer<void>();
