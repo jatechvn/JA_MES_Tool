@@ -5,6 +5,19 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.3] - 2026-10-05
+
+### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)
+- **📊 Chuẩn hóa Thông báo Thao tác CSV & Trạng thái Màu sắc UI**:
+  - Tách bạch rõ ràng trạng thái thông báo toàn cục (`_globalMessageIsError`): hiển thị khung màu xanh ngọc bích (`accentEmerald`) kèm biểu tượng tích xanh `check_circle_outline_rounded` khi thành công, và chỉ hiển thị khung màu đỏ hoa hồng (`accentRose`) kèm biểu tượng `error_outline_rounded` khi có lỗi thực sự.
+  - Đồng bộ và đa ngữ hóa 100% các thông báo tải file mẫu, nhập và xuất tệp CSV (`Test Records`, `Barcode History`, `WIP Components`, `Component Trace`) bằng tiếng Việt, tiếng Anh và tiếng Trung với tham số đường dẫn tệp `{path}` hoặc lỗi `{error}` trực quan.
+  - Khi người dùng bấm hủy bỏ (Cancel) hộp thoại chọn tệp, thanh thông báo sẽ được dọn sạch tự động, không còn để lại thông báo lỗi hay trạng thái dở dang.
+- **🧪 Mở rộng Bộ Kiểm thử Tự động (Comprehensive CSV Test Suite)**:
+  - Bổ sung bộ kiểm thử `test/csv_notifications_test.dart` bao phủ toàn diện 8 thao tác CSV, kiểm chứng thông báo thành công/thất bại trên cả 3 ngôn ngữ và kiểm tra trực quan giao diện Banner trên cả Light Mode và Dark Mode.
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.11.3+29` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.11.2] - 2026-10-05
 
 ### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)

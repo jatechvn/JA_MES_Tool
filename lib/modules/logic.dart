@@ -6,6 +6,7 @@ import 'api_client.dart';
 import 'config_service.dart';
 import 'constants.dart';
 import 'query_queue.dart';
+import 'translations.dart';
 import 'services/app_power_manager.dart';
 
 final _logger = Logger('AppLogic');
@@ -236,8 +237,28 @@ class AppLogic extends ChangeNotifier {
 
   bool get isBatchLoading => _loadingStatus.values.any((value) => value);
 
-  String _globalError = '';
-  String get globalError => _globalError;
+  String _globalMessageKey = '';
+  Map<String, String> _globalMessageValues = {};
+  bool _globalMessageIsError = false;
+  bool get globalMessageIsError => _globalMessageIsError;
+  String get globalError {
+    if (_globalMessageKey.isEmpty) return '';
+    var message = Translations.get(_globalMessageKey, _lang);
+    for (final entry in _globalMessageValues.entries) {
+      message = message.replaceAll('{${entry.key}}', entry.value);
+    }
+    return message;
+  }
+
+  void _setGlobalMessage(
+    String key, {
+    bool isError = true,
+    Map<String, String> values = const {},
+  }) {
+    _globalMessageKey = key;
+    _globalMessageValues = values;
+    _globalMessageIsError = key.isNotEmpty && isError;
+  }
 
   bool? isConnectionValid;
   String? connectionError;
@@ -251,12 +272,14 @@ class AppLogic extends ChangeNotifier {
   int _credentialsRevision = 0;
   final Future<void> Function(Map<String, dynamic>) _saveConfig;
   final Future<Map<String, dynamic>> Function() _loadConfig;
+  final Future<String?> Function(bool isSave)? filePicker;
 
   AppLogic({
     bool initialize = true,
     int queryConcurrency = 6,
     Future<void> Function(Map<String, dynamic>)? saveConfig,
     Future<Map<String, dynamic>> Function()? loadConfig,
+    this.filePicker,
   }) : _queue = QueryQueue(concurrency: queryConcurrency),
        _saveConfig = saveConfig ?? ConfigService.saveConfig,
        _loadConfig = loadConfig ?? ConfigService.loadConfig {
@@ -690,6 +713,8 @@ class AppLogic extends ChangeNotifier {
   }
 
   Future<String?> pickFile({bool isSave = false}) async {
+    final picker = filePicker;
+    if (picker != null) return picker(isSave);
     final script = isSave
         ? '''
 Add-Type -AssemblyName System.Windows.Forms
@@ -724,7 +749,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   }
 
   Future<void> downloadTemplateCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final script = '''
@@ -735,26 +760,36 @@ Add-Type -AssemblyName System.Windows.Forms
 \$f.InitialDirectory = [Environment]::GetFolderPath("Desktop")
 if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 ''';
-      final result = await Process.run('powershell', [
-        '-NoProfile',
-        '-STA',
-        '-Command',
-        script,
-      ]);
-      final path = result.stdout.toString().trim();
+      final path = await _pickTemplatePath(script);
       if (path.isEmpty) return; // User canceled
 
       final file = File(path.replaceAll('"', '').trim());
       await file.writeAsString('SN\nSN123456\nSN789012\n');
-      _globalError = 'Template downloaded successfully to $path';
+      _setGlobalMessage(
+        'csv_template_success',
+        isError: false,
+        values: {'path': path},
+      );
     } catch (e) {
-      _globalError = 'Error downloading template: $e';
+      _setGlobalMessage('csv_template_error', values: {'error': '$e'});
     }
     notifyListeners();
   }
 
+  Future<String> _pickTemplatePath(String script) async {
+    final picker = filePicker;
+    if (picker != null) return await picker(true) ?? '';
+    final result = await Process.run('powershell', [
+      '-NoProfile',
+      '-STA',
+      '-Command',
+      script,
+    ]);
+    return result.stdout.toString().trim();
+  }
+
   Future<void> importCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final path = await pickFile(isSave: false);
@@ -762,20 +797,26 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 
       final file = File(path.replaceAll('"', '').trim());
       if (!await file.exists()) {
-        _globalError = 'CSV file not found.';
+        _setGlobalMessage('csv_file_not_found');
         notifyListeners();
         return;
       }
       final content = await file.readAsString();
       await addSns(content, allowTestRecordFallback: false);
+      _setGlobalMessage(
+        'csv_import_success',
+        isError: false,
+        values: {'path': path},
+      );
+      notifyListeners();
     } catch (e) {
-      _globalError = 'Error importing CSV: $e';
+      _setGlobalMessage('csv_import_error', values: {'error': '$e'});
       notifyListeners();
     }
   }
 
   Future<void> exportCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final path = await pickFile(isSave: true);
@@ -822,15 +863,19 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       }
 
       await file.writeAsString(buffer.toString());
-      _globalError = 'Exported successfully to $path';
+      _setGlobalMessage(
+        'csv_export_success',
+        isError: false,
+        values: {'path': path},
+      );
     } catch (e) {
-      _globalError = 'Error exporting CSV: $e';
+      _setGlobalMessage('csv_export_error', values: {'error': '$e'});
     }
     notifyListeners();
   }
 
   Future<void> exportBarcodeHistoryCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final path = await pickFile(isSave: true);
@@ -872,15 +917,19 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       }
 
       await file.writeAsString(buffer.toString());
-      _globalError = 'Exported Barcode History successfully to $path';
+      _setGlobalMessage(
+        'csv_export_success',
+        isError: false,
+        values: {'path': path},
+      );
     } catch (e) {
-      _globalError = 'Error exporting Barcode History: $e';
+      _setGlobalMessage('csv_export_error', values: {'error': '$e'});
     }
     notifyListeners();
   }
 
   Future<void> exportWipComponentsCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final path = await pickFile(isSave: true);
@@ -918,9 +967,13 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       }
 
       await file.writeAsString(buffer.toString());
-      _globalError = 'Exported WIP Components successfully to $path';
+      _setGlobalMessage(
+        'csv_export_success',
+        isError: false,
+        values: {'path': path},
+      );
     } catch (e) {
-      _globalError = 'Error exporting WIP Components: $e';
+      _setGlobalMessage('csv_export_error', values: {'error': '$e'});
     }
     notifyListeners();
   }
@@ -1215,7 +1268,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
   }
 
   Future<void> downloadTraceTemplateCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final script = '''
@@ -1226,26 +1279,24 @@ Add-Type -AssemblyName System.Windows.Forms
 \$f.InitialDirectory = [Environment]::GetFolderPath("Desktop")
 if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 ''';
-      final result = await Process.run('powershell', [
-        '-NoProfile',
-        '-STA',
-        '-Command',
-        script,
-      ]);
-      final path = result.stdout.toString().trim();
+      final path = await _pickTemplatePath(script);
       if (path.isEmpty) return; // User canceled
 
       final file = File(path.replaceAll('"', '').trim());
       await file.writeAsString('CSN\nOPM1106349G1CCX\nQB940AE002627V05171\n');
-      _globalError = 'Template downloaded successfully to $path';
+      _setGlobalMessage(
+        'csv_template_success',
+        isError: false,
+        values: {'path': path},
+      );
     } catch (e) {
-      _globalError = 'Error downloading template: $e';
+      _setGlobalMessage('csv_template_error', values: {'error': '$e'});
     }
     notifyListeners();
   }
 
   Future<void> importTraceCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final path = await pickFile(isSave: false);
@@ -1253,20 +1304,26 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
 
       final file = File(path.replaceAll('"', '').trim());
       if (!await file.exists()) {
-        _globalError = 'CSV file not found.';
+        _setGlobalMessage('csv_file_not_found');
         notifyListeners();
         return;
       }
       final content = await file.readAsString();
       await addTraceCsns(content);
+      _setGlobalMessage(
+        'csv_import_success',
+        isError: false,
+        values: {'path': path},
+      );
+      notifyListeners();
     } catch (e) {
-      _globalError = 'Error importing CSV: $e';
+      _setGlobalMessage('csv_import_error', values: {'error': '$e'});
       notifyListeners();
     }
   }
 
   Future<void> exportTraceCsv() async {
-    _globalError = '';
+    _setGlobalMessage('');
     notifyListeners();
     try {
       final path = await pickFile(isSave: true);
@@ -1310,9 +1367,13 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       }
 
       await file.writeAsString(buffer.toString());
-      _globalError = 'Exported successfully to $path';
+      _setGlobalMessage(
+        'csv_export_success',
+        isError: false,
+        values: {'path': path},
+      );
     } catch (e) {
-      _globalError = 'Error exporting CSV: $e';
+      _setGlobalMessage('csv_export_error', values: {'error': '$e'});
     }
     notifyListeners();
   }
