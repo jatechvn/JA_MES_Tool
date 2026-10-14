@@ -371,9 +371,79 @@ class QueryInfoRecord {
   }
 }
 
+class TestRecordPage {
+  final List<TestRecord> records;
+  final int pageIndex;
+  final int pageSize;
+  final int? totalCount;
+
+  const TestRecordPage({
+    required this.records,
+    required this.pageIndex,
+    required this.pageSize,
+    this.totalCount,
+  });
+
+  bool get hasNext => totalCount == null
+      ? records.length >= pageSize
+      : pageIndex * pageSize < totalCount!;
+}
+
 class ApiClient {
   static Future<List<TestRecord>> fetchTestRecords({
     required String sn,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+  }) async {
+    final page = await _fetchTestRecordPage(
+      sn: sn,
+      woNo: '',
+      pageIndex: 1,
+      pageSize: 100,
+      token: token,
+      lang: lang,
+      operationId: operationId,
+      uuid: uuid,
+      cookie: cookie,
+    );
+    return page.records;
+  }
+
+  static Future<TestRecordPage> fetchWorkOrderPage({
+    required String woNo,
+    int pageIndex = 1,
+    int pageSize = 100,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+  }) {
+    if (woNo.trim().isEmpty) throw ArgumentError.value(woNo, 'woNo');
+    if (pageIndex < 1 || pageSize < 1 || pageSize > 100) {
+      throw ArgumentError('Invalid pagination');
+    }
+    return _fetchTestRecordPage(
+      sn: '',
+      woNo: woNo.trim(),
+      pageIndex: pageIndex,
+      pageSize: pageSize,
+      token: token,
+      lang: lang,
+      operationId: operationId,
+      uuid: uuid,
+      cookie: cookie,
+    );
+  }
+
+  static Future<TestRecordPage> _fetchTestRecordPage({
+    required String sn,
+    required String woNo,
+    required int pageIndex,
+    required int pageSize,
     required String token,
     required String lang,
     required String operationId,
@@ -388,11 +458,25 @@ class ApiClient {
     final cleanUuid = _cleanHeader(uuid);
     final cleanCookie = _cleanHeader(cookie);
 
-    final uri = Uri.parse(
-      'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/equipmentRecord/pageTestRecordLists'
-      '?pageIndex=1&pageSize=100&productNo=&testStartDate=&processCode=&woNo=&sn=$sn'
-      '&stationId=&testTime=&productSeries=&orgCode=$defaultOrgCode',
-    );
+    final uri =
+        Uri.parse(
+          'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/equipmentRecord/pageTestRecordLists',
+        ).replace(
+          queryParameters: {
+            'pageIndex': '$pageIndex',
+            'pageSize': '$pageSize',
+            'productNo': '',
+            'testStartDate': '',
+            'testEndDate': '',
+            'processCode': '',
+            'woNo': woNo,
+            'sn': sn,
+            'stationId': '',
+            'testTime': '',
+            'productSeries': '',
+            'orgCode': defaultOrgCode,
+          },
+        );
 
     final headers = {
       'Host': 'vncmes.ces.myfiinet.com',
@@ -408,9 +492,11 @@ class ApiClient {
           : 'CloudMES-token=$cleanToken',
     };
 
-    _logger.info('Fetching records for SN: $sn');
+    _logger.info('Fetching test records page $pageIndex');
 
-    final response = await http.get(uri, headers: headers);
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 30));
 
     if (response.statusCode != 200) {
       if (response.statusCode == 401) {
@@ -450,7 +536,17 @@ class ApiClient {
       recordsList = responseData;
     }
 
-    return recordsList.map((e) => TestRecord.fromJson(e)).toList();
+    final total = responseData is Map
+        ? responseData['totalCount'] ??
+              responseData['total'] ??
+              responseData['count']
+        : null;
+    return TestRecordPage(
+      records: recordsList.map((e) => TestRecord.fromJson(e)).toList(),
+      pageIndex: pageIndex,
+      pageSize: pageSize,
+      totalCount: int.tryParse('$total'),
+    );
   }
 
   static Future<List<SnProcessRecord>> fetchSnProcessHistory({

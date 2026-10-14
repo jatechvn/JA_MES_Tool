@@ -140,6 +140,45 @@ class AppLogic extends ChangeNotifier {
   Map<String, SnMasterInfo> get snMasterInfo => _snMasterInfo;
   String? resolvedSnFor(String sn) => _resolvedSn[sn];
 
+  /// Sidebar counterpart: internal input shows customer SN; other identifiers
+  /// show internal SN. Keep canonical resolution separate from display fallback.
+  String? alternateSnFor(String sn) {
+    final input = sn.trim().toUpperCase();
+    String? different(String value) {
+      final candidate = value.trim();
+      return candidate.isNotEmpty && candidate.toUpperCase() != input
+          ? candidate
+          : null;
+    }
+
+    final resolved = different(_resolvedSn[sn] ?? '');
+    if (resolved != null) return resolved;
+
+    String? counterpart(String internal, String customer) {
+      if (internal.trim().toUpperCase() == input) {
+        return different(customer);
+      }
+      return different(internal) ?? different(customer);
+    }
+
+    final tests = _results[sn];
+    if (tests != null && tests.isNotEmpty) {
+      final alternate = counterpart(
+        tests.first.internalSn,
+        tests.first.customerSn,
+      );
+      if (alternate != null) return alternate;
+    }
+    final processes = _processResults[sn];
+    if (processes != null && processes.isNotEmpty) {
+      return counterpart(
+        processes.first.internalSn,
+        processes.first.customerSn,
+      );
+    }
+    return null;
+  }
+
   String _token = '';
   String get token => _token;
 
@@ -237,6 +276,9 @@ class AppLogic extends ChangeNotifier {
 
   bool get isBatchLoading => _loadingStatus.values.any((value) => value);
 
+  int _loadingWoCount = 0;
+  bool get isLoadingWo => _loadingWoCount > 0;
+
   String _globalMessageKey = '';
   Map<String, String> _globalMessageValues = {};
   bool _globalMessageIsError = false;
@@ -289,6 +331,39 @@ class AppLogic extends ChangeNotifier {
   int _revision(String key) => _revisions[key] ?? 0;
 
   Future<void> get queriesIdle => _queue.idle;
+
+  /// WO queries bypass SN resolution and never mutate SN/trace history.
+  Future<TestRecordPage> fetchWorkOrderPage(
+    String woNo, {
+    int pageIndex = 1,
+    bool Function()? isCurrent,
+  }) async {
+    final revision = _credentialsRevision;
+    bool current() =>
+        !_disposed &&
+        revision == _credentialsRevision &&
+        (isCurrent?.call() ?? true);
+    TestRecordPage? result;
+    await _queue.run(
+      Object(),
+      () async {
+        final page = await ApiClient.fetchWorkOrderPage(
+          woNo: woNo,
+          pageIndex: pageIndex,
+          token: _token,
+          lang: _lang,
+          operationId: _operationId,
+          uuid: _uuid,
+          cookie: _cookie,
+        );
+        if (current()) result = page;
+      },
+      isCurrent: current,
+      priority: () => _snList.length + 1000,
+    );
+    if (!current() || result == null) throw StateError('Query invalidated');
+    return result!;
+  }
 
   void _invalidate(String key) {
     _revisions[key] = _revision(key) + 1;
@@ -709,6 +784,102 @@ class AppLogic extends ChangeNotifier {
       }
       notifyListeners();
       _fetchAllPending();
+    }
+  }
+
+  /// Fetches all pages of test records for one or more Work Orders (WO) and
+  /// adds the unique unit SNs found in those Work Orders into the SN queue,
+  /// triggering full parallel SN queries (Test Record, Barcode History,
+  /// Component List, SnMaster Next Process/Route) just like batch SN lookup.
+  Future<void> addWorkOrders(
+    String input, {
+    bool allowTestRecordFallback = true,
+  }) async {
+    final lines = input.split(RegExp(r'[\n\r,;\s]+'));
+    final wos = <String>[];
+    for (final line in lines) {
+      final wo = line.trim();
+      if (wo.isEmpty) continue;
+      final upper = wo.toUpperCase();
+      if (upper == 'WO' || upper == 'WONO' || upper == 'WO_NO') continue;
+      if (!wos.contains(wo)) {
+        wos.add(wo);
+      }
+    }
+    if (wos.isEmpty) return;
+
+    _setGlobalMessage('');
+    _loadingWoCount++;
+    notifyListeners();
+
+    try {
+      final extractedSns = <String>[];
+      final seenUnitIds = <String>{};
+
+      for (final wo in wos) {
+        var pageIndex = 1;
+        var woFoundAny = false;
+        while (pageIndex <= 20) {
+          if (_disposed) return;
+          TestRecordPage page;
+          try {
+            page = await fetchWorkOrderPage(wo, pageIndex: pageIndex);
+          } on StateError {
+            return;
+          } catch (e) {
+            final errText = e.toString().replaceFirst('Exception: ', '');
+            _setGlobalMessage(
+              'wo_error',
+              isError: true,
+              values: {'wo': wo, 'error': errText},
+            );
+            notifyListeners();
+            break;
+          }
+
+          for (final r in page.records) {
+            final candidates =
+                [
+                      r.internalSn.trim().toUpperCase(),
+                      r.sn.trim().toUpperCase(),
+                      r.customerSn.trim().toUpperCase(),
+                    ]
+                    .where(
+                      (s) =>
+                          s.isNotEmpty && RegExp(r'^[A-Z0-9_-]+$').hasMatch(s),
+                    )
+                    .toList();
+            if (candidates.isEmpty) continue;
+            woFoundAny = true;
+            if (candidates.any(seenUnitIds.contains)) {
+              seenUnitIds.addAll(candidates);
+              continue;
+            }
+            seenUnitIds.addAll(candidates);
+            extractedSns.add(candidates.first);
+          }
+
+          if (!page.hasNext || page.records.isEmpty) {
+            break;
+          }
+          pageIndex++;
+        }
+
+        if (!woFoundAny && _globalMessageKey.isEmpty) {
+          _setGlobalMessage('wo_empty', isError: true, values: {'wo': wo});
+          notifyListeners();
+        }
+      }
+
+      if (extractedSns.isNotEmpty) {
+        await addSns(
+          extractedSns.join('\n'),
+          allowTestRecordFallback: allowTestRecordFallback,
+        );
+      }
+    } finally {
+      _loadingWoCount = (_loadingWoCount - 1).clamp(0, 1 << 30);
+      notifyListeners();
     }
   }
 

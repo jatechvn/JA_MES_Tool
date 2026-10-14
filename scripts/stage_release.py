@@ -71,33 +71,7 @@ def main():
                 except Exception:
                     pass
 
-        # Package contents into zip (parent folder named JA_MES_Tool_v<base_ver>_Windows_x64)
-        folder_prefix = f"JA_MES_Tool_v{base_ver}_Windows_x64"
-        print(f"[stage_release] Creating release ZIP: {zip_path}")
-        
-        with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-            for root_dir, dirs, files in os.walk(dist_dir):
-                for f in files:
-                    full_p = os.path.join(root_dir, f)
-                    if full_p == zip_path or f.endswith('.zip') or f == 'SHA256SUMS.txt':
-                        continue
-                    arc_name = os.path.relpath(full_p, dist_dir)
-                    zf.write(full_p, os.path.join(folder_prefix, arc_name))
-        print(f"[stage_release] ZIP package created: {zip_path} ({os.path.getsize(zip_path)} bytes)")
-
-        # 5. Compute SHA256 and write dist/SHA256SUMS.txt
-        sha256 = hashlib.sha256()
-        with open(zip_path, 'rb') as f:
-            while chunk := f.read(65536):
-                sha256.update(chunk)
-        zip_hash = sha256.hexdigest()
-
-        sha_path = os.path.join(dist_dir, 'SHA256SUMS.txt')
-        with open(sha_path, 'w', encoding='utf-8') as sf:
-            sf.write(f"{zip_hash}  {zip_name}\n")
-        print(f"[stage_release] Updated SHA256SUMS.txt: {zip_hash}  {zip_name}")
-
-        # 6. Generate dist/version.json metadata for OTA
+        # 5. Generate dist/version.json metadata for OTA BEFORE zipping so the archive has the fresh version.json
         notes = ''
         notes_path = os.path.join(root, 'RELEASE_NOTES.md')
         if os.path.exists(notes_path):
@@ -116,6 +90,32 @@ def main():
         with open(version_json_path, 'w', encoding='utf-8') as vf:
             json.dump(meta, vf, indent=4, ensure_ascii=False)
         print(f"[stage_release] Updated version.json: version {ver}")
+
+        # 6. Package contents into zip (parent folder named JA_MES_Tool_v<base_ver>_Windows_x64)
+        folder_prefix = f"JA_MES_Tool_v{base_ver}_Windows_x64"
+        print(f"[stage_release] Creating release ZIP: {zip_path}")
+        
+        with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for root_dir, dirs, files in os.walk(dist_dir):
+                for f in files:
+                    full_p = os.path.join(root_dir, f)
+                    if full_p == zip_path or f.endswith('.zip') or f == 'SHA256SUMS.txt':
+                        continue
+                    arc_name = os.path.relpath(full_p, dist_dir)
+                    zf.write(full_p, os.path.join(folder_prefix, arc_name))
+        print(f"[stage_release] ZIP package created: {zip_path} ({os.path.getsize(zip_path)} bytes)")
+
+        # 7. Compute SHA256 and write dist/SHA256SUMS.txt
+        sha256 = hashlib.sha256()
+        with open(zip_path, 'rb') as f:
+            while chunk := f.read(65536):
+                sha256.update(chunk)
+        zip_hash = sha256.hexdigest()
+
+        sha_path = os.path.join(dist_dir, 'SHA256SUMS.txt')
+        with open(sha_path, 'w', encoding='utf-8') as sf:
+            sf.write(f"{zip_hash}  {zip_name}\n")
+        print(f"[stage_release] Updated SHA256SUMS.txt: {zip_hash}  {zip_name}")
 
 if __name__ == '__main__':
     main()

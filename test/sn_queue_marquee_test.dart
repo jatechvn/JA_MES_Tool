@@ -54,6 +54,14 @@ void main() {
 
       logic.snList.add(longSn);
       logic.snList.add('NEW_LOADING_SN');
+      logic.snList.add('DHL2700003');
+      logic.results['DHL2700003'] = [
+        TestRecord.fromJson({
+          'sn': 'DHL2700003',
+          'internalSn': 'SAFVN2630836185',
+          'customerSn': 'VN0TD2147FVSG672D003A00',
+        }),
+      ];
       logic.loadingStatus['NEW_LOADING_SN'] = true;
       logic.snMasterInfo[longSn] = SnMasterInfo.fromJson({
         'sn': longSn,
@@ -91,9 +99,16 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(tester.takeException(), isNull);
 
+      expect(find.byKey(const ValueKey('toggle_wo_mode')), findsOneWidget);
+      expect(find.byKey(const ValueKey('open_work_order')), findsNothing);
       // Verify BounceMarqueeText instances exist for longSn and longAltSn
       final marqueeFinder = find.byType(BounceMarqueeText);
       expect(marqueeFinder, findsAtLeastNWidgets(2));
+      final sidebarSerials = tester
+          .widgetList<BounceMarqueeText>(marqueeFinder)
+          .map((widget) => widget.text);
+      expect(sidebarSerials, contains('SAFVN2630836185'));
+      expect(sidebarSerials, isNot(contains('VN0TD2147FVSG672D003A00')));
 
       // Verify PillBadge with marquee exists for nextStation
       final pillBadgeFinder = find.byWidgetPredicate(
@@ -103,7 +118,7 @@ void main() {
             w.useMarquee == true,
       );
       expect(pillBadgeFinder, findsOneWidget);
-      expect(find.byIcon(Icons.copy_rounded), findsNWidgets(2));
+      expect(find.byIcon(Icons.copy_rounded), findsNWidgets(3));
       expect(find.byIcon(Icons.refresh_rounded), findsWidgets);
       await tester.tap(find.byKey(const ValueKey('copy_sn_NEW_LOADING_SN')));
       await tester.pump();

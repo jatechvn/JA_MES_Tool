@@ -1,4 +1,4 @@
-# 📘 Hướng dẫn Sử dụng JA MES Tool v2.11.3
+# 📘 Hướng dẫn Sử dụng JA MES Tool v2.12.0
 
 > **Ứng dụng Windows Desktop hiệu năng cao tra cứu dữ liệu kiểm thử, lịch sử công đoạn và truy vết linh kiện Foxconn CloudMES với giao diện Bento Glassmorphism.**
 
@@ -23,7 +23,7 @@
 - Kết nối mạng: Truy cập được mạng nội bộ nhà máy hoặc VPN Foxconn CloudMES
 
 ### Cách 1: Cài đặt chuẩn Windows không cần Admin (Khuyên dùng)
-1. Tải gói phát hành `JA_MES_Tool_v2.11.3_Windows_x64.zip`.
+1. Tải gói phát hành `JA_MES_Tool_v2.12.0_Windows_x64.zip`.
 2. Giải nén và nhấp đúp chạy file **`install.bat`**.
 3. Trình cài đặt tự động triển khai vào `%LOCALAPPDATA%\Programs\JA_MES_Tool`, tạo Shortcut ngoài Desktop và Start Menu, tích hợp mục gỡ cài đặt chuẩn xác trong Windows Settings / Control Panel (tự động bảo toàn cấu hình người dùng).
 4. Khi muốn gỡ cài đặt, chạy **`uninstall.bat`** hoặc gỡ trực tiếp qua Windows Installed Apps.
@@ -51,8 +51,9 @@
 
 ## 3. Tra cứu Dữ liệu & Quản lý Hàng đợi SN
 
-### Thêm Serial Number
+### Thêm Serial Number hoặc Tra cứu Hàng loạt theo Work Order (WO)
 - Nhập SN trực tiếp vào ô tìm kiếm ở thanh bên trái và nhấn Enter.
+- **Hoán đổi nhanh chế độ nhập `SN ↔ WO`**: Nhấn vào biểu tượng công đơn nhỏ trên dòng tiêu đề Sidebar (cạnh nút **Làm mới tất cả**) để chuyển ô nhập sang chế độ **Nhập WO...**. Khi nhập mã Work Order và nhấn Enter, toàn bộ các mã SN thuộc WO đó sẽ tự động được trích xuất và đẩy hàng loạt xuống danh sách bên dưới giống hệt như tra nhiều SN cùng lúc.
 - Nhập hàng loạt SN từ clipboard hoặc dán danh sách ngăn cách bằng dấu phẩy, khoảng trắng hoặc xuống dòng.
 - Nhập từ file danh sách bằng nút **Import CSV**.
 - **Hiển thị SN mới nhất lên đầu**: Danh sách hàng đợi SN tự động xếp các mã SN vừa nhập/quét lên hàng đầu tiên, giúp theo dõi kết quả kiểm thử ngay tức thì mà không cần cuộn trang.
