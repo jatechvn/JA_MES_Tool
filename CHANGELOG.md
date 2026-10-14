@@ -5,6 +5,22 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-10-14
+
+### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)
+- **🔄 Hoán đổi Trực tiếp Chế độ Nhập `SN ↔ WO` trên Thanh Hàng đợi (Inline SN ↔ WO Input Swap)**:
+  - Bổ sung nút icon chuyển đổi nhỏ gọn (`ValueKey('toggle_wo_mode')`) ngay trên dòng `Refresh all` cùng hàng với nút **Refresh All** và **Clear All** trên Sidebar, loại bỏ nút bấm và hộp thoại `WorkOrderDialog` rời rạc cũ để đồng bộ hoàn toàn với giao diện Bento Glassmorphism.
+  - Khi bật chế độ nhập **Work Order (WO)**, ô tìm kiếm tự động chuyển sang viền và biểu tượng điểm nhấn `accentCyan` kèm gợi ý đa ngôn ngữ (`Nhập WO...` / `Enter WO...` / `输入工单号...`).
+- **📦 Nạp Hàng loạt Serial Number từ Work Order (`addWorkOrders`)**:
+  - Khi nhập một hoặc nhiều mã WO vào ô tìm kiếm và nhấn `Enter` (hoặc nút `+`), ứng dụng tự động truy vấn phân trang qua `ApiClient.fetchWorkOrderPage`, trích xuất và khử trùng lặp toàn bộ các mã SN thuộc WO đó (ưu tiên `internalSn` -> `sn` -> `customerSn`).
+  - Toàn bộ các mã SN thuộc WO được đẩy hàng loạt xuống danh sách bên dưới giống hệt như tra nhiều SN cùng lúc, tự động chọn SN mới nhất và kích hoạt truy vấn song song đầy đủ cả 3 chế độ xem (**Test Record**, **Barcode History**, **Component List**) cùng thông tin **Next Process / Route**.
+- **🏷️ Hiển thị Mã SN Phụ (`alternateSnFor`) & Tối ưu Hàng đợi Truy vấn**:
+  - Tự động đối chiếu và hiển thị mã SN liên kết (Internal SN / Product SN / Customer SN) trên tiêu đề bảng kết quả kèm hiệu ứng cuộn marquee mượt mà và nút sao chép nhanh.
+  - Bổ sung các bộ kiểm thử `test/work_order_query_test.dart`, `test/sn_alternate_test.dart` và `test/sn_query_concurrency_test.dart` nâng tổng số ca kiểm thử lên **127/127 pass**.
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.12.0+30` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.11.3] - 2026-10-05
 
 ### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)

@@ -19,6 +19,26 @@ AppLogic isolated({int concurrency = 6}) => AppLogic(
 
 void main() {
   test(
+    'sidebar preserves a different canonical SN from master resolution',
+    () async {
+      await http.runWithClient(
+        () async {
+          final app = isolated();
+          addTearDown(app.dispose);
+          await app.addSns('CUSTOMER-ALIAS', allowTestRecordFallback: false);
+          await app.queriesIdle;
+          expect(app.resolvedSnFor('CUSTOMER-ALIAS'), 'CANONICAL-SN');
+          expect(app.alternateSnFor('CUSTOMER-ALIAS'), 'CANONICAL-SN');
+        },
+        () => MockClient((r) async {
+          if (master(r)) return reply({'sn': 'CANONICAL-SN'});
+          return reply([]);
+        }),
+      );
+    },
+  );
+
+  test(
     're-submitted SN becomes newest and selected without duplicate or refetch',
     () async {
       Map<String, dynamic>? saved;

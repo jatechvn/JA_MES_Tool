@@ -29,6 +29,7 @@ class MainWindow extends StatefulWidget {
 
 class _MainWindowState extends State<MainWindow> with WindowListener {
   final TextEditingController _snController = TextEditingController();
+  bool _isWoInputMode = false;
   bool _hasCheckedInitialToken = false;
   bool _isMaximized = false;
   Timer? _tokenCheckTimer;
@@ -912,6 +913,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     AppColors colors,
   ) {
     final isTraceMode = logic.viewMode == ViewMode.componentTrace;
+    final isWoMode = !isTraceMode && _isWoInputMode;
     final count = isTraceMode ? logic.traceHistory.length : logic.snList.length;
 
     return Column(
@@ -965,6 +967,31 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   fontSize: 10,
                 ),
                 const SizedBox(width: 4),
+                if (!isTraceMode)
+                  IconButton(
+                    key: const ValueKey('toggle_wo_mode'),
+                    icon: Icon(
+                      _isWoInputMode
+                          ? Icons.assignment_rounded
+                          : Icons.assignment_outlined,
+                      color: _isWoInputMode
+                          ? colors.accentCyan
+                          : colors.textSecondary,
+                      size: 18,
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    splashRadius: 16,
+                    onPressed: () {
+                      setState(() {
+                        _isWoInputMode = !_isWoInputMode;
+                      });
+                    },
+                    tooltip: Translations.get(
+                      _isWoInputMode ? 'switch_to_sn' : 'switch_to_wo',
+                      logic.lang,
+                    ),
+                  ),
                 IconButton(
                   icon: Icon(
                     Icons.refresh_rounded,
@@ -1011,13 +1038,17 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         ),
         const SizedBox(height: 12),
 
-        // Shared Pill-Shaped Input Field
+        // Shared Pill-Shaped Input Field (SN ↔ WO swap or Component Trace)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
           decoration: BoxDecoration(
             color: colors.subCardBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.subCardBorder),
+            border: Border.all(
+              color: isWoMode
+                  ? colors.accentCyan.withValues(alpha: 0.55)
+                  : colors.subCardBorder,
+            ),
           ),
           child: Row(
             children: [
@@ -1025,13 +1056,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               Icon(
                 isTraceMode
                     ? Icons.search_rounded
-                    : Icons.qr_code_scanner_rounded,
+                    : (isWoMode
+                          ? Icons.assignment_outlined
+                          : Icons.qr_code_scanner_rounded),
                 size: 16,
-                color: colors.textSecondary,
+                color: isWoMode ? colors.accentCyan : colors.textSecondary,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
+                  key: const ValueKey('sidebar_primary_input'),
                   controller: _snController,
                   style: TextStyle(
                     color: colors.textPrimary,
@@ -1041,7 +1075,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   decoration: InputDecoration(
                     isDense: true,
                     hintText: Translations.get(
-                      isTraceMode ? 'component_trace_hint' : 'enter_sn',
+                      isTraceMode
+                          ? 'component_trace_hint'
+                          : (isWoMode ? 'enter_wo' : 'enter_sn'),
                       logic.lang,
                     ),
                     hintStyle: TextStyle(
@@ -1055,6 +1091,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   onSubmitted: (val) {
                     if (isTraceMode) {
                       logic.addTraceCsns(val);
+                    } else if (isWoMode) {
+                      logic.addWorkOrders(val);
                     } else {
                       logic.addSns(val);
                     }
@@ -1074,15 +1112,29 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: IconButton(
+                  key: const ValueKey('sidebar_submit_input'),
                   padding: EdgeInsets.zero,
-                  icon: Icon(
-                    isTraceMode ? Icons.search_rounded : Icons.add_rounded,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                  icon: isWoMode && logic.isLoadingWo
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          isTraceMode
+                              ? Icons.search_rounded
+                              : Icons.add_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                   onPressed: () {
                     if (isTraceMode) {
                       logic.addTraceCsns(_snController.text);
+                    } else if (isWoMode) {
+                      logic.addWorkOrders(_snController.text);
                     } else {
                       logic.addSns(_snController.text);
                     }
@@ -1166,32 +1218,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     : masterInfo.nextProcessCode);
 
           // Alternate / Resolved SN
-          String? alternateSn;
-          final resolved = logic.resolvedSnFor(sn);
-          if (resolved != null && resolved.isNotEmpty && resolved != sn) {
-            alternateSn = resolved;
-          } else {
-            final testList = logic.results[sn];
-            if (testList != null && testList.isNotEmpty) {
-              final r = testList.first;
-              if (r.customerSn.isNotEmpty && r.customerSn != sn) {
-                alternateSn = r.customerSn;
-              } else if (r.internalSn.isNotEmpty && r.internalSn != sn) {
-                alternateSn = r.internalSn;
-              }
-            }
-            if (alternateSn == null) {
-              final procList = logic.processResults[sn];
-              if (procList != null && procList.isNotEmpty) {
-                final r = procList.first;
-                if (r.customerSn.isNotEmpty && r.customerSn != sn) {
-                  alternateSn = r.customerSn;
-                } else if (r.internalSn.isNotEmpty && r.internalSn != sn) {
-                  alternateSn = r.internalSn;
-                }
-              }
-            }
-          }
+          final alternateSn = logic.alternateSnFor(sn);
 
           final hasBottomRow =
               isLoading ||

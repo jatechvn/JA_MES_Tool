@@ -1,21 +1,21 @@
-TAG=v2.11.3
-TITLE=JA MES Tool v2.11.3 — Chuẩn hóa thông báo CSV thành công màu xanh, đa ngữ hóa thông báo và dọn dẹp khi hủy
+TAG=v2.12.0
+TITLE=JA MES Tool v2.12.0 — Hoán đổi nhanh chế độ nhập SN ↔ WO, nạp hàng loạt SN từ Work Order và hiển thị mã SN phụ
 BODY=
 ## Điểm nhấn chính
-- **Chuẩn hóa Màu sắc & Biểu tượng Thông báo CSV**:
-  - Phân tách thông báo thành công (xanh ngọc `accentEmerald` kèm `check_circle_outline_rounded`) và lỗi (đỏ `accentRose` kèm `error_outline_rounded`).
-  - Đường dẫn tệp hoặc chi tiết lỗi được nội suy rõ ràng vào nội dung thông báo.
-- **Đa ngữ hóa Toàn diện Thông báo Thao tác Tệp**:
-  - Hỗ trợ đa ngôn ngữ đầy đủ (Tiếng Việt, Tiếng Anh, Tiếng Trung) cho các hành động tải file mẫu, nhập CSV, xuất CSV và thông báo không tìm thấy tệp.
-  - Tự động xóa thông báo khi người dùng hủy bỏ (Cancel) hộp thoại chọn tệp.
-- **Mở rộng Bộ Kiểm thử Tự động**:
-  - Bổ sung 8 test cases trong `test/csv_notifications_test.dart` bao phủ kiểm tra đa ngữ và màu sắc banner trên cả Light và Dark mode.
+- **Hoán đổi Trực tiếp Chế độ Nhập `SN ↔ WO` trên Sidebar**:
+  - Bổ sung nút icon chuyển đổi nhỏ gọn trên dòng `Refresh all` (cùng hàng với **Refresh All** và **Clear All**), loại bỏ nút bấm và hộp thoại rời rạc cũ để đồng bộ hoàn toàn với ngôn ngữ thiết kế Bento Glassmorphism.
+  - Khi bật chế độ nhập **Work Order (WO)**, ô tìm kiếm tự động chuyển sang viền và biểu tượng điểm nhấn `accentCyan` (`Nhập WO...` / `Enter WO...` / `输入工单号...`).
+- **Nạp Hàng loạt SN từ Work Order (`addWorkOrders`)**:
+  - Nhập một hoặc nhiều mã WO vào ô tìm kiếm sẽ tự động truy vấn phân trang từ CloudMES (`pageTestRecordLists`), trích xuất và khử trùng lặp toàn bộ các mã SN thuộc WO đó (ưu tiên `internalSn` -> `sn` -> `customerSn`).
+  - Toàn bộ SN thuộc WO được đẩy hàng loạt xuống danh sách bên dưới giống hệt như tra nhiều SN cùng lúc, tự động chọn SN mới nhất và kích hoạt truy vấn song song đầy đủ cả 3 chế độ xem (**Test Record**, **Barcode History**, **Component List**) cùng thông tin **Next Process / Route**.
+- **Hiển thị Mã SN Phụ (`alternateSnFor`) & Tối ưu Hàng đợi Truy vấn**:
+  - Tự động đối chiếu và hiển thị mã SN liên kết (Internal SN / Product SN / Customer SN) trên tiêu đề bảng kết quả kèm hiệu ứng cuộn marquee mượt mà và nút sao chép nhanh.
 
 ## Kiểm chứng & Đóng gói
 - `dart format .`: Chuẩn hóa 100% định dạng mã nguồn.
 - `flutter analyze`: Đạt 0 issues found.
-- `flutter test`: 91/91 ca kiểm thử vượt qua thành công (100% pass).
+- `flutter test`: 127/127 ca kiểm thử vượt qua thành công (100% pass).
 - `flutter build windows --release`: Biên dịch hoàn chỉnh `ja_mes_tool.exe`.
 
 ### Cài đặt
-Giải nén toàn bộ gói `JA_MES_Tool_v2.11.3_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
+Giải nén toàn bộ gói `JA_MES_Tool_v2.12.0_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
