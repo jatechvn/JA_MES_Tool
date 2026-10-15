@@ -10,12 +10,16 @@ def main():
     dist_dir = os.path.join(root, 'dist')
     os.makedirs(dist_dir, exist_ok=True)
     
-    # 1. Clean config and logs from Release and Dist
+    # 1. Clean config and logs from Dist (preserve config.json in Release for local testing)
+    for f in ['config.json', 'config.ini', 'update_config.json']:
+        p = os.path.join(dist_dir, f)
+        if os.path.exists(p):
+            os.remove(p)
+    for f in ['config.ini']:
+        p = os.path.join(rel_dir, f)
+        if os.path.exists(p):
+            os.remove(p)
     for d in [rel_dir, dist_dir]:
-        for f in ['config.json', 'config.ini', 'update_config.json']:
-            p = os.path.join(d, f)
-            if os.path.exists(p):
-                os.remove(p)
         logs_p = os.path.join(d, 'logs')
         if os.path.exists(logs_p):
             shutil.rmtree(logs_p, ignore_errors=True)
@@ -105,12 +109,16 @@ def main():
                     zf.write(full_p, os.path.join(folder_prefix, arc_name))
         print(f"[stage_release] ZIP package created: {zip_path} ({os.path.getsize(zip_path)} bytes)")
 
-        # 7. Compute SHA256 and write dist/SHA256SUMS.txt
+        # 7. Compute SHA256 and write dist/SHA256SUMS.txt + update sha256 in dist/version.json
         sha256 = hashlib.sha256()
         with open(zip_path, 'rb') as f:
             while chunk := f.read(65536):
                 sha256.update(chunk)
         zip_hash = sha256.hexdigest()
+
+        meta["sha256"] = zip_hash
+        with open(version_json_path, 'w', encoding='utf-8') as vf:
+            json.dump(meta, vf, indent=4, ensure_ascii=False)
 
         sha_path = os.path.join(dist_dir, 'SHA256SUMS.txt')
         with open(sha_path, 'w', encoding='utf-8') as sf:

@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.12.0
+# 🤖 JA MES Tool v2.13.0
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.12.0-blue.svg" alt="Version 2.12.0">
+  <img src="https://img.shields.io/badge/version-2.13.0-blue.svg" alt="Version 2.13.0">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -261,6 +261,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.13.0]** — Upgraded all 4 existing data views with extended CloudMES fields and 1-click cross-tab navigation: added `All / FAIL Only` sidebar queue filter & `GOOD/FAIL` badges; `SnMasterInfo` status flow & `KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`) header badges; `Test Start/End`, `Duration`, `Test No`, `Motherboard SN`, `MAC Group`, `Collecting Data`, `Components`, `GIT/ASN`, `Equipment Params`, `Fail Step/Cycle/Major Item`, and 1-click `Log / Zip Path` copy bar in Tab 1; `Landmark Codes` in Tab 2; `Parsed CSN`, `Scan Type`, `Unlink Time`, `Assembled Code`, expandable `Component Params / MAC` (`queryComponentParam`), and 1-click `Trace Component` jump in Tab 3; 1-click `Inspect Product SN` jump and extended fields in Tab 4; pre-seeded Work Order `TestRecord` results to eliminate redundant HTTP requests; and preserved local `Release\config.json` in `build.bat`.
 - **[2.12.0]** — Added an inline **SN ↔ Work Order (WO)** input mode swap icon on the Sidebar Queue header row (alongside Refresh All and Clear All), batch WO lookup (`addWorkOrders`) that fetches all WO pages and populates unique unit SNs directly into the SN queue for full parallel querying, and secondary/alternate SN resolution on the records header.
 - **[2.11.3]** — Standardized CSV operation banners (emerald green for success, rose red for errors) across templates, imports, and exports with full trilingual localization, placeholder paths, and automated clearing upon cancelation.
 - **[2.11.2]** — Added 1-click serial number clipboard copy button on sidebar queue items with localized tooltips, priority-aware `QueryQueue` scheduling executing newest queries first without altering storage order, auto-selection of newest SN on startup, and enhanced re-submission behavior to bring existing SNs to the top.

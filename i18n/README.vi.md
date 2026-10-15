@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.12.0 - Tiếng Việt
+# 🤖 JA MES Tool v2.13.0 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.12.0-blue.svg" alt="Phiên bản 2.12.0">
+  <img src="https://img.shields.io/badge/phien_ban-2.13.0-blue.svg" alt="Phiên bản 2.13.0">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -229,6 +229,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.13.0]** — **Nâng cấp toàn diện dữ liệu CloudMES cho 4 Tab hiện có, lọc nhanh `FAIL Only`, tra cứu thông số MAC linh kiện & nhảy liên tab 1-Click**: Bổ sung bộ lọc nhanh `All / FAIL Only` và badge `GOOD / FAIL` trên Sidebar Queue; hiển thị luồng trạm `Current ➔ Next` và chỉ số năng suất `KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`) trên thanh tiêu đề bản ghi; bổ sung `Test Start/End`, `Duration`, `#testNo`, `Motherboard SN`, `MAC Group`, `Collecting Data`, `Components`, `GIT/ASN`, `Equipment Params`, chi tiết bước lỗi và thanh sao chép đường dẫn `Log / Zip File` ở Tab 1; `Landmark Codes` ở Tab 2; `Parsed CSN`, `Scan Type`, `Unlink Time`, bảng mở rộng `Component Params / MAC` (`queryComponentParam`) và nút 1-click `Trace Component` ở Tab 3; nút 1-click `Inspect Product SN` và các trường mở rộng ở Tab 4; tối ưu nạp sẵn (`pre-seed`) `TestRecord` khi tra cứu WO và giữ nguyên `Release\config.json` trong `build.bat`.
 - **[2.12.0]** — **Hoán đổi nhanh chế độ nhập `SN ↔ WO` trên Sidebar, nạp hàng loạt SN từ Work Order & hiển thị mã SN phụ**: Thêm nút icon chuyển đổi chế độ nhập SN ↔ WO ngay trên dòng `Refresh all` (loại bỏ nút và hộp thoại WO rời rạc cũ), tự động tải phân trang Work Order để đẩy hàng loạt mã SN duy nhất xuống danh sách hàng đợi bên dưới và hiển thị mã SN phụ trên thanh tiêu đề bản ghi.
 - **[2.11.3]** — **Chuẩn hóa thông báo CSV màu xanh khi thành công, đa ngữ hóa & tự dọn khi hủy**: Hiển thị khung màu xanh ngọc bích (`accentEmerald`) kèm icon tích xanh khi tải template/nhập/xuất CSV thành công, hiển thị khung màu đỏ (`accentRose`) khi có lỗi, đa ngữ hóa toàn diện EN/VN/CN kèm đường dẫn tệp và tự động xóa thông báo khi hủy bỏ hộp thoại.
 - **[2.11.2]** — **Nút sao chép nhanh SN, ưu tiên truy vấn SN mới & tự chọn khi khởi động**: Thêm nút icon sao chép nhanh trực tiếp trên từng item hàng đợi SN tại sidebar kèm tooltip đa ngôn ngữ, nâng cấp hàng đợi `QueryQueue` ưu tiên thực thi các SN mới nhất trước khi làm mới hoặc tải hàng loạt, tự động đưa SN đã có lên đầu và chọn ngay khi nhập lại, và tự động chọn SN mới nhất khi khởi động ứng dụng.
