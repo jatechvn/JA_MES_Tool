@@ -5,6 +5,25 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0] - 2026-10-15
+
+### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)
+- **🧭 Nâng cấp Sidebar Hàng đợi SN & Thanh Tiêu đề Tổng quan (`SnMasterInfo` + `KPI Yield`)**:
+  - Bổ sung bộ lọc nhanh **`All / FAIL Only`** ngay trên danh sách hàng đợi SN, kết hợp badge trạng thái tổng thể **`GOOD` / `FAIL`** từ `SnMasterInfo` trên từng thẻ SN.
+  - Mở rộng thanh tiêu đề bản ghi (`_buildRecordsHeader`) hiển thị luồng công đoạn **`Current ➔ Next`**, `WO`, `PN (vRev)`, `Line`, `Last Scan` và dải chỉ số năng suất **`KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`)**.
+- **📊 Làm giàu Dữ liệu CloudMES & Tương tác Liên Tab trên cả 4 Tab Hiện có**:
+  - **Tab 1 (`Test Record`)**: bổ sung `#testNo`, `⏱ Duration` (`timeDifferenceValue`), `Test Start / End`, `Motherboard SN` (`mbSn`), `MAC Group` (`macGroup`), `Collecting Data`, `Components`, `GIT / ASN Data`, `Equipment Params`, chi tiết bước lỗi (`Fail Step`, `Fail Cycle`, `Major Item`) và thanh sao chép nhanh đường dẫn `Log / Zip File` (`testLogPath` / `zipFileName`).
+  - **Tab 2 (`Barcode History`)**: bổ sung hiển thị nổi bật mã khắc laser / đánh dấu **`Landmark Codes`** (`landMarkCodes`).
+  - **Tab 3 (`Component List`)**: bổ sung `Parsed CSN`, `Scan Type`, `Unlink Time`, `Assembled Code`, tích hợp API `POST /api/cloudmes-report-mes/snProcess/queryComponentParam` để mở rộng xem trực tiếp **`Component Params / MAC`** (`macParam`, `macType`, `macValue`), cùng nút 1-click **`Trace Component`** nhảy thẳng sang Tab 4.
+  - **Tab 4 (`Component Trace`)**: bổ sung nút 1-click **`Inspect Product SN`** đẩy nhanh `productSn` về hàng đợi SN ở Tab 1, đồng thời hiển thị thêm `Parsed CSN`, `MAC Address`, `Scan Type`, `Material Ver`, `Customer PN`.
+- **⚡ Tối ưu Hiệu năng Tra cứu Work Order & Giữ nguyên `config.json` khi Build Local**:
+  - Tận dụng trực tiếp dữ liệu `TestRecord` từ kết quả phân trang `fetchWorkOrderPage` trong `addWorkOrders` để nạp sẵn (`pre-seed`) vào bộ nhớ đệm của từng SN, loại bỏ hoàn toàn các request `pageTestRecordLists` trùng lặp.
+  - Cập nhật `build.bat` và `scripts/stage_release.py` để không xoá `config.json` trong thư mục `build\windows\x64\runner\Release` sau khi build, trong khi vẫn loại trừ tệp cấu hình cá nhân khỏi thư mục đóng gói `dist\`.
+  - Mở rộng đầy đủ các cột mới cho cả 4 chế độ xuất CSV và bổ sung bộ kiểm thử `test/four_tabs_upgrade_test.dart` (**130/130 tests pass**).
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.13.0+31` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.12.0] - 2026-10-14
 
 ### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)

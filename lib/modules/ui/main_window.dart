@@ -48,6 +48,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
   OverlayEntry? _sortOverlayEntry;
   String? _lastSortViewKey;
+  bool _queueFailOnlyFilter = false;
+  final Set<int> _expandedCompParamIds = {};
 
   @override
   void initState() {
@@ -1173,348 +1175,495 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
       );
     }
 
-    return SelectionArea(
-      child: ListView.separated(
-        physics: const BouncingScrollPhysics(),
-        itemCount: logic.snList.length,
-        separatorBuilder: (ctx, idx) => const SizedBox(height: 5),
-        itemBuilder: (context, index) {
-          final sn = logic.snList[logic.snList.length - 1 - index];
-          final isSelected = sn == logic.selectedSn;
-          final isLoading = logic.loadingStatus[sn] == true;
-          final dataStatus = logic.snDataStatus(sn);
-          final hasError = dataStatus == SnDataStatus.error;
-          final hasWarning = dataStatus == SnDataStatus.warning;
+    final failSnCount = logic.snList.where(logic.snHasFail).length;
+    final effectiveFailOnly = _queueFailOnlyFilter && failSnCount > 0;
+    final displaySns = effectiveFailOnly
+        ? logic.snList.where(logic.snHasFail).toList()
+        : logic.snList;
 
-          // Record count for active tab
-          int recordCount = 0;
-          switch (logic.viewMode) {
-            case ViewMode.testRecord:
-              recordCount = logic.results[sn]?.length ?? 0;
-              break;
-            case ViewMode.barcodeHistory:
-              recordCount = logic.processResults[sn]?.length ?? 0;
-              break;
-            case ViewMode.wipComponents:
-              recordCount = logic.wipResults[sn]?.length ?? 0;
-              break;
-            case ViewMode.componentTrace:
-              recordCount = logic.traceResults[sn]?.length ?? 0;
-              break;
-            default:
-              recordCount = logic.results[sn]?.length ?? 0;
-              break;
-          }
-          if (recordCount == 0 && logic.results.containsKey(sn)) {
-            recordCount = logic.results[sn]?.length ?? 0;
-          }
-
-          // Next Station info from MES master
-          final masterInfo = logic.snMasterInfo[sn];
-          final nextStation = masterInfo == null
-              ? ''
-              : (masterInfo.nextProcessName.isNotEmpty
-                    ? masterInfo.nextProcessName
-                    : masterInfo.nextProcessCode);
-
-          // Alternate / Resolved SN
-          final alternateSn = logic.alternateSnFor(sn);
-
-          final hasBottomRow =
-              isLoading ||
-              hasError ||
-              hasWarning ||
-              (alternateSn != null && alternateSn.isNotEmpty) ||
-              nextStation.isNotEmpty;
-
-          final Color cardBg = isSelected
-              ? (theme.isDark
-                    ? Color.alphaBlend(
-                        colors.accentColor.withValues(alpha: 0.16),
-                        const Color(0xFF1E293B).withValues(
-                          alpha: (theme.cardOpacity * 1.5).clamp(0.20, 0.85),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (failSnCount > 0 || _queueFailOnlyFilter) ...[
+          Container(
+            height: 26,
+            padding: const EdgeInsets.all(2),
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(
+              color: colors.subCardBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.subCardBorder),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    key: const ValueKey('queue_filter_all'),
+                    onTap: () => setState(() => _queueFailOnlyFilter = false),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: !effectiveFailOnly
+                            ? colors.accentCyan.withValues(alpha: 0.16)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: !effectiveFailOnly
+                              ? colors.accentCyan.withValues(alpha: 0.4)
+                              : Colors.transparent,
                         ),
-                      )
-                    : Color.alphaBlend(
-                        colors.accentColor.withValues(alpha: 0.08),
-                        Colors.white.withValues(
-                          alpha: (theme.cardOpacity * 2.0).clamp(0.35, 0.85),
+                      ),
+                      child: Text(
+                        '${Translations.get('queue_filter_all', logic.lang)} (${logic.snList.length})',
+                        style: TextStyle(
+                          color: !effectiveFailOnly
+                              ? colors.accentCyan
+                              : colors.textSecondary,
+                          fontSize: 10.5,
+                          fontWeight: !effectiveFailOnly
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                         ),
-                      ))
-              : colors.subCardBg;
-
-          final Color cardBorder = isSelected
-              ? (theme.isDark
-                    ? colors.accentColor.withValues(alpha: 0.55)
-                    : colors.accentColor.withValues(alpha: 0.45))
-              : colors.subCardBorder;
-
-          final List<BoxShadow>? cardShadow = isSelected
-              ? [
-                  BoxShadow(
-                    color: colors.primaryGlow.withValues(
-                      alpha: theme.isDark ? 0.20 : 0.12,
+                      ),
                     ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
                   ),
-                ]
-              : null;
-
-          return InkWell(
-            onTap: () => logic.selectSn(sn),
-            borderRadius: BorderRadius.circular(10),
-            child: AnimatedContainer(
-              duration: Motion.fast,
-              curve: Motion.curveOut,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6.5,
-              ),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: cardBorder,
-                  width: isSelected ? 1.1 : 1.0,
                 ),
-                boxShadow: cardShadow,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Row 1: Status Icon + SN + Count Badge + Actions
-                  Row(
-                    children: [
-                      Icon(
-                        hasError
-                            ? Icons.error_rounded
-                            : hasWarning
-                            ? Icons.warning_amber_rounded
-                            : (isLoading
-                                  ? Icons.sync_rounded
-                                  : (isSelected
-                                        ? Icons.tag_rounded
-                                        : Icons.tag_rounded)),
-                        size: 14,
-                        color: hasError
-                            ? colors.accentRose
-                            : hasWarning
-                            ? colors.accentAmber
-                            : (isSelected
-                                  ? colors.accentCyan
-                                  : colors.textMuted),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: BounceMarqueeText(
-                          text: sn,
-                          style: TextStyle(
-                            color: hasError
-                                ? colors.accentRose
-                                : hasWarning
-                                ? colors.accentAmber
-                                : (isSelected
-                                      ? colors.textPrimary
-                                      : colors.textSecondary),
-                            fontWeight: isSelected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            fontFamily: 'JetBrains Mono',
-                            fontSize: 12.5,
-                          ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: InkWell(
+                    key: const ValueKey('queue_filter_fail'),
+                    onTap: () => setState(
+                      () => _queueFailOnlyFilter = !effectiveFailOnly,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: effectiveFailOnly
+                            ? colors.accentRose.withValues(alpha: 0.18)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: effectiveFailOnly
+                              ? colors.accentRose.withValues(alpha: 0.45)
+                              : Colors.transparent,
                         ),
                       ),
-                      if (recordCount > 0 || logic.results.containsKey(sn)) ...[
-                        AnimatedSwitcher(
-                          duration: Motion.fast,
-                          transitionBuilder: (child, animation) =>
-                              ScaleTransition(scale: animation, child: child),
-                          child: PillBadge(
-                            key: ValueKey('${sn}_$recordCount'),
-                            label: '$recordCount',
-                            color: recordCount > 0
-                                ? colors.accentEmerald
-                                : colors.textMuted,
-                            bg: recordCount > 0
-                                ? colors.accentEmerald.withValues(alpha: 0.15)
-                                : colors.subCardBg,
-                            border: recordCount > 0
-                                ? colors.accentEmerald.withValues(alpha: 0.4)
-                                : colors.subCardBorder,
-                            fontSize: 9.5,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      IconButton(
-                        key: ValueKey('copy_sn_$sn'),
-                        tooltip: Translations.get('copy_sn', logic.lang),
-                        onPressed: () =>
-                            Clipboard.setData(ClipboardData(text: sn)),
-                        padding: const EdgeInsets.all(2),
-                        constraints: const BoxConstraints.tightFor(
-                          width: 18,
-                          height: 18,
-                        ),
-                        icon: Icon(
-                          Icons.copy_rounded,
-                          color: colors.textMuted,
-                          size: 14,
+                      child: Text(
+                        '${Translations.get('queue_filter_fail', logic.lang)} ($failSnCount)',
+                        style: TextStyle(
+                          color: effectiveFailOnly
+                              ? colors.accentRose
+                              : colors.textSecondary,
+                          fontSize: 10.5,
+                          fontWeight: effectiveFailOnly
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      if (!isLoading) ...[
-                        InkWell(
-                          onTap: () => logic.refreshSn(sn),
-                          borderRadius: BorderRadius.circular(4),
-                          child: Padding(
-                            padding: const EdgeInsets.all(2),
-                            child: Icon(
-                              Icons.refresh_rounded,
-                              color: colors.textMuted,
-                              size: 14,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      InkWell(
-                        onTap: () => logic.removeSn(sn),
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.all(2),
-                          child: Icon(
-                            Icons.close_rounded,
-                            color: colors.textMuted,
-                            size: 14,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        Expanded(
+          child: SelectionArea(
+            child: ListView.separated(
+              physics: const BouncingScrollPhysics(),
+              itemCount: displaySns.length,
+              separatorBuilder: (ctx, idx) => const SizedBox(height: 5),
+              itemBuilder: (context, index) {
+                final sn = displaySns[displaySns.length - 1 - index];
+                final isSelected = sn == logic.selectedSn;
+                final isLoading = logic.loadingStatus[sn] == true;
+                final dataStatus = logic.snDataStatus(sn);
+                final hasError = dataStatus == SnDataStatus.error;
+                final hasWarning = dataStatus == SnDataStatus.warning;
 
-                  // Row 2: Alternate SN + Next Station / Status
-                  if (hasBottomRow) ...[
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        if (isLoading) ...[
-                          SizedBox(
-                            width: 10,
-                            height: 10,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.8,
-                              color: colors.accentCyan,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            Translations.get('status_fetching', logic.lang),
-                            style: TextStyle(
-                              color: colors.accentCyan,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ] else if (hasError) ...[
-                          Flexible(
-                            child: Text(
-                              logic.errors[sn] ?? 'Error',
-                              style: TextStyle(
-                                color: colors.accentRose,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
+                // Record count for active tab
+                int recordCount = 0;
+                switch (logic.viewMode) {
+                  case ViewMode.testRecord:
+                    recordCount = logic.results[sn]?.length ?? 0;
+                    break;
+                  case ViewMode.barcodeHistory:
+                    recordCount = logic.processResults[sn]?.length ?? 0;
+                    break;
+                  case ViewMode.wipComponents:
+                    recordCount = logic.wipResults[sn]?.length ?? 0;
+                    break;
+                  case ViewMode.componentTrace:
+                    recordCount = logic.traceResults[sn]?.length ?? 0;
+                    break;
+                  default:
+                    recordCount = logic.results[sn]?.length ?? 0;
+                    break;
+                }
+                if (recordCount == 0 && logic.results.containsKey(sn)) {
+                  recordCount = logic.results[sn]?.length ?? 0;
+                }
+
+                // Next Station info from MES master
+                final masterInfo = logic.snMasterInfo[sn];
+                final nextStation = masterInfo == null
+                    ? ''
+                    : (masterInfo.nextProcessName.isNotEmpty
+                          ? masterInfo.nextProcessName
+                          : masterInfo.nextProcessCode);
+                final productStatus = masterInfo?.productStatus.trim() ?? '';
+
+                // Alternate / Resolved SN
+                final alternateSn = logic.alternateSnFor(sn);
+
+                final hasBottomRow =
+                    isLoading ||
+                    hasError ||
+                    hasWarning ||
+                    productStatus.isNotEmpty ||
+                    (alternateSn != null && alternateSn.isNotEmpty) ||
+                    nextStation.isNotEmpty;
+
+                final Color cardBg = isSelected
+                    ? (theme.isDark
+                          ? Color.alphaBlend(
+                              colors.accentColor.withValues(alpha: 0.16),
+                              const Color(0xFF1E293B).withValues(
+                                alpha: (theme.cardOpacity * 1.5).clamp(
+                                  0.20,
+                                  0.85,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            )
+                          : Color.alphaBlend(
+                              colors.accentColor.withValues(alpha: 0.08),
+                              Colors.white.withValues(
+                                alpha: (theme.cardOpacity * 2.0).clamp(
+                                  0.35,
+                                  0.85,
+                                ),
+                              ),
+                            ))
+                    : colors.subCardBg;
+
+                final Color cardBorder = isSelected
+                    ? (theme.isDark
+                          ? colors.accentColor.withValues(alpha: 0.55)
+                          : colors.accentColor.withValues(alpha: 0.45))
+                    : colors.subCardBorder;
+
+                final List<BoxShadow>? cardShadow = isSelected
+                    ? [
+                        BoxShadow(
+                          color: colors.primaryGlow.withValues(
+                            alpha: theme.isDark ? 0.20 : 0.12,
                           ),
-                        ] else ...[
-                          if (alternateSn != null &&
-                              alternateSn.isNotEmpty) ...[
-                            Flexible(
-                              flex: 3,
-                              fit: FlexFit.loose,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 1.5,
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null;
+
+                return InkWell(
+                  onTap: () => logic.selectSn(sn),
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: Motion.fast,
+                    curve: Motion.curveOut,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: cardBorder,
+                        width: isSelected ? 1.1 : 1.0,
+                      ),
+                      boxShadow: cardShadow,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Row 1: Status Icon + SN + Count Badge + Actions
+                        Row(
+                          children: [
+                            Icon(
+                              hasError
+                                  ? Icons.error_rounded
+                                  : hasWarning
+                                  ? Icons.warning_amber_rounded
+                                  : (isLoading
+                                        ? Icons.sync_rounded
+                                        : (isSelected
+                                              ? Icons.tag_rounded
+                                              : Icons.tag_rounded)),
+                              size: 14,
+                              color: hasError
+                                  ? colors.accentRose
+                                  : hasWarning
+                                  ? colors.accentAmber
+                                  : (isSelected
+                                        ? colors.accentCyan
+                                        : colors.textMuted),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: BounceMarqueeText(
+                                text: sn,
+                                style: TextStyle(
+                                  color: hasError
+                                      ? colors.accentRose
+                                      : hasWarning
+                                      ? colors.accentAmber
+                                      : (isSelected
+                                            ? colors.textPrimary
+                                            : colors.textSecondary),
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  fontFamily: 'JetBrains Mono',
+                                  fontSize: 12.5,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: colors.accentCyan.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(5),
-                                  border: Border.all(
-                                    color: colors.accentCyan.withValues(
-                                      alpha: 0.25,
+                              ),
+                            ),
+                            if (recordCount > 0 ||
+                                logic.results.containsKey(sn)) ...[
+                              AnimatedSwitcher(
+                                duration: Motion.fast,
+                                transitionBuilder: (child, animation) =>
+                                    ScaleTransition(
+                                      scale: animation,
+                                      child: child,
                                     ),
-                                    width: 0.8,
+                                child: PillBadge(
+                                  key: ValueKey('${sn}_$recordCount'),
+                                  label: '$recordCount',
+                                  color: recordCount > 0
+                                      ? colors.accentEmerald
+                                      : colors.textMuted,
+                                  bg: recordCount > 0
+                                      ? colors.accentEmerald.withValues(
+                                          alpha: 0.15,
+                                        )
+                                      : colors.subCardBg,
+                                  border: recordCount > 0
+                                      ? colors.accentEmerald.withValues(
+                                          alpha: 0.4,
+                                        )
+                                      : colors.subCardBorder,
+                                  fontSize: 9.5,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1.5,
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.sync_alt_rounded,
-                                      size: 10,
-                                      color: colors.accentCyan,
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            IconButton(
+                              key: ValueKey('copy_sn_$sn'),
+                              tooltip: Translations.get('copy_sn', logic.lang),
+                              onPressed: () =>
+                                  Clipboard.setData(ClipboardData(text: sn)),
+                              padding: const EdgeInsets.all(2),
+                              constraints: const BoxConstraints.tightFor(
+                                width: 18,
+                                height: 18,
+                              ),
+                              icon: Icon(
+                                Icons.copy_rounded,
+                                color: colors.textMuted,
+                                size: 14,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            if (!isLoading) ...[
+                              InkWell(
+                                onTap: () => logic.refreshSn(sn),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(2),
+                                  child: Icon(
+                                    Icons.refresh_rounded,
+                                    color: colors.textMuted,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            InkWell(
+                              onTap: () => logic.removeSn(sn),
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  color: colors.textMuted,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Row 2: Alternate SN + Next Station / Status
+                        if (hasBottomRow) ...[
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              if (isLoading) ...[
+                                SizedBox(
+                                  width: 10,
+                                  height: 10,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.8,
+                                    color: colors.accentCyan,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  Translations.get(
+                                    'status_fetching',
+                                    logic.lang,
+                                  ),
+                                  style: TextStyle(
+                                    color: colors.accentCyan,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ] else if (hasError) ...[
+                                Flexible(
+                                  child: Text(
+                                    logic.errors[sn] ?? 'Error',
+                                    style: TextStyle(
+                                      color: colors.accentRose,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    const SizedBox(width: 3),
-                                    Flexible(
-                                      child: BounceMarqueeText(
-                                        text: alternateSn,
-                                        style: TextStyle(
-                                          color: colors.accentCyan,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          fontFamily: 'JetBrains Mono',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ] else ...[
+                                if (productStatus.isNotEmpty) ...[
+                                  Builder(
+                                    builder: (context) {
+                                      final upper = productStatus.toUpperCase();
+                                      final isGood =
+                                          upper == 'GOOD' ||
+                                          upper == 'PASS' ||
+                                          upper == 'OK';
+                                      final badgeColor = isGood
+                                          ? colors.accentEmerald
+                                          : colors.accentRose;
+                                      return PillBadge(
+                                        label: productStatus,
+                                        color: badgeColor,
+                                        bg: badgeColor.withValues(alpha: 0.12),
+                                        border: badgeColor.withValues(
+                                          alpha: 0.35,
+                                        ),
+                                        fontSize: 9.0,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4.5,
+                                          vertical: 1.5,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                ],
+                                if (alternateSn != null &&
+                                    alternateSn.isNotEmpty) ...[
+                                  Flexible(
+                                    flex: 3,
+                                    fit: FlexFit.loose,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colors.accentCyan.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(
+                                          color: colors.accentCyan.withValues(
+                                            alpha: 0.25,
+                                          ),
+                                          width: 0.8,
                                         ),
                                       ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.sync_alt_rounded,
+                                            size: 10,
+                                            color: colors.accentCyan,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Flexible(
+                                            child: BounceMarqueeText(
+                                              text: alternateSn,
+                                              style: TextStyle(
+                                                color: colors.accentCyan,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                fontFamily: 'JetBrains Mono',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                          ],
-                          if (nextStation.isNotEmpty) ...[
-                            Flexible(
-                              flex: 2,
-                              fit: FlexFit.loose,
-                              child: PillBadge(
-                                label: 'Next: $nextStation',
-                                color: colors.accentPurple,
-                                bg: colors.accentPurple.withValues(alpha: 0.12),
-                                border: colors.accentPurple.withValues(
-                                  alpha: 0.35,
-                                ),
-                                fontSize: 9.5,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 1.5,
-                                ),
-                                icon: Icons.arrow_forward_rounded,
-                                useMarquee: true,
-                              ),
-                            ),
-                          ],
+                                  ),
+                                  const SizedBox(width: 5),
+                                ],
+                                if (nextStation.isNotEmpty) ...[
+                                  Flexible(
+                                    flex: 2,
+                                    fit: FlexFit.loose,
+                                    child: PillBadge(
+                                      label: 'Next: $nextStation',
+                                      color: colors.accentPurple,
+                                      bg: colors.accentPurple.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentPurple.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 9.5,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1.5,
+                                      ),
+                                      icon: Icons.arrow_forward_rounded,
+                                      useMarquee: true,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          ),
                         ],
                       ],
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1858,6 +2007,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
         .where((r) => r.testResult.toUpperCase() == 'PASS')
         .length;
     final failCount = records.length - passCount;
+    final kpiRecord = records
+        .where((r) => (r.qty ?? 0) > 0 || r.fpy != null || r.lpy != null)
+        .firstOrNull;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1870,6 +2022,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
           lang: logic.lang,
           resolvedSn: logic.resolvedSnFor(sn),
           snMasterInfo: logic.snMasterInfo[sn],
+          kpiRecord: kpiRecord,
           listState: _testRecordListState,
           passCount: passCount,
           failCount: failCount,
@@ -1944,64 +2097,97 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: colors.accentCyan.withValues(
-                                      alpha: 0.12,
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: colors.accentCyan.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentCyan.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.dns_rounded,
+                                          color: colors.accentCyan,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        '${Translations.get('station', logic.lang)}: ${record.stationId}',
+                                        style: TextStyle(
+                                          color: colors.textPrimary,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (record.processCode.isNotEmpty)
+                                    PillBadge(
+                                      label: record.processCode,
+                                      color: colors.accentCyan,
+                                      bg: colors.accentCyan.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentCyan.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colors.accentCyan.withValues(
-                                        alpha: 0.3,
+                                  if (record.testNo.isNotEmpty)
+                                    PillBadge(
+                                      label: '#${record.testNo}',
+                                      color: colors.accentPurple,
+                                      bg: colors.accentPurple.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentPurple.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
+                                    ),
+                                  if (record.timeDifferenceValue.isNotEmpty)
+                                    PillBadge(
+                                      label: '⏱ ${record.timeDifferenceValue}',
+                                      color: colors.accentAmber,
+                                      bg: colors.accentAmber.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentAmber.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
+                                    ),
+                                  if (record.testDate.isNotEmpty)
+                                    Text(
+                                      record.testDate,
+                                      style: TextStyle(
+                                        color: colors.textMuted,
+                                        fontSize: 11.5,
+                                        fontFamily: 'JetBrains Mono',
                                       ),
                                     ),
-                                  ),
-                                  child: Icon(
-                                    Icons.dns_rounded,
-                                    color: colors.accentCyan,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  '${Translations.get('station', logic.lang)}: ${record.stationId}',
-                                  style: TextStyle(
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                if (record.processCode.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  PillBadge(
-                                    label: record.processCode,
-                                    color: colors.accentCyan,
-                                    bg: colors.accentCyan.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    border: colors.accentCyan.withValues(
-                                      alpha: 0.35,
-                                    ),
-                                    fontSize: 10,
-                                  ),
                                 ],
-                                if (record.testDate.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    record.testDate,
-                                    style: TextStyle(
-                                      color: colors.textMuted,
-                                      fontSize: 11.5,
-                                      fontFamily: 'JetBrains Mono',
-                                    ),
-                                  ),
-                                ],
-                              ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             PillBadge(
                               label: record.testResult.toUpperCase(),
                               color: isPass
@@ -2058,6 +2244,43 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     record.testTime,
                                     colors,
                                   ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'test_start_time',
+                                      logic.lang,
+                                    ),
+                                    record.testStartDate,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'test_end_time',
+                                      logic.lang,
+                                    ),
+                                    record.testEndDate,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'test_duration',
+                                      logic.lang,
+                                    ),
+                                    record.timeDifferenceValue,
+                                    colors,
+                                    highlight:
+                                        record.timeDifferenceValue.isNotEmpty,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('mb_sn', logic.lang),
+                                    record.mbSn,
+                                    colors,
+                                    highlight: record.mbSn.isNotEmpty,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('mac_group', logic.lang),
+                                    record.macGroup,
+                                    colors,
+                                  ),
                                 ],
                               ),
                             ),
@@ -2105,13 +2328,116 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     record.testDate,
                                     colors,
                                   ),
+                                  _buildInfoRow(
+                                    Translations.get('test_no', logic.lang),
+                                    record.testNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'collecting_data',
+                                      logic.lang,
+                                    ),
+                                    record.collectingData,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'components_info',
+                                      logic.lang,
+                                    ),
+                                    record.components,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'git_asn_data',
+                                      logic.lang,
+                                    ),
+                                    record.gitAsnData,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('eqp_params', logic.lang),
+                                    record.eqpParams,
+                                    colors,
+                                  ),
                                 ],
                               ),
                             ),
                           ],
                         ),
 
-                        if (!isPass) ...[
+                        if (record.zipFileName.isNotEmpty ||
+                            record.testLogPath.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.accentCyan.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: colors.accentCyan.withValues(
+                                  alpha: 0.22,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.folder_zip_outlined,
+                                  size: 15,
+                                  color: colors.accentCyan,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: SelectableText(
+                                    record.testLogPath.isNotEmpty
+                                        ? (record.zipFileName.isNotEmpty &&
+                                                  !record.testLogPath.contains(
+                                                    record.zipFileName,
+                                                  )
+                                              ? '${record.testLogPath} (${record.zipFileName})'
+                                              : record.testLogPath)
+                                        : record.zipFileName,
+                                    style: TextStyle(
+                                      color: colors.textSecondary,
+                                      fontSize: 11.5,
+                                      fontFamily: 'JetBrains Mono',
+                                    ),
+                                    maxLines: 1,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () => Clipboard.setData(
+                                    ClipboardData(
+                                      text: record.testLogPath.isNotEmpty
+                                          ? record.testLogPath
+                                          : record.zipFileName,
+                                    ),
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
+                                    child: Icon(
+                                      Icons.folder_copy_outlined,
+                                      size: 14,
+                                      color: colors.accentCyan,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        if (!isPass ||
+                            record.testItemFailStep.isNotEmpty ||
+                            record.testMajorItem.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(10),
@@ -2131,6 +2457,24 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                   _buildInfoRow(
                                     Translations.get('error_code', logic.lang),
                                     record.errCode,
+                                    colors,
+                                  ),
+                                if (record.testItemFailStep.isNotEmpty)
+                                  _buildInfoRow(
+                                    Translations.get('fail_step', logic.lang),
+                                    record.testItemFailStep,
+                                    colors,
+                                  ),
+                                if (record.testItemFailCycle.isNotEmpty)
+                                  _buildInfoRow(
+                                    Translations.get('fail_cycle', logic.lang),
+                                    record.testItemFailCycle,
+                                    colors,
+                                  ),
+                                if (record.testMajorItem.isNotEmpty)
+                                  _buildInfoRow(
+                                    Translations.get('major_item', logic.lang),
+                                    record.testMajorItem,
                                     colors,
                                   ),
                                 if (record.failureReason.isNotEmpty)
@@ -2530,6 +2874,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     colors,
                                     highlight: true,
                                   ),
+                                  if (record.landMarkCodes.isNotEmpty)
+                                    _buildInfoRow(
+                                      Translations.get(
+                                        'landmark_codes',
+                                        logic.lang,
+                                      ),
+                                      record.landMarkCodes,
+                                      colors,
+                                      highlight: true,
+                                    ),
                                 ],
                               ),
                             ),
@@ -2834,6 +3188,12 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                 final record = displayRecords[index];
                 final itemKey =
                     '${record.materialNo}_${record.scannedCsn}_${record.createdDt}_$index';
+                final compId = record.wipProductComponentId;
+                final isParamExpanded =
+                    compId > 0 && _expandedCompParamIds.contains(compId);
+                final traceTargetCsn = record.parsedCsn.isNotEmpty
+                    ? record.parsedCsn
+                    : record.scannedCsn;
 
                 return _StaggeredItem(
                   key: ValueKey(itemKey),
@@ -2852,59 +3212,205 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: colors.accentAmber.withValues(
-                                      alpha: 0.12,
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: colors.accentAmber.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentAmber
+                                                .withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.memory_rounded,
+                                          color: colors.accentAmber,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        record.materialNo,
+                                        style: TextStyle(
+                                          color: colors.textPrimary,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (record.scanType.isNotEmpty)
+                                    PillBadge(
+                                      label: record.scanType,
+                                      color: colors.accentCyan,
+                                      bg: colors.accentCyan.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      border: colors.accentCyan.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                      fontSize: 10,
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colors.accentAmber.withValues(
-                                        alpha: 0.3,
+                                  if (record.createdDt.isNotEmpty)
+                                    Text(
+                                      record.createdDt,
+                                      style: TextStyle(
+                                        color: colors.textMuted,
+                                        fontSize: 11.5,
+                                        fontFamily: 'JetBrains Mono',
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (traceTargetCsn.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(6),
+                                      onTap: () => logic.traceComponentFromWip(
+                                        traceTargetCsn,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colors.accentCyan.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentCyan.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.travel_explore_rounded,
+                                              size: 12,
+                                              color: colors.accentCyan,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              Translations.get(
+                                                'trace_component',
+                                                logic.lang,
+                                              ),
+                                              style: TextStyle(
+                                                color: colors.accentCyan,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                  child: Icon(
-                                    Icons.memory_rounded,
-                                    color: colors.accentAmber,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  record.materialNo,
-                                  style: TextStyle(
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                if (record.createdDt.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    record.createdDt,
-                                    style: TextStyle(
-                                      color: colors.textMuted,
-                                      fontSize: 11.5,
-                                      fontFamily: 'JetBrains Mono',
+                                if (compId > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(6),
+                                      onTap: () {
+                                        setState(() {
+                                          if (isParamExpanded) {
+                                            _expandedCompParamIds.remove(
+                                              compId,
+                                            );
+                                          } else {
+                                            _expandedCompParamIds.add(compId);
+                                            logic.fetchComponentParams(compId);
+                                          }
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isParamExpanded
+                                              ? colors.accentPurple.withValues(
+                                                  alpha: 0.2,
+                                                )
+                                              : colors.accentPurple.withValues(
+                                                  alpha: 0.1,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentPurple
+                                                .withValues(
+                                                  alpha: isParamExpanded
+                                                      ? 0.5
+                                                      : 0.3,
+                                                ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.settings_ethernet_rounded,
+                                              size: 12,
+                                              color: colors.accentPurple,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              Translations.get(
+                                                'component_params',
+                                                logic.lang,
+                                              ),
+                                              style: TextStyle(
+                                                color: colors.accentPurple,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ],
+                                if (record.materialCategory.isNotEmpty)
+                                  PillBadge(
+                                    label: record.materialCategory,
+                                    color: colors.accentAmber,
+                                    bg: colors.accentAmber.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    border: colors.accentAmber.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                  ),
                               ],
                             ),
-                            if (record.materialCategory.isNotEmpty)
-                              PillBadge(
-                                label: record.materialCategory,
-                                color: colors.accentAmber,
-                                bg: colors.accentAmber.withValues(alpha: 0.12),
-                                border: colors.accentAmber.withValues(
-                                  alpha: 0.35,
-                                ),
-                              ),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -2928,6 +3434,17 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     colors,
                                     highlight: true,
                                   ),
+                                  if (record.parsedCsn.isNotEmpty &&
+                                      record.parsedCsn != record.scannedCsn)
+                                    _buildInfoRow(
+                                      Translations.get(
+                                        'parsed_csn',
+                                        logic.lang,
+                                      ),
+                                      record.parsedCsn,
+                                      colors,
+                                      highlight: true,
+                                    ),
                                   _buildInfoRow(
                                     Translations.get('location', logic.lang),
                                     record.location,
@@ -2979,11 +3496,29 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     colors,
                                   ),
                                   _buildInfoRow(
+                                    Translations.get('scan_type', logic.lang),
+                                    record.scanType,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
                                     Translations.get(
                                       'process_time',
                                       logic.lang,
                                     ),
                                     record.createdDt,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get('unlink_time', logic.lang),
+                                    record.unlinkTime,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'check_assembled_code',
+                                      logic.lang,
+                                    ),
+                                    record.checkAssembledCode,
                                     colors,
                                   ),
                                   _buildInfoRow(
@@ -2996,6 +3531,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             ),
                           ],
                         ),
+                        if (isParamExpanded) ...[
+                          const SizedBox(height: 8),
+                          _buildComponentParamsSubPanel(compId, logic, colors),
+                        ],
                       ],
                     ),
                   ),
@@ -3004,6 +3543,127 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildComponentParamsSubPanel(
+    int compId,
+    AppLogic logic,
+    AppColors colors,
+  ) {
+    final loading = logic.componentParamsLoading[compId] == true;
+    final err = logic.componentParamsErrors[compId];
+    final params = logic.componentParams[compId] ?? const [];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.accentPurple.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.accentPurple.withValues(alpha: 0.25)),
+      ),
+      child: loading
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.accentPurple,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${Translations.get('status_fetching', logic.lang)}...',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 11.5),
+                ),
+              ],
+            )
+          : err != null
+          ? Text(
+              err,
+              style: TextStyle(color: colors.accentRose, fontSize: 11.5),
+            )
+          : params.isEmpty
+          ? Text(
+              Translations.get('no_component_params', logic.lang),
+              style: TextStyle(color: colors.textSecondary, fontSize: 11.5),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Translations.get('component_params', logic.lang),
+                  style: TextStyle(
+                    color: colors.accentPurple,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...params.map(
+                  (p) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      children: [
+                        if (p.macParam.isNotEmpty)
+                          Text(
+                            '${Translations.get('mac_param', logic.lang)}: ${p.macParam}',
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                        if (p.macType.isNotEmpty)
+                          Text(
+                            '${Translations.get('mac_type', logic.lang)}: ${p.macType}',
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              fontSize: 11.5,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                        if (p.macValue.isNotEmpty)
+                          Text(
+                            '${Translations.get('mac_value', logic.lang)}: ${p.macValue}',
+                            style: TextStyle(
+                              color: colors.accentCyan,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                        if (p.parsedCsn.isNotEmpty)
+                          Text(
+                            '${Translations.get('parsed_csn', logic.lang)}: ${p.parsedCsn}',
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              fontSize: 11.5,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                        if (p.createdDt.isNotEmpty)
+                          Text(
+                            p.createdDt,
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 11,
+                              fontFamily: 'JetBrains Mono',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -3193,60 +3853,129 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: colors.accentCyan.withValues(
-                                      alpha: 0.12,
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: colors.accentCyan.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentCyan.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.devices_rounded,
+                                          color: colors.accentCyan,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        record.productSn,
+                                        style: TextStyle(
+                                          color: colors.textPrimary,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14.5,
+                                          fontFamily: 'JetBrains Mono',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (record.createdDt.isNotEmpty)
+                                    Text(
+                                      record.createdDt,
+                                      style: TextStyle(
+                                        color: colors.textMuted,
+                                        fontSize: 11.5,
+                                        fontFamily: 'JetBrains Mono',
+                                      ),
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colors.accentCyan.withValues(
-                                        alpha: 0.3,
+                                ],
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (record.productSn.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(6),
+                                      onTap: () =>
+                                          logic.inspectProductSnFromTrace(
+                                            record.productSn,
+                                          ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colors.accentCyan.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: colors.accentCyan.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.open_in_new_rounded,
+                                              size: 12,
+                                              color: colors.accentCyan,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              Translations.get(
+                                                'inspect_product_sn',
+                                                logic.lang,
+                                              ),
+                                              style: TextStyle(
+                                                color: colors.accentCyan,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                  child: Icon(
-                                    Icons.devices_rounded,
+                                if (record.checkAssembled.isNotEmpty)
+                                  PillBadge(
+                                    label: record.checkAssembled,
                                     color: colors.accentCyan,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  record.productSn,
-                                  style: TextStyle(
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14.5,
-                                    fontFamily: 'JetBrains Mono',
-                                  ),
-                                ),
-                                if (record.createdDt.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    record.createdDt,
-                                    style: TextStyle(
-                                      color: colors.textMuted,
-                                      fontSize: 11.5,
-                                      fontFamily: 'JetBrains Mono',
+                                    bg: colors.accentCyan.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    border: colors.accentCyan.withValues(
+                                      alpha: 0.35,
                                     ),
                                   ),
-                                ],
                               ],
                             ),
-                            if (record.checkAssembled.isNotEmpty)
-                              PillBadge(
-                                label: record.checkAssembled,
-                                color: colors.accentCyan,
-                                bg: colors.accentCyan.withValues(alpha: 0.12),
-                                border: colors.accentCyan.withValues(
-                                  alpha: 0.35,
-                                ),
-                              ),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -3267,6 +3996,23 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                       logic.lang,
                                     ),
                                     record.scannedCsn,
+                                    colors,
+                                    highlight: true,
+                                  ),
+                                  if (record.parsedCsn.isNotEmpty &&
+                                      record.parsedCsn != record.scannedCsn)
+                                    _buildInfoRow(
+                                      Translations.get(
+                                        'parsed_csn',
+                                        logic.lang,
+                                      ),
+                                      record.parsedCsn,
+                                      colors,
+                                      highlight: true,
+                                    ),
+                                  _buildInfoRow(
+                                    Translations.get('mac_address', logic.lang),
+                                    record.mac,
                                     colors,
                                     highlight: true,
                                   ),
@@ -3336,6 +4082,27 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                     colors,
                                   ),
                                   _buildInfoRow(
+                                    Translations.get('scan_type', logic.lang),
+                                    record.scanType,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'material_version',
+                                      logic.lang,
+                                    ),
+                                    record.materialVersion,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
+                                    Translations.get(
+                                      'customer_material_no',
+                                      logic.lang,
+                                    ),
+                                    record.customerMaterialNo,
+                                    colors,
+                                  ),
+                                  _buildInfoRow(
                                     Translations.get('quantity', logic.lang),
                                     record.installedQty,
                                     colors,
@@ -3375,6 +4142,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     required List<_SortOption> sortOptions,
     String? resolvedSn,
     SnMasterInfo? snMasterInfo,
+    TestRecord? kpiRecord,
     int? passCount,
     int? failCount,
   }) {
@@ -3389,142 +4157,299 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     final isPassSelected = listState.filter.toUpperCase() == 'PASS';
     final isFailSelected = listState.filter.toUpperCase() == 'FAIL';
 
+    final extraBadges = <Widget>[];
+    if (snMasterInfo != null) {
+      if (snMasterInfo.productStatus.isNotEmpty) {
+        final isGood = snMasterInfo.productStatus.toUpperCase() == 'GOOD';
+        final stColor = isGood ? colors.accentEmerald : colors.accentRose;
+        extraBadges.add(
+          PillBadge(
+            label: snMasterInfo.productStatus.toUpperCase(),
+            color: stColor,
+            bg: stColor.withValues(alpha: 0.12),
+            border: stColor.withValues(alpha: 0.35),
+            fontSize: 10,
+            showDot: true,
+          ),
+        );
+      }
+      final curStage = snMasterInfo.currentProcessCode.isNotEmpty
+          ? snMasterInfo.currentProcessCode
+          : snMasterInfo.currentProcessName;
+      final nxtStage = snMasterInfo.nextProcessCode;
+      if (curStage.isNotEmpty || nxtStage.isNotEmpty) {
+        final stageFlow = curStage.isNotEmpty && nxtStage.isNotEmpty
+            ? '$curStage ➔ $nxtStage'
+            : (curStage.isNotEmpty ? curStage : nxtStage);
+        extraBadges.add(
+          PillBadge(
+            label: '${Translations.get('current_station', lang)}: $stageFlow',
+            color: colors.accentCyan,
+            bg: colors.accentCyan.withValues(alpha: 0.1),
+            border: colors.accentCyan.withValues(alpha: 0.3),
+            fontSize: 10,
+          ),
+        );
+      }
+      if (snMasterInfo.woNo.isNotEmpty) {
+        extraBadges.add(
+          PillBadge(
+            label: 'WO: ${snMasterInfo.woNo}',
+            color: colors.accentPurple,
+            bg: colors.accentPurple.withValues(alpha: 0.1),
+            border: colors.accentPurple.withValues(alpha: 0.3),
+            fontSize: 10,
+          ),
+        );
+      }
+      if (snMasterInfo.productNo.isNotEmpty) {
+        final rev = snMasterInfo.productVersion.isNotEmpty
+            ? ' (v${snMasterInfo.productVersion})'
+            : '';
+        extraBadges.add(
+          PillBadge(
+            label: 'PN: ${snMasterInfo.productNo}$rev',
+            color: colors.accentAmber,
+            bg: colors.accentAmber.withValues(alpha: 0.1),
+            border: colors.accentAmber.withValues(alpha: 0.3),
+            fontSize: 10,
+          ),
+        );
+      }
+      final lineStr = snMasterInfo.lineName.isNotEmpty
+          ? snMasterInfo.lineName
+          : snMasterInfo.lineCode;
+      if (lineStr.isNotEmpty) {
+        extraBadges.add(
+          PillBadge(
+            label: '${Translations.get('line', lang)}: $lineStr',
+            color: colors.textSecondary,
+            bg: colors.subCardBg,
+            border: colors.subCardBorder,
+            fontSize: 10,
+          ),
+        );
+      }
+      if (snMasterInfo.lastEditedDt.isNotEmpty) {
+        final editor = snMasterInfo.lastEditor.isNotEmpty
+            ? ' (${snMasterInfo.lastEditor})'
+            : '';
+        extraBadges.add(
+          PillBadge(
+            label:
+                '${Translations.get('last_scan_time', lang)}: ${snMasterInfo.lastEditedDt}$editor',
+            color: colors.textSecondary,
+            bg: colors.subCardBg,
+            border: colors.subCardBorder,
+            fontSize: 10,
+          ),
+        );
+      }
+    }
+
+    if (kpiRecord != null &&
+        (kpiRecord.fpy != null ||
+            kpiRecord.lpy != null ||
+            (kpiRecord.qty ?? 0) > 0)) {
+      final kpiParts = <String>[];
+      if (kpiRecord.qty != null) {
+        kpiParts.add('${Translations.get('kpi_total', lang)}:${kpiRecord.qty}');
+      }
+      if (kpiRecord.passQty != null) {
+        kpiParts.add(
+          '${Translations.get('kpi_pass', lang)}:${kpiRecord.passQty}',
+        );
+      }
+      if (kpiRecord.failQty != null) {
+        kpiParts.add(
+          '${Translations.get('kpi_fail', lang)}:${kpiRecord.failQty}',
+        );
+      }
+      if (kpiRecord.repassQty != null) {
+        kpiParts.add(
+          '${Translations.get('kpi_repass', lang)}:${kpiRecord.repassQty}',
+        );
+      }
+      if (kpiRecord.fpy != null) {
+        kpiParts.add(
+          '${Translations.get('kpi_fpy', lang)}:${kpiRecord.fpy!.toStringAsFixed(1)}%',
+        );
+      }
+      if (kpiRecord.lpy != null) {
+        kpiParts.add(
+          '${Translations.get('kpi_lpy', lang)}:${kpiRecord.lpy!.toStringAsFixed(1)}%',
+        );
+      }
+      if (kpiParts.isNotEmpty) {
+        extraBadges.add(
+          PillBadge(
+            label: kpiParts.join(' · '),
+            color: colors.accentEmerald,
+            bg: colors.accentEmerald.withValues(alpha: 0.1),
+            border: colors.accentEmerald.withValues(alpha: 0.3),
+            fontSize: 10,
+          ),
+        );
+      }
+    }
+
     return BentoCard(
       colors: colors,
       blurSigma: logic.bgBlur,
       bgOpacity: logic.bgOpacity,
       borderRadius: 14,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (routeLabel.isNotEmpty) ...[
-            PillBadge(
-              label: 'Route: $routeLabel',
-              color: colors.accentEmerald,
-              bg: colors.accentEmerald.withValues(alpha: 0.12),
-              border: colors.accentEmerald.withValues(alpha: 0.35),
-              fontSize: 10.5,
-              icon: Icons.alt_route_rounded,
-            ),
-            const SizedBox(width: 10),
-          ],
-          if (passCount != null && failCount != null && count > 0) ...[
-            Container(
-              height: 28,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: colors.subCardBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colors.subCardBorder),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildQuickFilterTab(
-                    label: 'All ($count)',
-                    selected: isAllSelected,
-                    colors: colors,
-                    activeColor: colors.accentCyan,
-                    onTap: () => setState(() {
-                      listState.filterCtrl.clear();
-                      listState.filter = '';
-                    }),
-                  ),
-                  _buildQuickFilterTab(
-                    label: 'PASS ($passCount)',
-                    selected: isPassSelected,
-                    colors: colors,
-                    activeColor: colors.accentEmerald,
-                    onTap: () => setState(() {
-                      if (isPassSelected) {
-                        listState.filterCtrl.clear();
-                        listState.filter = '';
-                      } else {
-                        listState.filterCtrl.text = 'PASS';
-                        listState.filter = 'PASS';
-                      }
-                    }),
-                  ),
-                  if (failCount > 0)
-                    _buildQuickFilterTab(
-                      label: 'FAIL ($failCount)',
-                      selected: isFailSelected,
-                      colors: colors,
-                      activeColor: colors.accentRose,
-                      onTap: () => setState(() {
-                        if (isFailSelected) {
-                          listState.filterCtrl.clear();
-                          listState.filter = '';
-                        } else {
-                          listState.filterCtrl.text = 'FAIL';
-                          listState.filter = 'FAIL';
-                        }
-                      }),
-                    ),
-                ],
-              ),
-            ),
-          ],
-          const Spacer(),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 200,
-            height: 32,
-            child: TextField(
-              controller: listState.filterCtrl,
-              style: TextStyle(fontSize: 12, color: colors.textPrimary),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: Translations.get('search_placeholder', lang),
-                hintStyle: TextStyle(fontSize: 11.5, color: colors.textMuted),
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  size: 15,
-                  color: colors.textSecondary,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (routeLabel.isNotEmpty) ...[
+                PillBadge(
+                  label: 'Route: $routeLabel',
+                  color: colors.accentEmerald,
+                  bg: colors.accentEmerald.withValues(alpha: 0.12),
+                  border: colors.accentEmerald.withValues(alpha: 0.35),
+                  fontSize: 10.5,
+                  icon: Icons.alt_route_rounded,
                 ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 28,
-                  minHeight: 28,
-                ),
-                suffixIcon: listState.filter.isEmpty
-                    ? null
-                    : InkWell(
+                const SizedBox(width: 10),
+              ],
+              if (passCount != null && failCount != null && count > 0) ...[
+                Container(
+                  height: 28,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: colors.subCardBg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: colors.subCardBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildQuickFilterTab(
+                        label: 'All ($count)',
+                        selected: isAllSelected,
+                        colors: colors,
+                        activeColor: colors.accentCyan,
                         onTap: () => setState(() {
                           listState.filterCtrl.clear();
                           listState.filter = '';
                         }),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 13,
-                          color: colors.textSecondary,
-                        ),
                       ),
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: 24,
-                  minHeight: 24,
+                      _buildQuickFilterTab(
+                        label: 'PASS ($passCount)',
+                        selected: isPassSelected,
+                        colors: colors,
+                        activeColor: colors.accentEmerald,
+                        onTap: () => setState(() {
+                          if (isPassSelected) {
+                            listState.filterCtrl.clear();
+                            listState.filter = '';
+                          } else {
+                            listState.filterCtrl.text = 'PASS';
+                            listState.filter = 'PASS';
+                          }
+                        }),
+                      ),
+                      if (failCount > 0)
+                        _buildQuickFilterTab(
+                          label: 'FAIL ($failCount)',
+                          selected: isFailSelected,
+                          colors: colors,
+                          activeColor: colors.accentRose,
+                          onTap: () => setState(() {
+                            if (isFailSelected) {
+                              listState.filterCtrl.clear();
+                              listState.filter = '';
+                            } else {
+                              listState.filterCtrl.text = 'FAIL';
+                              listState.filter = 'FAIL';
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
                 ),
-                filled: true,
-                fillColor: colors.subCardBg,
-                contentPadding: const EdgeInsets.symmetric(vertical: 6),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: colors.subCardBorder),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: colors.accentColor, width: 1.5),
-                  borderRadius: BorderRadius.circular(8),
+              ],
+              const Spacer(),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 200,
+                height: 32,
+                child: TextField(
+                  controller: listState.filterCtrl,
+                  style: TextStyle(fontSize: 12, color: colors.textPrimary),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: Translations.get('search_placeholder', lang),
+                    hintStyle: TextStyle(
+                      fontSize: 11.5,
+                      color: colors.textMuted,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      size: 15,
+                      color: colors.textSecondary,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                    suffixIcon: listState.filter.isEmpty
+                        ? null
+                        : InkWell(
+                            onTap: () => setState(() {
+                              listState.filterCtrl.clear();
+                              listState.filter = '';
+                            }),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 13,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                    suffixIconConstraints: const BoxConstraints(
+                      minWidth: 24,
+                      minHeight: 24,
+                    ),
+                    filled: true,
+                    fillColor: colors.subCardBg,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: colors.subCardBorder),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: colors.accentColor,
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onChanged: (v) => setState(() => listState.filter = v),
                 ),
               ),
-              onChanged: (v) => setState(() => listState.filter = v),
-            ),
+              const SizedBox(width: 8),
+              _buildSortButton(theme, colors, lang, listState, sortOptions),
+            ],
           ),
-          const SizedBox(width: 8),
-          _buildSortButton(theme, colors, lang, listState, sortOptions),
+          if (extraBadges.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: extraBadges,
+            ),
+          ],
         ],
       ),
     );
@@ -3960,11 +4885,26 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               r.productSeries,
               r.woNo,
               r.testDate,
+              r.testStartDate,
+              r.testEndDate,
+              r.timeDifferenceValue,
               r.testResult,
+              r.testNo,
               r.empNo,
               r.errCode,
               r.failureReason,
               r.failDesc,
+              r.testItemFailStep,
+              r.testItemFailCycle,
+              r.testMajorItem,
+              r.mbSn,
+              r.macGroup,
+              r.collectingData,
+              r.components,
+              r.gitAsnData,
+              r.eqpParams,
+              r.testLogPath,
+              r.zipFileName,
             ].any((f) => f.toLowerCase().contains(q)),
           )
           .toList();
@@ -4025,6 +4965,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               r.remark,
               r.operateDt,
               r.result,
+              r.landMarkCodes,
             ].any((f) => f.toLowerCase().contains(q)),
           )
           .toList();
@@ -4089,6 +5030,10 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               r.mfgPn,
               r.dateCode,
               r.scannedCsn,
+              r.parsedCsn,
+              r.scanType,
+              r.unlinkTime,
+              r.checkAssembledCode,
               r.pkgId,
               r.stationCode,
               r.processCode,
@@ -4142,6 +5087,9 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
               r.materialNo,
               r.materialName,
               r.materialCategory,
+              r.materialVersion,
+              r.customerMaterialNo,
+              r.scanType,
               r.mfgName,
               r.mfgPn,
               r.productNo,

@@ -9,7 +9,6 @@ if %ERRORLEVEL% neq 0 (
 )
 
 set "REL=build\windows\x64\runner\Release"
-if exist "%REL%\config.json" del /f /q "%REL%\config.json"
 if exist "%REL%\config.ini" del /f /q "%REL%\config.ini"
 if exist "%REL%\logs" rmdir /s /q "%REL%\logs"
 

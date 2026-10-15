@@ -31,6 +31,27 @@ class TestRecord {
   final String woNo;
   final String empNo;
   final String testDate;
+  final String testStartDate;
+  final String testEndDate;
+  final String timeDifferenceValue;
+  final String testNo;
+  final String testLogPath;
+  final String zipFileName;
+  final String mbSn;
+  final String macGroup;
+  final String components;
+  final String collectingData;
+  final String gitAsnData;
+  final String eqpParams;
+  final String testItemFailStep;
+  final String testItemFailCycle;
+  final String testMajorItem;
+  final int? qty;
+  final int? passQty;
+  final int? failQty;
+  final int? repassQty;
+  final double? fpy;
+  final double? lpy;
 
   TestRecord({
     required this.sn,
@@ -50,6 +71,27 @@ class TestRecord {
     required this.woNo,
     required this.empNo,
     required this.testDate,
+    this.testStartDate = '',
+    this.testEndDate = '',
+    this.timeDifferenceValue = '',
+    this.testNo = '',
+    this.testLogPath = '',
+    this.zipFileName = '',
+    this.mbSn = '',
+    this.macGroup = '',
+    this.components = '',
+    this.collectingData = '',
+    this.gitAsnData = '',
+    this.eqpParams = '',
+    this.testItemFailStep = '',
+    this.testItemFailCycle = '',
+    this.testMajorItem = '',
+    this.qty,
+    this.passQty,
+    this.failQty,
+    this.repassQty,
+    this.fpy,
+    this.lpy,
   });
 
   factory TestRecord.fromJson(Map<String, dynamic> json) {
@@ -74,6 +116,27 @@ class TestRecord {
           json['lastEditedDt']?.toString() ??
           json['createdDt']?.toString() ??
           '',
+      testStartDate: json['testStartDate']?.toString() ?? '',
+      testEndDate: json['testEndDate']?.toString() ?? '',
+      timeDifferenceValue: json['timeDifferenceValue']?.toString() ?? '',
+      testNo: json['testNo']?.toString() ?? '',
+      testLogPath: json['testLogPath']?.toString() ?? '',
+      zipFileName: json['zipFileName']?.toString() ?? '',
+      mbSn: json['mbSn']?.toString() ?? '',
+      macGroup: json['macGroup']?.toString() ?? '',
+      components: json['components']?.toString() ?? '',
+      collectingData: json['collectingData']?.toString() ?? '',
+      gitAsnData: json['gitAsnData']?.toString() ?? '',
+      eqpParams: json['eqpParams']?.toString() ?? '',
+      testItemFailStep: json['testItemFailStep']?.toString() ?? '',
+      testItemFailCycle: json['testItemFailCycle']?.toString() ?? '',
+      testMajorItem: json['testMajorItem']?.toString() ?? '',
+      qty: int.tryParse(json['qty']?.toString() ?? ''),
+      passQty: int.tryParse(json['passQty']?.toString() ?? ''),
+      failQty: int.tryParse(json['failQty']?.toString() ?? ''),
+      repassQty: int.tryParse(json['repassQty']?.toString() ?? ''),
+      fpy: double.tryParse(json['fpy']?.toString() ?? ''),
+      lpy: double.tryParse(json['lpy']?.toString() ?? ''),
     );
   }
 }
@@ -84,6 +147,7 @@ class SnProcessRecord {
   final String internalSn;
   final String customerSn;
   final String lineStation;
+  final String landMarkCodes;
   final String currentProcessCode;
   final String currentProcessName;
   final String operateDt;
@@ -108,6 +172,7 @@ class SnProcessRecord {
     required this.internalSn,
     required this.customerSn,
     required this.lineStation,
+    this.landMarkCodes = '',
     required this.currentProcessCode,
     required this.currentProcessName,
     required this.operateDt,
@@ -136,6 +201,7 @@ class SnProcessRecord {
       internalSn: json['internalSn']?.toString() ?? '',
       customerSn: json['customerSn']?.toString() ?? '',
       lineStation: json['lineStation']?.toString() ?? '',
+      landMarkCodes: json['landMarkCodes']?.toString() ?? '',
       currentProcessCode: json['currentProcessCode']?.toString() ?? '',
       currentProcessName: json['currentProcessName']?.toString() ?? '',
       operateDt: json['operateDt']?.toString() ?? '',
@@ -162,35 +228,49 @@ class SnProcessRecord {
 
 class WipComponentRecord {
   final int wipProductComponentId;
+  final String productSn;
+  final String internalSn;
+  final String customerSn;
   final String materialNo;
   final String materialCategory;
   final String mfgName;
   final String mfgPn;
   final String dateCode;
   final String scannedCsn;
+  final String parsedCsn;
   final String pkgId;
   final String stationCode;
   final String processCode;
+  final String scanType;
   final String installedQty;
   final String creator;
   final String createdDt;
+  final String unlinkTime;
+  final String checkAssembledCode;
   final String location;
   final String materialNameValue;
 
   WipComponentRecord({
     required this.wipProductComponentId,
+    this.productSn = '',
+    this.internalSn = '',
+    this.customerSn = '',
     required this.materialNo,
     required this.materialCategory,
     required this.mfgName,
     required this.mfgPn,
     required this.dateCode,
     required this.scannedCsn,
+    this.parsedCsn = '',
     required this.pkgId,
     required this.stationCode,
     required this.processCode,
+    this.scanType = '',
     required this.installedQty,
     required this.creator,
     required this.createdDt,
+    this.unlinkTime = '',
+    this.checkAssembledCode = '',
     this.location = '',
     this.materialNameValue = '',
   });
@@ -202,21 +282,59 @@ class WipComponentRecord {
   factory WipComponentRecord.fromJson(Map<String, dynamic> json) {
     return WipComponentRecord(
       wipProductComponentId:
-          int.tryParse(json['wipProductComponentId']?.toString() ?? '') ?? 0,
+          int.tryParse(json['wipProductComponentId']?.toString() ?? '') ??
+          int.tryParse(json['id']?.toString() ?? '') ??
+          0,
+      productSn: json['productSn']?.toString() ?? json['sn']?.toString() ?? '',
+      internalSn: json['internalSn']?.toString() ?? '',
+      customerSn: json['customerSn']?.toString() ?? '',
       materialNo: json['materialNo']?.toString() ?? '',
       materialCategory: json['materialCategory']?.toString() ?? '',
       mfgName: json['mfgName']?.toString() ?? '',
       mfgPn: json['mfgPn']?.toString() ?? '',
       dateCode: json['dateCode']?.toString() ?? '',
       scannedCsn: json['scannedCsn']?.toString() ?? '',
+      parsedCsn: json['parsedCsn']?.toString() ?? '',
       pkgId: json['pkgId']?.toString() ?? '',
       stationCode: json['stationCode']?.toString() ?? '',
       processCode: json['processCode']?.toString() ?? '',
+      scanType: json['scanType']?.toString() ?? '',
       installedQty: json['installedQty']?.toString() ?? '',
       creator: json['creator']?.toString() ?? '',
       createdDt: json['createdDt']?.toString() ?? '',
+      unlinkTime: json['unlinkTime']?.toString() ?? '',
+      checkAssembledCode:
+          json['checkAssembledCode']?.toString() ??
+          json['checkAssembled']?.toString() ??
+          '',
       location: json['location']?.toString() ?? '',
       materialNameValue: json['materialName']?.toString() ?? '',
+    );
+  }
+}
+
+class ComponentParamRecord {
+  final String macParam;
+  final String macType;
+  final String macValue;
+  final String parsedCsn;
+  final String createdDt;
+
+  const ComponentParamRecord({
+    required this.macParam,
+    required this.macType,
+    required this.macValue,
+    required this.parsedCsn,
+    required this.createdDt,
+  });
+
+  factory ComponentParamRecord.fromJson(Map<String, dynamic> json) {
+    return ComponentParamRecord(
+      macParam: json['macParam']?.toString() ?? '',
+      macType: json['macType']?.toString() ?? '',
+      macValue: json['macValue']?.toString() ?? '',
+      parsedCsn: json['parsedCsn']?.toString() ?? '',
+      createdDt: json['createdDt']?.toString() ?? '',
     );
   }
 }
@@ -242,6 +360,9 @@ class SnMasterInfo {
   final String routeCode;
   final String routeName;
   final String productStatus;
+  final String createdDt;
+  final String lastEditedDt;
+  final String lastEditor;
 
   SnMasterInfo({
     required this.sn,
@@ -259,6 +380,9 @@ class SnMasterInfo {
     required this.routeCode,
     required this.routeName,
     required this.productStatus,
+    this.createdDt = '',
+    this.lastEditedDt = '',
+    this.lastEditor = '',
   });
 
   factory SnMasterInfo.fromJson(Map<String, dynamic> json) {
@@ -278,6 +402,9 @@ class SnMasterInfo {
       routeCode: json['routeCode']?.toString() ?? '',
       routeName: json['routeName']?.toString() ?? '',
       productStatus: json['productStatus']?.toString() ?? '',
+      createdDt: json['createdDt']?.toString() ?? '',
+      lastEditedDt: json['lastEditedDt']?.toString() ?? '',
+      lastEditor: json['lastEditor']?.toString() ?? '',
     );
   }
 }
@@ -712,6 +839,96 @@ class ApiClient {
     }
 
     return recordsList.map((e) => WipComponentRecord.fromJson(e)).toList();
+  }
+
+  static Future<List<ComponentParamRecord>> fetchComponentParams({
+    required int wipProductComponentId,
+    required String token,
+    required String lang,
+    required String operationId,
+    required String uuid,
+    required String cookie,
+  }) async {
+    final cleanToken = _cleanHeader(
+      token,
+    ).replaceFirst(RegExp(r'^[bB][eE][aA][rR][eE][rR]\s+'), '').trim();
+    final cleanLang = _cleanHeader(lang);
+    final cleanOpId = _cleanHeader(operationId);
+    final cleanUuid = _cleanHeader(uuid);
+    final cleanCookie = _cleanHeader(cookie);
+
+    if (cleanToken.isEmpty) {
+      throw Exception('Token cannot be empty');
+    }
+
+    final uri = Uri.parse(
+      'https://vncmes.ces.myfiinet.com/api/cloudmes-report-mes/snProcess/queryComponentParam',
+    );
+    final headers = <String, String>{
+      'Host': 'vncmes.ces.myfiinet.com',
+      'Content-Type': 'application/json;charset=UTF-8',
+      'Authorization': 'bearer $cleanToken',
+      'factoryid': '13',
+      'lang': cleanLang,
+      'operation-id': cleanOpId,
+      'org-code': defaultOrgCode,
+      'timezone': '+07:00',
+      'uuid': cleanUuid,
+      'Cookie': cleanCookie.isNotEmpty
+          ? cleanCookie
+          : 'CloudMES-token=$cleanToken',
+    };
+
+    _logger.info(
+      'Fetching component params for wipProductComponentId: $wipProductComponentId',
+    );
+
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: json.encode({
+        'pageIndex': 1,
+        'pageSize': 100,
+        'wipProductComponentId': wipProductComponentId,
+        'orgCode': defaultOrgCode,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
+      }
+      throw Exception('Server error: ${response.statusCode}');
+    }
+
+    final data = json.decode(response.body);
+
+    final code = data['code'];
+    final msg = data['msg'] ?? data['message'] ?? '';
+
+    if (code != 200 &&
+        code != 0 &&
+        code.toString() != '200' &&
+        code.toString() != '0') {
+      if (code.toString() == '401' || msg.toString().contains('401')) {
+        throw Exception(
+          'Token expired or unauthorized (401). Please update the token.',
+        );
+      }
+      throw Exception('API Error [$code]: $msg');
+    }
+
+    final responseData = data['data'];
+    List<dynamic> recordsList = [];
+    if (responseData is Map) {
+      recordsList = responseData['list'] ?? [];
+    } else if (responseData is List) {
+      recordsList = responseData;
+    }
+
+    return recordsList.map((e) => ComponentParamRecord.fromJson(e)).toList();
   }
 
   static Future<SnMasterInfo> resolveSnMaster({

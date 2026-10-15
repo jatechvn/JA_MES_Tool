@@ -1,21 +1,24 @@
-TAG=v2.12.0
-TITLE=JA MES Tool v2.12.0 — Hoán đổi nhanh chế độ nhập SN ↔ WO, nạp hàng loạt SN từ Work Order và hiển thị mã SN phụ
+TAG=v2.13.0
+TITLE=JA MES Tool v2.13.0 — Nâng cấp toàn diện dữ liệu CloudMES cho 4 Tab hiện có, lọc nhanh FAIL Only, tra cứu thông số MAC linh kiện và nhảy liên tab 1-Click
 BODY=
 ## Điểm nhấn chính
-- **Hoán đổi Trực tiếp Chế độ Nhập `SN ↔ WO` trên Sidebar**:
-  - Bổ sung nút icon chuyển đổi nhỏ gọn trên dòng `Refresh all` (cùng hàng với **Refresh All** và **Clear All**), loại bỏ nút bấm và hộp thoại rời rạc cũ để đồng bộ hoàn toàn với ngôn ngữ thiết kế Bento Glassmorphism.
-  - Khi bật chế độ nhập **Work Order (WO)**, ô tìm kiếm tự động chuyển sang viền và biểu tượng điểm nhấn `accentCyan` (`Nhập WO...` / `Enter WO...` / `输入工单号...`).
-- **Nạp Hàng loạt SN từ Work Order (`addWorkOrders`)**:
-  - Nhập một hoặc nhiều mã WO vào ô tìm kiếm sẽ tự động truy vấn phân trang từ CloudMES (`pageTestRecordLists`), trích xuất và khử trùng lặp toàn bộ các mã SN thuộc WO đó (ưu tiên `internalSn` -> `sn` -> `customerSn`).
-  - Toàn bộ SN thuộc WO được đẩy hàng loạt xuống danh sách bên dưới giống hệt như tra nhiều SN cùng lúc, tự động chọn SN mới nhất và kích hoạt truy vấn song song đầy đủ cả 3 chế độ xem (**Test Record**, **Barcode History**, **Component List**) cùng thông tin **Next Process / Route**.
-- **Hiển thị Mã SN Phụ (`alternateSnFor`) & Tối ưu Hàng đợi Truy vấn**:
-  - Tự động đối chiếu và hiển thị mã SN liên kết (Internal SN / Product SN / Customer SN) trên tiêu đề bảng kết quả kèm hiệu ứng cuộn marquee mượt mà và nút sao chép nhanh.
+- **Sidebar Queue & Header Tổng quan (`SnMasterInfo` + `KPI Yield`)**:
+  - Bổ sung bộ lọc nhanh **`All / FAIL Only`** ngay trên danh sách hàng đợi SN cùng badge trạng thái **`GOOD` / `FAIL`** từ `SnMasterInfo`.
+  - Hiển thị dải thông tin luồng trạm **`Current ➔ Next`**, `WO`, `PN (vRev)`, `Line`, `Last Scan` và chỉ số năng suất **`KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`)** trên thanh tiêu đề bản ghi.
+- **Nâng cấp Chi tiết 4 Tab Hiện có**:
+  - **Tab 1 (`Test Record`)**: bổ sung `#testNo`, `⏱ Duration`, `Test Start / End`, `Motherboard SN`, `MAC Group`, `Collecting Data`, `Components`, `GIT / ASN Data`, `Equipment Params`, chi tiết bước lỗi (`Fail Step`, `Fail Cycle`, `Major Item`) và thanh sao chép nhanh đường dẫn `Log / Zip File`.
+  - **Tab 2 (`Barcode History`)**: hiển thị nổi bật mã khắc laser / đánh dấu **`Landmark Codes`** (`landMarkCodes`).
+  - **Tab 3 (`Component List`)**: bổ sung `Parsed CSN`, `Scan Type`, `Unlink Time`, `Assembled Code`, bảng mở rộng **`Component Params / MAC`** (`queryComponentParam`) và nút 1-click **`Trace Component`** nhảy thẳng sang Tab 4.
+  - **Tab 4 (`Component Trace`)**: bổ sung nút 1-click **`Inspect Product SN`** đẩy nhanh SN thành phẩm về hàng đợi Tab 1, kèm hiển thị `Parsed CSN`, `MAC Address`, `Scan Type`, `Material Ver`, `Customer PN`.
+- **Tối ưu Hiệu năng WO & Quy trình Build**:
+  - Nạp sẵn (`pre-seed`) dữ liệu `TestRecord` ngay từ kết quả phân trang Work Order, loại bỏ các request `pageTestRecordLists` trùng lặp cho từng SN.
+  - Cập nhật `build.bat` và `scripts/stage_release.py` giữ nguyên `config.json` trong thư mục `Release` sau khi build (trong khi vẫn làm sạch gói phân phối `dist\`).
 
 ## Kiểm chứng & Đóng gói
 - `dart format .`: Chuẩn hóa 100% định dạng mã nguồn.
 - `flutter analyze`: Đạt 0 issues found.
-- `flutter test`: 127/127 ca kiểm thử vượt qua thành công (100% pass).
+- `flutter test`: 130/130 ca kiểm thử vượt qua thành công (100% pass).
 - `flutter build windows --release`: Biên dịch hoàn chỉnh `ja_mes_tool.exe`.
 
 ### Cài đặt
-Giải nén toàn bộ gói `JA_MES_Tool_v2.12.0_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
+Giải nén toàn bộ gói `JA_MES_Tool_v2.13.0_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.

@@ -110,6 +110,15 @@ class AppLogic extends ChangeNotifier {
   final Map<String, String> _wipErrors = {};
   Map<String, String> get wipErrors => _wipErrors;
 
+  final Map<int, List<ComponentParamRecord>> _componentParams = {};
+  Map<int, List<ComponentParamRecord>> get componentParams => _componentParams;
+
+  final Map<int, bool> _componentParamsLoading = {};
+  Map<int, bool> get componentParamsLoading => _componentParamsLoading;
+
+  final Map<int, String> _componentParamsErrors = {};
+  Map<int, String> get componentParamsErrors => _componentParamsErrors;
+
   // Component Trace: a standalone reverse lookup (scanned component CSN ->
   // product SN it's installed into). Unrelated to the SN queue above — it
   // has its own history of searched CSNs (shown in the sidebar in place of
@@ -139,6 +148,41 @@ class AppLogic extends ChangeNotifier {
   final Map<String, SnMasterInfo> _snMasterInfo = {};
   Map<String, SnMasterInfo> get snMasterInfo => _snMasterInfo;
   String? resolvedSnFor(String sn) => _resolvedSn[sn];
+
+  /// Returns true if the SN has a FAIL status in SN Master, Test Record, or
+  /// Barcode History. Used by the Sidebar Queue quick filter (All / FAIL Only).
+  bool snHasFail(String sn) {
+    final masterStatus =
+        _snMasterInfo[sn]?.productStatus.trim().toUpperCase() ?? '';
+    if (masterStatus.contains('FAIL') ||
+        masterStatus == 'NG' ||
+        masterStatus == 'ERR') {
+      return true;
+    }
+    final testRecords = _results[sn];
+    if (testRecords != null &&
+        testRecords.any((r) {
+          final res = r.testResult.trim().toUpperCase();
+          return res.isNotEmpty &&
+              res != 'PASS' &&
+              res != 'OK' &&
+              res != 'GOOD';
+        })) {
+      return true;
+    }
+    final procRecords = _processResults[sn];
+    if (procRecords != null &&
+        procRecords.any((r) {
+          final res = r.result.trim().toUpperCase();
+          return res.isNotEmpty &&
+              res != 'PASS' &&
+              res != 'OK' &&
+              res != 'GOOD';
+        })) {
+      return true;
+    }
+    return false;
+  }
 
   /// Sidebar counterpart: internal input shows customer SN; other identifiers
   /// show internal SN. Keep canonical resolution separate from display fallback.
@@ -372,6 +416,9 @@ class AppLogic extends ChangeNotifier {
   void _invalidateAll({bool includeTrace = false}) {
     _resolvedSn.clear();
     _snMasterInfo.clear();
+    _componentParams.clear();
+    _componentParamsLoading.clear();
+    _componentParamsErrors.clear();
     for (final sn in _snList) {
       _invalidate('sn:$sn');
     }
@@ -814,7 +861,8 @@ class AppLogic extends ChangeNotifier {
 
     try {
       final extractedSns = <String>[];
-      final seenUnitIds = <String>{};
+      final idToUnitSn = <String, String>{};
+      final preseededRecords = <String, List<TestRecord>>{};
 
       for (final wo in wos) {
         var pageIndex = 1;
@@ -851,12 +899,27 @@ class AppLogic extends ChangeNotifier {
                     .toList();
             if (candidates.isEmpty) continue;
             woFoundAny = true;
-            if (candidates.any(seenUnitIds.contains)) {
-              seenUnitIds.addAll(candidates);
+            String? existingUnit;
+            for (final c in candidates) {
+              final mapped = idToUnitSn[c];
+              if (mapped != null) {
+                existingUnit = mapped;
+                break;
+              }
+            }
+            if (existingUnit != null) {
+              for (final c in candidates) {
+                idToUnitSn[c] = existingUnit;
+              }
+              preseededRecords[existingUnit]?.add(r);
               continue;
             }
-            seenUnitIds.addAll(candidates);
-            extractedSns.add(candidates.first);
+            final unitSn = candidates.first;
+            for (final c in candidates) {
+              idToUnitSn[c] = unitSn;
+            }
+            extractedSns.add(unitSn);
+            preseededRecords[unitSn] = [r];
           }
 
           if (!page.hasNext || page.records.isEmpty) {
@@ -872,6 +935,13 @@ class AppLogic extends ChangeNotifier {
       }
 
       if (extractedSns.isNotEmpty) {
+        for (final entry in preseededRecords.entries) {
+          if (entry.value.isNotEmpty) {
+            _results[entry.key] = entry.value;
+            _loadingStatus[entry.key] = false;
+            _errors.remove(entry.key);
+          }
+        }
         await addSns(
           extractedSns.join('\n'),
           allowTestRecordFallback: allowTestRecordFallback,
@@ -997,7 +1067,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final buffer = StringBuffer();
       // Write Header
       buffer.writeln(
-        'SN,Internal SN,Customer SN,Product No,Process Code,Line Station Code,Station ID,Error Code,Test Time,Result,Failure Reason,Fail Desc,Host Loc,Product Series,WO,EmpNo',
+        'SN,Internal SN,Customer SN,Product No,Process Code,Line Station Code,Station ID,Error Code,Test Time,Test Start Time,Test End Time,Duration,Test No,Result,Failure Reason,Fail Desc,Fail Step,Fail Cycle,Major Item,Host Loc,Product Series,WO,EmpNo,MB SN,MAC Group,Collecting Data,Components,GIT/ASN Data,Eqp Params,Zip File,Test Log Path,Qty,Pass Qty,Fail Qty,Repass Qty,FPY,LPY',
       );
 
       for (final sn in _snList) {
@@ -1015,20 +1085,41 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
                 r.stationId,
                 r.errCode,
                 r.testDate,
+                r.testStartDate,
+                r.testEndDate,
+                r.timeDifferenceValue,
+                r.testNo,
                 r.testResult,
                 r.failureReason,
                 r.failDesc,
+                r.testItemFailStep,
+                r.testItemFailCycle,
+                r.testMajorItem,
                 r.loc,
                 r.productSeries,
                 r.woNo,
                 r.empNo,
+                r.mbSn,
+                r.macGroup,
+                r.collectingData,
+                r.components,
+                r.gitAsnData,
+                r.eqpParams,
+                r.zipFileName,
+                r.testLogPath,
+                r.qty,
+                r.passQty,
+                r.failQty,
+                r.repassQty,
+                r.fpy,
+                r.lpy,
               ].map(csvField).join(','),
             );
           }
         } else {
           final err = _errors[sn] ?? 'No records / Pending';
           buffer.writeln(
-            [sn, ...List<String>.filled(14, ''), err].map(csvField).join(','),
+            [sn, ...List<String>.filled(35, ''), err].map(csvField).join(','),
           );
         }
       }
@@ -1055,7 +1146,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final file = File(path.replaceAll('"', '').trim());
       final buffer = StringBuffer();
       buffer.writeln(
-        'Product SN,Internal SN,Customer SN,Current Process Code,Current Process Name,Line,Line Station,Equipment No,Result,Operate Date,WO,Plan No,Product No,Product Version,Operator,Remark',
+        'Product SN,Internal SN,Customer SN,Current Process Code,Current Process Name,Line,Line Station,Equipment No,Result,Operate Date,WO,Plan No,Product No,Product Version,Operator,Landmark Codes,Remark',
       );
 
       for (final sn in _snList) {
@@ -1080,6 +1171,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
                 r.productNo,
                 r.productVersion,
                 r.operatorName,
+                r.landMarkCodes,
                 r.remark,
               ].map(csvField).join(','),
             );
@@ -1109,7 +1201,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final file = File(path.replaceAll('"', '').trim());
       final buffer = StringBuffer();
       buffer.writeln(
-        'Material No,Material Name,Category,Component SN,Location,Manufacturer,Mfg PN,Date Code,Package ID,Installed Qty,Station Code,Process Code,Created Date',
+        'Product SN,Internal SN,Customer SN,Material No,Material Name,Category,Component SN,Parsed CSN,Scan Type,Location,Manufacturer,Mfg PN,Date Code,Package ID,Installed Qty,Station Code,Process Code,Created Date,Unlink Time,Check Assembled Code',
       );
 
       for (final sn in _snList) {
@@ -1118,10 +1210,15 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
           for (final r in records) {
             buffer.writeln(
               [
+                r.productSn,
+                r.internalSn,
+                r.customerSn,
                 r.materialNo,
                 r.materialName,
                 r.materialCategory,
                 r.scannedCsn,
+                r.parsedCsn,
+                r.scanType,
                 r.location,
                 r.mfgName,
                 r.mfgPn,
@@ -1131,6 +1228,8 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
                 r.stationCode,
                 r.processCode,
                 r.createdDt,
+                r.unlinkTime,
+                r.checkAssembledCode,
               ].map(csvField).join(','),
             );
           }
@@ -1318,6 +1417,75 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
     ApiClient.fetchWipComponents,
   );
 
+  /// Queries additional parameters / MAC addresses (`queryComponentParam`) for
+  /// a specific WIP component row by its `wipProductComponentId`.
+  Future<void> fetchComponentParams(
+    int wipProductComponentId, {
+    bool force = false,
+  }) async {
+    if (wipProductComponentId <= 0) return;
+    if (!force &&
+        (_componentParams.containsKey(wipProductComponentId) ||
+            _componentParamsLoading[wipProductComponentId] == true)) {
+      return;
+    }
+    final revision = _credentialsRevision;
+    bool current() => !_disposed && revision == _credentialsRevision;
+    _componentParamsLoading[wipProductComponentId] = true;
+    _componentParamsErrors.remove(wipProductComponentId);
+    notifyListeners();
+
+    await _queue.run(('comp_param', wipProductComponentId, revision), () async {
+      try {
+        final params = await ApiClient.fetchComponentParams(
+          wipProductComponentId: wipProductComponentId,
+          token: _token,
+          lang: _lang,
+          operationId: _operationId,
+          uuid: _uuid,
+          cookie: _cookie,
+        );
+        if (!current()) return;
+        _componentParams[wipProductComponentId] = params;
+      } catch (e) {
+        if (current()) {
+          _componentParamsErrors[wipProductComponentId] = e
+              .toString()
+              .replaceFirst('Exception: ', '');
+        }
+      } finally {
+        if (current()) {
+          _componentParamsLoading[wipProductComponentId] = false;
+          notifyListeners();
+        }
+      }
+    }, isCurrent: current);
+  }
+
+  /// 1-click navigation from Tab 3 (Component List) -> Tab 4 (Component Trace).
+  Future<void> traceComponentFromWip(String csn) async {
+    final target = csn.trim().toUpperCase();
+    if (target.isEmpty) return;
+    setViewMode(ViewMode.componentTrace);
+    if (_traceResults.containsKey(target) && _traceErrors[target] == null) {
+      if (!_traceHistory.contains(target)) {
+        _traceHistory.insert(0, target);
+        _saveConfig(_exportConfigMap());
+      }
+      selectTraceCsn(target);
+      return;
+    }
+    await searchComponentTrace(target);
+  }
+
+  /// 1-click navigation from Tab 4 (Component Trace) -> SN Queue (Test Record).
+  Future<void> inspectProductSnFromTrace(String productSn) async {
+    final target = productSn.trim();
+    if (target.isEmpty) return;
+    setViewMode(ViewMode.testRecord);
+    await addSns(target);
+  }
+
   /// Reverse component lookup: given a scanned/typed component CSN, finds
   /// which product SN it is currently installed into. Adds the CSN to the
   /// trace history (if new) and selects it, so the sidebar and detail view
@@ -1503,7 +1671,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
       final file = File(path.replaceAll('"', '').trim());
       final buffer = StringBuffer();
       buffer.writeln(
-        'Component SN,Product SN,Material No,Material Name,Category,Manufacturer,Mfg Part No,Product No,Line Code,Process Code,WO,Qty,Process Time,Assembled Status',
+        'Component SN,Parsed CSN,MAC,Scan Type,Product SN,Material No,Material Name,Material Version,Customer Material No,Category,Manufacturer,Mfg Part No,Product No,Line Code,Process Code,WO,Qty,Process Time,Assembled Status',
       );
 
       for (final csn in _traceHistory) {
@@ -1513,9 +1681,14 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
             buffer.writeln(
               [
                 csn,
+                r.parsedCsn,
+                r.mac,
+                r.scanType,
                 r.productSn,
                 r.materialNo,
                 r.materialName,
+                r.materialVersion,
+                r.customerMaterialNo,
                 r.materialCategory,
                 r.mfgName,
                 r.mfgPn,
@@ -1532,7 +1705,7 @@ if(\$f.ShowDialog() -eq "OK") { Write-Output \$f.FileName }
         } else {
           final err = _traceErrors[csn] ?? 'No records / Pending';
           buffer.writeln(
-            [csn, ...List<String>.filled(12, ''), err].map(csvField).join(','),
+            [csn, ...List<String>.filled(17, ''), err].map(csvField).join(','),
           );
         }
       }
