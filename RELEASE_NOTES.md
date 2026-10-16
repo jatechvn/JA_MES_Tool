@@ -1,24 +1,17 @@
-TAG=v2.13.0
-TITLE=JA MES Tool v2.13.0 — Nâng cấp toàn diện dữ liệu CloudMES cho 4 Tab hiện có, lọc nhanh FAIL Only, tra cứu thông số MAC linh kiện và nhảy liên tab 1-Click
+TAG=v2.13.1
+TITLE=JA MES Tool v2.13.1 — Sửa lỗi bôi đen & sao chép Ctrl+C mã SN / SN phụ trên danh sách hàng đợi Sidebar
 BODY=
 ## Điểm nhấn chính
-- **Sidebar Queue & Header Tổng quan (`SnMasterInfo` + `KPI Yield`)**:
-  - Bổ sung bộ lọc nhanh **`All / FAIL Only`** ngay trên danh sách hàng đợi SN cùng badge trạng thái **`GOOD` / `FAIL`** từ `SnMasterInfo`.
-  - Hiển thị dải thông tin luồng trạm **`Current ➔ Next`**, `WO`, `PN (vRev)`, `Line`, `Last Scan` và chỉ số năng suất **`KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`)** trên thanh tiêu đề bản ghi.
-- **Nâng cấp Chi tiết 4 Tab Hiện có**:
-  - **Tab 1 (`Test Record`)**: bổ sung `#testNo`, `⏱ Duration`, `Test Start / End`, `Motherboard SN`, `MAC Group`, `Collecting Data`, `Components`, `GIT / ASN Data`, `Equipment Params`, chi tiết bước lỗi (`Fail Step`, `Fail Cycle`, `Major Item`) và thanh sao chép nhanh đường dẫn `Log / Zip File`.
-  - **Tab 2 (`Barcode History`)**: hiển thị nổi bật mã khắc laser / đánh dấu **`Landmark Codes`** (`landMarkCodes`).
-  - **Tab 3 (`Component List`)**: bổ sung `Parsed CSN`, `Scan Type`, `Unlink Time`, `Assembled Code`, bảng mở rộng **`Component Params / MAC`** (`queryComponentParam`) và nút 1-click **`Trace Component`** nhảy thẳng sang Tab 4.
-  - **Tab 4 (`Component Trace`)**: bổ sung nút 1-click **`Inspect Product SN`** đẩy nhanh SN thành phẩm về hàng đợi Tab 1, kèm hiển thị `Parsed CSN`, `MAC Address`, `Scan Type`, `Material Ver`, `Customer PN`.
-- **Tối ưu Hiệu năng WO & Quy trình Build**:
-  - Nạp sẵn (`pre-seed`) dữ liệu `TestRecord` ngay từ kết quả phân trang Work Order, loại bỏ các request `pageTestRecordLists` trùng lặp cho từng SN.
-  - Cập nhật `build.bat` và `scripts/stage_release.py` giữ nguyên `config.json` trong thư mục `Release` sau khi build (trong khi vẫn làm sạch gói phân phối `dist\`).
+- **Sửa lỗi Chọn Văn bản & Sao chép `Ctrl+C` trên Sidebar Hàng đợi SN (`main_window.dart`)**:
+  - Tách biệt phạm vi chọn văn bản (`SelectionArea`) độc lập cho từng mã SN chính (`select_sn_$sn`) và mã SN phụ (`select_alternate_sn_$sn`) trên mỗi dòng trong danh sách hàng đợi SN, loại bỏ hiện tượng xung đột tọa độ ngang của `BounceMarqueeText` giữa các hàng.
+  - Đảm bảo thao tác kéo chuột bôi đen (`drag`) hoặc nhấp đúp (`double-click`) + `Ctrl+C` ở bất kỳ dòng nào (từ dòng 2 trở đi) đều sao chép chính xác mã SN / SN phụ của đúng dòng đó, đồng thời tự động chọn dòng SN khi nhấn chuột và không làm mất vùng chọn khi có thông báo dữ liệu bất đồng bộ (`notifyListeners()`).
+  - Bổ sung bộ kiểm thử `test/sn_sidebar_selection_test.dart` kiểm chứng trên cả giao diện Sáng/Tối và cả 2 chế độ kéo/nhấp đúp.
 
 ## Kiểm chứng & Đóng gói
 - `dart format .`: Chuẩn hóa 100% định dạng mã nguồn.
 - `flutter analyze`: Đạt 0 issues found.
-- `flutter test`: 130/130 ca kiểm thử vượt qua thành công (100% pass).
+- `flutter test`: 134/134 ca kiểm thử vượt qua thành công (100% pass).
 - `flutter build windows --release`: Biên dịch hoàn chỉnh `ja_mes_tool.exe`.
 
 ### Cài đặt
-Giải nén toàn bộ gói `JA_MES_Tool_v2.13.0_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
+Giải nén toàn bộ gói `JA_MES_Tool_v2.13.1_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.

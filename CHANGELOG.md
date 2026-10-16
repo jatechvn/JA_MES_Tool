@@ -5,6 +5,17 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.1] - 2026-10-16
+
+### 🛠️ Sửa lỗi & Cải tiến (Bug Fixes & Improvements)
+- **📋 Sửa lỗi Chọn Văn bản & Sao chép `Ctrl+C` trên Hàng đợi SN tại Sidebar (`main_window.dart`)**:
+  - Bọc từng nhãn mã SN chính (`ValueKey('select_sn_$sn')`) và mã SN phụ (`ValueKey('select_alternate_sn_$sn')`) trên mỗi dòng trong phạm vi `SelectionArea` độc lập kết hợp `Listener(onPointerDown: ...)`, khắc phục triệt để hiện tượng xung đột tọa độ ngang của hiệu ứng cuộn chữ (`BounceMarqueeText`) giữa các hàng khiến thao tác bôi đen hoặc nhấp đúp + `Ctrl+C` ở các hàng từ dòng thứ 2 trở đi bị nhảy/sao chép nhầm sang dòng đầu tiên.
+  - Tự động kích hoạt chọn dòng SN tương ứng ngay khi nhấn chuột bôi đen văn bản trên dòng đó và giữ nguyên vùng chọn khi có cập nhật dữ liệu bất đồng bộ (`notifyListeners()`).
+  - Bổ sung bộ kiểm thử widget `test/sn_sidebar_selection_test.dart` kiểm chứng cả 2 chế độ giao diện (`light` / `dark`) và cả 2 thao tác chọn (`drag` / `double-click`) trên các dòng từ 2 đến 4 (**134/134 tests pass**).
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.13.1+32` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.13.0] - 2026-10-15
 
 ### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)

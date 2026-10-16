@@ -1367,6 +1367,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                     : null;
 
                 return InkWell(
+                  key: ValueKey('sn_row_$sn'),
                   onTap: () => logic.selectSn(sn),
                   borderRadius: BorderRadius.circular(10),
                   child: AnimatedContainer(
@@ -1413,21 +1414,33 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                             ),
                             const SizedBox(width: 6),
                             Expanded(
-                              child: BounceMarqueeText(
-                                text: sn,
-                                style: TextStyle(
-                                  color: hasError
-                                      ? colors.accentRose
-                                      : hasWarning
-                                      ? colors.accentAmber
-                                      : (isSelected
-                                            ? colors.textPrimary
-                                            : colors.textSecondary),
-                                  fontWeight: isSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  fontFamily: 'JetBrains Mono',
-                                  fontSize: 12.5,
+                              // Independent selection scopes avoid combining the
+                              // horizontal marquee coordinates of other rows.
+                              child: Listener(
+                                onPointerDown: (_) {
+                                  if (logic.selectedSn != sn) {
+                                    logic.selectSn(sn);
+                                  }
+                                },
+                                child: SelectionArea(
+                                  key: ValueKey('select_sn_$sn'),
+                                  child: BounceMarqueeText(
+                                    text: sn,
+                                    style: TextStyle(
+                                      color: hasError
+                                          ? colors.accentRose
+                                          : hasWarning
+                                          ? colors.accentAmber
+                                          : (isSelected
+                                                ? colors.textPrimary
+                                                : colors.textSecondary),
+                                      fontWeight: isSelected
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      fontFamily: 'JetBrains Mono',
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1612,13 +1625,26 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
                                           ),
                                           const SizedBox(width: 3),
                                           Flexible(
-                                            child: BounceMarqueeText(
-                                              text: alternateSn,
-                                              style: TextStyle(
-                                                color: colors.accentCyan,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                fontFamily: 'JetBrains Mono',
+                                            child: Listener(
+                                              onPointerDown: (_) {
+                                                if (logic.selectedSn != sn) {
+                                                  logic.selectSn(sn);
+                                                }
+                                              },
+                                              child: SelectionArea(
+                                                key: ValueKey(
+                                                  'select_alternate_sn_$sn',
+                                                ),
+                                                child: BounceMarqueeText(
+                                                  text: alternateSn,
+                                                  style: TextStyle(
+                                                    color: colors.accentCyan,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontFamily:
+                                                        'JetBrains Mono',
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
