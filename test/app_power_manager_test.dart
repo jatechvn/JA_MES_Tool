@@ -76,7 +76,7 @@ void main() {
 
         manager.onWindowRestore();
         expect(manager.isWindowVisible, isTrue);
-        // Crucial: focus remains false until onWindowFocus or resumed occurs
+        // Focus remains false until native foreground activation is confirmed.
         expect(manager.isWindowFocused, isFalse);
         expect(manager.shouldAnimateBackground, isFalse);
         expect(manager.shouldAnimateIndicators, isFalse);
@@ -96,8 +96,15 @@ void main() {
       expect(manager.shouldAnimateBackground, isFalse);
 
       manager.onLifecycleStateChanged(AppLifecycleState.resumed);
-      expect(manager.isWindowFocused, isTrue);
+      expect(manager.isWindowFocused, isFalse);
       expect(manager.isWindowVisible, isTrue);
+      expect(manager.shouldAnimateBackground, isFalse);
+
+      manager.applyNativeWindowState(
+        visible: true,
+        minimized: false,
+        focused: true,
+      );
       expect(manager.shouldAnimateBackground, isTrue);
 
       manager.onLifecycleStateChanged(AppLifecycleState.hidden);

@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.13.1 - 中文说明
+# 🤖 JA MES Tool v2.13.2 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.13.1-blue.svg" alt="版本 2.13.1">
+  <img src="https://img.shields.io/badge/banben-2.13.2-blue.svg" alt="版本 2.13.2">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -226,6 +226,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.13.2]** — **引擎级帧与 Ticker 冻结门控 (`PowerFrameGate` + `PowerTickerGate`) 及原生窗口活动监控器 (`WindowActivityMonitor`)**：新增 `PowerWidgetsBinding` 与 `PowerTickerGate`，在窗口失焦、最小化或空闲休眠时彻底阻断 Flutter 引擎常规帧调度 (`framesEnabled`) 并暂停所有子级 `Ticker`，同时保持 Dart 定时器与后台 MES/OTA 服务正常运行；配合 `WindowActivityMonitor` 校验原生窗口可见性/最小化/焦点快照，彻底消除系统解锁 (`AppLifecycleState.resumed`) 时的误唤醒并自动恢复遗漏的焦点事件。
 - **[2.13.1]** — **修复侧边栏 SN 队列跨行文本选中与 `Ctrl+C` 复制错位问题**：为每行的主序列号 (`select_sn_$sn`) 与副序列号 (`select_alternate_sn_$sn`) 跑马灯分别建立独立的 `SelectionArea` 作用域并联动鼠标按下自动选中当前行，彻底消除多行横向跑马灯坐标冲突导致复制第 2 行及以下序列号时误复制首行的问题，同时确保异步状态刷新不重置选中文本 (`test/sn_sidebar_selection_test.dart`)。
 - **[2.13.0]** — **全面升级现有 4 大数据视图 CloudMES 字段、侧边栏 `FAIL Only` 快捷筛选、组件 MAC 参数查询与跨标签一键跳转**：侧边栏新增 `All / FAIL Only` 快捷过滤与 `GOOD / FAIL` 状态徽章；记录标题栏展示 `Current ➔ Next` 工序流转及 `KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`) 良率指标；Tab 1 新增测试起止时间、耗时、测试编号、主板 SN、MAC 组、采集数据、组件信息、GIT/ASN、设备参数、失败步骤详情及日志/压缩包路径一键复制栏；Tab 2 新增激光雕刻码 (`Landmark Codes`)；Tab 3 新增解析条码、扫描类型、解绑时间、可展开 `Component Params / MAC` (`queryComponentParam`) 面板及一键跳转组件追溯按钮；Tab 4 新增一键回查成品 SN 按钮与扩展字段；优化工单查询 `TestRecord` 预填充缓存避免重复请求，并在 `build.bat` 中保留本地 `Release\config.json`。
 - **[2.12.0]** — **侧边栏 `SN ↔ 工单 (WO)` 输入模式一键切换、工单批量导入 SN 与副序列号展示**：在侧边栏标题行（全部刷新与全部清空旁）新增工单输入切换小图标（移除旧版独立工单按钮与弹窗），输入工单号后自动分页拉取并去重提取所有关联 SN 批量加入下方队列并行查询，同时在记录标题栏显示关联副序列号。

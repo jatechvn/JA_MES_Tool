@@ -17,7 +17,7 @@ import 'dialogs/settings_dialog.dart';
 import 'dialogs/token_expired_dialog.dart';
 import 'dialogs/glass_update_dialog.dart';
 import '../services/ota_update_service.dart';
-import '../services/app_power_manager.dart';
+import '../services/window_activity_monitor.dart';
 import 'views/terminal_view.dart';
 
 class MainWindow extends StatefulWidget {
@@ -40,6 +40,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   static const Duration _otaRetryDelay = Duration(minutes: 15);
 
   late final AppLifecycleListener _lifecycleListener;
+  late final WindowActivityMonitor _windowActivity;
 
   final _ListViewState _testRecordListState = _ListViewState();
   final _BarcodeListViewState _barcodeListState = _BarcodeListViewState();
@@ -54,20 +55,13 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   @override
   void initState() {
     super.initState();
+    _windowActivity = WindowActivityMonitor();
     _lifecycleListener = AppLifecycleListener(
-      onStateChange: AppPowerManager.instance.onLifecycleStateChanged,
+      onStateChange: _windowActivity.onLifecycleStateChanged,
     );
     windowManager.addListener(this);
-    windowManager
-        .isFocused()
-        .then((isFocused) {
-          if (isFocused == true) {
-            AppPowerManager.instance.onWindowFocus();
-          } else {
-            AppPowerManager.instance.onWindowBlur();
-          }
-        })
-        .catchError((_) {});
+    windowManager.addListener(_windowActivity);
+    _windowActivity.start();
     windowManager
         .isMaximized()
         .then((value) {
@@ -84,6 +78,8 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   @override
   void dispose() {
     _lifecycleListener.dispose();
+    windowManager.removeListener(_windowActivity);
+    _windowActivity.dispose();
     OtaUpdateService().removeListener(_onOtaServiceChanged);
     _tokenCheckTimer?.cancel();
     _otaCheckTimer?.cancel();
@@ -105,26 +101,6 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
   @override
   void onWindowUnmaximize() {
     if (mounted) setState(() => _isMaximized = false);
-  }
-
-  @override
-  void onWindowFocus() {
-    AppPowerManager.instance.onWindowFocus();
-  }
-
-  @override
-  void onWindowBlur() {
-    AppPowerManager.instance.onWindowBlur();
-  }
-
-  @override
-  void onWindowMinimize() {
-    AppPowerManager.instance.onWindowMinimize();
-  }
-
-  @override
-  void onWindowRestore() {
-    AppPowerManager.instance.onWindowRestore();
   }
 
   void _checkInitialToken() {

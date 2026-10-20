@@ -10,9 +10,10 @@ import 'theme/theme_provider.dart';
 
 import 'theme/language_provider.dart';
 import 'modules/services/app_power_manager.dart';
+import 'modules/services/power_binding.dart';
 
 void main(List<String> args) async {
-  WidgetsFlutterBinding.ensureInitialized();
+  PowerWidgetsBinding();
 
   if (args.contains('-debug') ||
       args.contains('--debug') ||
@@ -73,7 +74,7 @@ class MyApp extends StatelessWidget {
               AppPowerManager.instance.recordUserInteraction();
               return KeyEventResult.ignored;
             },
-            child: child ?? const SizedBox.shrink(),
+            child: PowerTickerGate(child: child ?? const SizedBox.shrink()),
           ),
         );
       },
