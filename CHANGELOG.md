@@ -5,6 +5,20 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.2] - 2026-10-20
+
+### 🚀 Nâng cấp & Sửa lỗi (Enhancements & Bug Fixes)
+- **⚡ Cổng Đóng băng Khung hình & Ticker cấp Engine (`PowerFrameGate` + `PowerTickerGate`) (`power_binding.dart`, `main.dart`)**:
+  - Bổ sung `PowerWidgetsBinding` (`mixin PowerFrameGate on WidgetsBinding`) kiểm soát `framesEnabled` theo trạng thái `AppPowerManager.instance.shouldAnimateIndicators` và tự động gọi `scheduleFrame()` khi thức dậy — ngắt hoàn toàn việc lập lịch vẽ khung hình (`frame scheduling`) thừa của Flutter Engine khi cửa sổ mất tiêu điểm, thu nhỏ hoặc nghỉ rảnh tay mà vẫn giữ nguyên các bộ đếm `Timer` và dịch vụ nền MES / OTA.
+  - Bọc cây widget gốc trong `PowerTickerGate` (`TickerMode`) đồng bộ trực tiếp với `indicatorsAnimationNotifier`, tự động tạm dừng toàn bộ `Ticker` con khi ứng dụng ở trạng thái nghỉ.
+- **🪟 Bộ Giám sát Trạng thái Cửa sổ Native & Khôi phục Focus sau Khóa Màn hình (`WindowActivityMonitor`) (`window_activity_monitor.dart`, `app_power_manager.dart`, `main_window.dart`)**:
+  - Bổ sung `WindowActivityMonitor` đối soát trực tiếp trạng thái thực tế từ `windowManager` (`isVisible`, `isMinimized`, `isFocused`) có bảo vệ theo phiên (`_epoch`) và chu kỳ kiểm tra nhẹ 2 giây (`applyNativeWindowState`) mà không làm reset bộ đếm thời gian nghỉ (`idleTimer`) khi trạng thái không đổi.
+  - Khắc phục triệt để lỗi tự bật lại animation khi mở khóa màn hình Windows (`Win+L` / RDP reconnect) làm phát sinh `AppLifecycleState.resumed` dù cửa sổ đang bị che khuất hoặc chưa được focus, đồng thời tự động khôi phục các sự kiện focus/visibility bị hệ điều hành bỏ sót khi quay lại.
+  - Mở rộng bộ kiểm thử với `test/power_frame_gate_test.dart`, `test/power_ticker_gate_test.dart`, `test/window_activity_monitor_test.dart` và cập nhật `test/app_power_manager_test.dart` (**146/146 tests pass**).
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.13.2+33` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.13.1] - 2026-10-16
 
 ### 🛠️ Sửa lỗi & Cải tiến (Bug Fixes & Improvements)

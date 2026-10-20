@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.13.1
-Release Date : 2026-10-16
+Version      : v2.13.2
+Release Date : 2026-10-20
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,13 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Engine-Level Power Frame/Ticker Gate & Native Window Activity Monitor: Added
+  PowerWidgetsBinding (PowerFrameGate) and PowerTickerGate to halt ordinary Flutter frame
+  scheduling and descendant Tickers when the window is unfocused, minimized, or idle while
+  keeping Dart timers and background MES/OTA services running. Paired with
+  WindowActivityMonitor to verify native window visibility/minimize/focus snapshots with
+  epoch guards, preventing false animation wakeups on Windows lock/unlock and recovering
+  missed focus events upon return.
 - Independent SN Sidebar Row Text Selection & Ctrl+C Copy Fix: Isolated each sidebar SN row's
   primary SN and alternate SN marquee into independent SelectionArea scopes with pointer-down
   row selection, preventing horizontal marquee coordinate collisions across rows and ensuring

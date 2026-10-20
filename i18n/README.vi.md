@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.13.1 - Tiếng Việt
+# 🤖 JA MES Tool v2.13.2 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.13.1-blue.svg" alt="Phiên bản 2.13.1">
+  <img src="https://img.shields.io/badge/phien_ban-2.13.2-blue.svg" alt="Phiên bản 2.13.2">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -229,6 +229,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.13.2]** — **Cổng đóng băng khung hình & Ticker cấp Engine (`PowerFrameGate` + `PowerTickerGate`) & Bộ giám sát cửa sổ Native (`WindowActivityMonitor`)**: Ngắt hoàn toàn việc lập lịch vẽ khung hình (`framesEnabled`) và tạm dừng toàn bộ `Ticker` con khi cửa sổ mất tiêu điểm, thu nhỏ hoặc nghỉ rảnh tay mà không ảnh hưởng tới `Timer` và dịch vụ nền MES/OTA; kết hợp `WindowActivityMonitor` đối soát trực tiếp trạng thái `isVisible` / `isMinimized` / `isFocused` từ native window giúp ngăn chặn tự bật lại animation khi mở khóa màn hình Windows và tự khôi phục sự kiện focus bị bỏ sót.
 - **[2.13.1]** — **Sửa lỗi bôi đen & sao chép `Ctrl+C` mã SN / SN phụ trên danh sách hàng đợi Sidebar**: Tách biệt phạm vi chọn văn bản (`SelectionArea`) độc lập cho từng mã SN chính (`select_sn_$sn`) và mã SN phụ (`select_alternate_sn_$sn`) trên mỗi dòng kèm tự động chọn dòng khi nhấn chuột, khắc phục triệt để xung đột tọa độ ngang của `BounceMarqueeText` giữa các hàng và giữ nguyên vùng chọn khi cập nhật dữ liệu bất đồng bộ (`test/sn_sidebar_selection_test.dart`).
 - **[2.13.0]** — **Nâng cấp toàn diện dữ liệu CloudMES cho 4 Tab hiện có, lọc nhanh `FAIL Only`, tra cứu thông số MAC linh kiện & nhảy liên tab 1-Click**: Bổ sung bộ lọc nhanh `All / FAIL Only` và badge `GOOD / FAIL` trên Sidebar Queue; hiển thị luồng trạm `Current ➔ Next` và chỉ số năng suất `KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`) trên thanh tiêu đề bản ghi; bổ sung `Test Start/End`, `Duration`, `#testNo`, `Motherboard SN`, `MAC Group`, `Collecting Data`, `Components`, `GIT/ASN`, `Equipment Params`, chi tiết bước lỗi và thanh sao chép đường dẫn `Log / Zip File` ở Tab 1; `Landmark Codes` ở Tab 2; `Parsed CSN`, `Scan Type`, `Unlink Time`, bảng mở rộng `Component Params / MAC` (`queryComponentParam`) và nút 1-click `Trace Component` ở Tab 3; nút 1-click `Inspect Product SN` và các trường mở rộng ở Tab 4; tối ưu nạp sẵn (`pre-seed`) `TestRecord` khi tra cứu WO và giữ nguyên `Release\config.json` trong `build.bat`.
 - **[2.12.0]** — **Hoán đổi nhanh chế độ nhập `SN ↔ WO` trên Sidebar, nạp hàng loạt SN từ Work Order & hiển thị mã SN phụ**: Thêm nút icon chuyển đổi chế độ nhập SN ↔ WO ngay trên dòng `Refresh all` (loại bỏ nút và hộp thoại WO rời rạc cũ), tự động tải phân trang Work Order để đẩy hàng loạt mã SN duy nhất xuống danh sách hàng đợi bên dưới và hiển thị mã SN phụ trên thanh tiêu đề bản ghi.

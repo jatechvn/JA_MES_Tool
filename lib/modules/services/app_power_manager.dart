@@ -110,7 +110,7 @@ class AppPowerManager {
   /// Called when the native window is restored from minimized state.
   ///
   /// Note: Restore makes the window visible, but does NOT automatically imply focus.
-  /// Focus is only confirmed when onWindowFocus() or AppLifecycleState.resumed fires.
+  /// Focus must be confirmed by a native window snapshot, not lifecycle resume.
   void onWindowRestore() {
     _isWindowVisible = true;
     _updatePolicies();
@@ -120,10 +120,10 @@ class AppPowerManager {
   void onLifecycleStateChanged(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
-        _isWindowVisible = true;
-        _isWindowFocused = true;
-        _isUserIdle = false;
-        _rescheduleIdleTimer();
+        // Unlock/reconnect can resume Flutter without foreground activation.
+        // Stay muted until the native monitor confirms the real window state.
+        _isWindowFocused = false;
+        _idleTimer?.cancel();
         break;
       case AppLifecycleState.inactive:
         _isWindowFocused = false;
@@ -136,6 +136,24 @@ class AppPowerManager {
         _isWindowFocused = false;
         _idleTimer?.cancel();
         break;
+    }
+    _updatePolicies();
+  }
+
+  /// Reconciles native state without treating unchanged polls as user activity.
+  void applyNativeWindowState({
+    required bool visible,
+    required bool minimized,
+    required bool focused,
+  }) {
+    final wasActive = shouldAnimateIndicators;
+    _isWindowVisible = visible && !minimized;
+    _isWindowFocused = _isWindowVisible && focused;
+    if (!shouldAnimateIndicators) {
+      _idleTimer?.cancel();
+    } else if (!wasActive) {
+      _isUserIdle = false;
+      _rescheduleIdleTimer();
     }
     _updatePolicies();
   }
