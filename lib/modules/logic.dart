@@ -238,6 +238,37 @@ class AppLogic extends ChangeNotifier {
   String _cookie = '';
   String get cookie => _cookie;
 
+  String _username = '';
+  String get username => _username;
+
+  String _savedPassword = '';
+  String get savedPassword => _savedPassword;
+
+  String _loginMethod = 'SSO';
+  String get loginMethod => _loginMethod;
+
+  String _copeCode = 'F_VN';
+  String get copeCode => _copeCode;
+
+  bool _rememberPassword = true;
+  bool get rememberPassword => _rememberPassword;
+
+  bool _autoLogin = true;
+  bool get autoLogin => _autoLogin;
+
+  bool _isLoggingIn = false;
+  bool get isLoggingIn => _isLoggingIn;
+
+  bool _manualLogoutInSession = false;
+  bool get manualLogoutInSession => _manualLogoutInSession;
+
+  String get activeAccount {
+    final jwtAccount = ApiClient.extractAccountFromJwt(_token);
+    if (jwtAccount.isNotEmpty) return jwtAccount;
+    if (_username.trim().isNotEmpty) return _username.trim();
+    return '';
+  }
+
   // Glassmorphism controls, matching the JA_Compare reference app's
   // Advanced Settings layout (Main background blur/opacity + Dialog
   // blur/opacity). bgBlur/bgOpacity are persisted for parity but not yet
@@ -464,6 +495,18 @@ class AppLogic extends ChangeNotifier {
     _operationId = config['operationId'] ?? defaultOperationId;
     _uuid = config['uuid'] ?? defaultUuid;
     _cookie = config['cookie'] ?? '';
+    _username = config['username']?.toString() ?? '';
+    _savedPassword = config['savedPassword']?.toString() ?? '';
+    final cfgMethod =
+        config['loginMethod']?.toString().trim().toUpperCase() ?? 'SSO';
+    _loginMethod = cfgMethod == 'CLOUDMES' ? 'CLOUDMES' : 'SSO';
+    _copeCode = config['copeCode']?.toString() ?? 'F_VN';
+    _rememberPassword = config['rememberPassword'] is bool
+        ? config['rememberPassword'] as bool
+        : true;
+    _autoLogin = config['autoLogin'] is bool
+        ? config['autoLogin'] as bool
+        : true;
     _bgBlur = _parseDouble(config['bgBlur'], 20.0);
     _bgOpacity = _parseDouble(config['bgOpacity'], 0.25);
     _dialogBlur = _parseDouble(config['dialogBlur'], 20.0);
@@ -536,21 +579,46 @@ class AppLogic extends ChangeNotifier {
 
   Future<void> _validateNow() async {
     final revision = _credentialsRevision;
-    final res = await verifySettings(
-      _token,
-      _lang,
-      _operationId,
-      _uuid,
-      _cookie,
-    );
+    String? res;
+    if (_token.trim().isEmpty) {
+      res = '401 Unauthorized';
+    } else {
+      res = await verifySettings(_token, _lang, _operationId, _uuid, _cookie);
+    }
     if (_disposed || revision != _credentialsRevision) return;
     if (res == null) {
+      final jwtUser = ApiClient.extractAccountFromJwt(_token);
+      if (jwtUser.isNotEmpty && _username.trim().isEmpty) {
+        _username = jwtUser;
+        unawaited(_saveConfig(_exportConfigMap()));
+      }
       isConnectionValid = true;
       connectionError = null;
-    } else {
-      isConnectionValid = false;
-      connectionError = res;
+      notifyListeners();
+      return;
     }
+
+    // Attempt silent auto-login if remembered credentials exist and user did not manually log out
+    if (!_manualLogoutInSession &&
+        _autoLogin &&
+        _rememberPassword &&
+        _username.trim().isNotEmpty &&
+        _savedPassword.isNotEmpty) {
+      final autoRes = await loginWithAccount(
+        username: _username,
+        password: _savedPassword,
+        loginMethod: _loginMethod,
+        rememberPassword: _rememberPassword,
+        autoLogin: _autoLogin,
+      );
+      if (_disposed) return;
+      if (autoRes.success) {
+        return;
+      }
+    }
+
+    isConnectionValid = false;
+    connectionError = res;
     notifyListeners();
   }
 
@@ -563,6 +631,12 @@ class AppLogic extends ChangeNotifier {
       'operationId': _operationId,
       'uuid': _uuid,
       'cookie': _cookie,
+      'username': _username,
+      'savedPassword': _rememberPassword ? _savedPassword : '',
+      'loginMethod': _loginMethod,
+      'copeCode': _copeCode,
+      'rememberPassword': _rememberPassword,
+      'autoLogin': _autoLogin,
       'bgBlur': _bgBlur,
       'bgOpacity': _bgOpacity,
       'dialogBlur': _dialogBlur,
@@ -702,6 +776,136 @@ class AppLogic extends ChangeNotifier {
     await _fetchAllPending();
   }
 
+  void setLoginPreferences({
+    String? loginMethod,
+    bool? rememberPassword,
+    bool? autoLogin,
+  }) {
+    if (loginMethod != null) {
+      _loginMethod = loginMethod.trim().toUpperCase() == 'CLOUDMES'
+          ? 'CLOUDMES'
+          : 'SSO';
+    }
+    if (rememberPassword != null) {
+      _rememberPassword = rememberPassword;
+      if (!rememberPassword) {
+        _savedPassword = '';
+      }
+    }
+    if (autoLogin != null) {
+      _autoLogin = autoLogin;
+    }
+    _saveConfig(_exportConfigMap());
+    notifyListeners();
+  }
+
+  Future<MesLoginResult> loginWithAccount({
+    required String username,
+    required String password,
+    String? loginMethod,
+    bool? rememberPassword,
+    bool? autoLogin,
+    String? captchaKey,
+    String? captchaCode,
+  }) async {
+    final cleanUser = username.trim();
+    final effectiveMethod =
+        (loginMethod ?? _loginMethod).trim().toUpperCase() == 'CLOUDMES'
+        ? 'CLOUDMES'
+        : 'SSO';
+    final effectiveRemember = rememberPassword ?? _rememberPassword;
+    final effectiveAuto = autoLogin ?? _autoLogin;
+
+    _isLoggingIn = true;
+    notifyListeners();
+
+    try {
+      final result = await ApiClient.loginWithCredentials(
+        username: cleanUser,
+        password: password,
+        loginMethod: effectiveMethod,
+        copeCode: _copeCode,
+        uuid: _uuid,
+        lang: _lang,
+        captchaKey: captchaKey,
+        captchaCode: captchaCode,
+      );
+
+      if (_disposed) return result;
+
+      if (result.success) {
+        final revision = ++_credentialsRevision;
+        _invalidateAll(includeTrace: true);
+        _token = result.accessToken;
+        _uuid = result.uuid;
+        _cookie = result.cookie;
+        _username = result.username.isNotEmpty ? result.username : cleanUser;
+        _loginMethod = effectiveMethod;
+        _rememberPassword = effectiveRemember;
+        _autoLogin = effectiveAuto;
+        _savedPassword = effectiveRemember ? password : '';
+        _manualLogoutInSession = false;
+        isConnectionValid = true;
+        connectionError = null;
+        await _saveConfig(_exportConfigMap());
+        if (_disposed || revision != _credentialsRevision) return result;
+        _isLoggingIn = false;
+        notifyListeners();
+        if (_snList.isNotEmpty || _traceHistory.isNotEmpty) {
+          refetchAllSns(allowTestRecordFallback: false);
+        }
+        return result;
+      } else {
+        _loginMethod = effectiveMethod;
+        _rememberPassword = effectiveRemember;
+        _autoLogin = effectiveAuto;
+        _isLoggingIn = false;
+        notifyListeners();
+        return result;
+      }
+    } catch (e) {
+      _isLoggingIn = false;
+      notifyListeners();
+      return MesLoginResult(
+        success: false,
+        uuid: _uuid,
+        username: cleanUser,
+        message: e.toString(),
+      );
+    }
+  }
+
+  Future<void> logoutAccount({bool clearSavedPassword = false}) async {
+    final oldToken = _token;
+    final oldUuid = _uuid;
+    final oldCookie = _cookie;
+
+    ++_credentialsRevision;
+    _invalidateAll(includeTrace: true);
+    _manualLogoutInSession = true;
+    _token = '';
+    _cookie = '';
+    if (clearSavedPassword) {
+      _savedPassword = '';
+      _rememberPassword = false;
+    }
+    isConnectionValid = false;
+    connectionError = '401 Unauthorized';
+    await _saveConfig(_exportConfigMap());
+    notifyListeners();
+
+    if (oldToken.isNotEmpty && oldToken != defaultToken) {
+      unawaited(
+        ApiClient.logoutSession(
+          token: oldToken,
+          uuid: oldUuid,
+          cookie: oldCookie,
+          lang: _lang,
+        ),
+      );
+    }
+  }
+
   Future<void> updateCredentials({
     required String token,
     required String uuid,
@@ -714,6 +918,11 @@ class AppLogic extends ChangeNotifier {
     _uuid = uuid;
     _operationId = operationId;
     _cookie = cookie;
+    _manualLogoutInSession = false;
+    final jwtUser = ApiClient.extractAccountFromJwt(token);
+    if (jwtUser.isNotEmpty) {
+      _username = jwtUser;
+    }
     await _saveConfig(_exportConfigMap());
     if (_disposed || revision != _credentialsRevision) return;
     await _validateNow();
@@ -777,6 +986,11 @@ class AppLogic extends ChangeNotifier {
     _operationId = operationId;
     _uuid = uuid;
     _cookie = cookie;
+    _manualLogoutInSession = false;
+    final jwtUser = ApiClient.extractAccountFromJwt(token);
+    if (jwtUser.isNotEmpty) {
+      _username = jwtUser;
+    }
     if (bgBlur != null) _bgBlur = bgBlur;
     if (bgOpacity != null) _bgOpacity = bgOpacity;
     if (dialogBlur != null) _dialogBlur = dialogBlur;

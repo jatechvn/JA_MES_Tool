@@ -13,6 +13,7 @@ import '../../../widgets/app_toast.dart';
 import '../../services/ota_update_service.dart';
 import '../../services/app_power_manager.dart';
 import 'glass_update_dialog.dart';
+import 'login_dialog.dart';
 
 String _formatSettingsTranslation(
   String key,
@@ -568,6 +569,147 @@ Widget _buildMesApiTab(
     key: const PageStorageKey('settings_tab_mes_api'),
     physics: const BouncingScrollPhysics(),
     children: [
+      // Direct Account Login & Auto-Login Card
+      BentoCard(
+        colors: colors,
+        padding: const EdgeInsets.all(16),
+        borderRadius: 14,
+        isFeatured: true,
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color:
+                    (logic.isConnectionValid == true &&
+                                logic.token.trim().isNotEmpty
+                            ? colors.accentEmerald
+                            : colors.accentColor)
+                        .withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                logic.isConnectionValid == true && logic.token.trim().isNotEmpty
+                    ? Icons.verified_user_rounded
+                    : Icons.person_outline_rounded,
+                color:
+                    logic.isConnectionValid == true &&
+                        logic.token.trim().isNotEmpty
+                    ? colors.accentEmerald
+                    : colors.accentColor,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    Translations.get('account_section_title', logic.lang),
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    logic.isConnectionValid == true &&
+                            logic.token.trim().isNotEmpty
+                        ? '${Translations.get('logged_in_as', logic.lang)} '
+                              '${logic.activeAccount.isNotEmpty ? logic.activeAccount : 'LIVE'} '
+                              '(${logic.loginMethod == 'CLOUDMES' ? 'CloudMES' : 'SSO'})'
+                        : Translations.get('not_logged_in', logic.lang),
+                    style: TextStyle(
+                      color:
+                          logic.isConnectionValid == true &&
+                              logic.token.trim().isNotEmpty
+                          ? colors.accentEmerald
+                          : colors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (logic.isConnectionValid == true &&
+                logic.token.trim().isNotEmpty) ...[
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.accentRose,
+                  side: BorderSide(
+                    color: colors.accentRose.withValues(alpha: 0.45),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () async {
+                  await logic.logoutAccount();
+                  setDialogState(() {
+                    tokenCtrl.text = logic.token;
+                    cookieCtrl.text = logic.cookie;
+                  });
+                },
+                icon: const Icon(Icons.logout_rounded, size: 15),
+                label: Text(
+                  Translations.get('logout_btn', logic.lang),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.accentColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                await showMesLoginDialog(context, logic: logic, colors: colors);
+                setDialogState(() {
+                  tokenCtrl.text = logic.token;
+                  uuidCtrl.text = logic.uuid;
+                  cookieCtrl.text = logic.cookie;
+                });
+              },
+              icon: const Icon(Icons.login_rounded, size: 15),
+              label: Text(
+                Translations.get(
+                  logic.isConnectionValid == true &&
+                          logic.token.trim().isNotEmpty
+                      ? 'switch_account_btn'
+                      : 'login_btn',
+                  logic.lang,
+                ),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+
       // CDP Auto Sync Card
       BentoCard(
         colors: colors,

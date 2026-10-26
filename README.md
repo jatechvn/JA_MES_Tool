@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.13.2-blue.svg" alt="Version 2.13.2">
+  <img src="https://img.shields.io/badge/version-2.14.0-blue.svg" alt="Version 2.14.0">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -261,6 +261,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.14.0]** ? Added native in-app **CloudMES / SSO Login Dialog** (`MesLoginDialog`) supporting both `SSO` and `CloudMES` authentication endpoints, obfuscated Remember Password & silent Auto-Login on startup/token expiry, live `user_account` display on `DynamicIslandCapsule`, and 1-click **Logout / Switch Account** (`POST /api/platform-user/platform/logout`).
 - **[2.13.2]** — Added engine-level `PowerWidgetsBinding` (`PowerFrameGate`) and `PowerTickerGate` (`lib/modules/services/power_binding.dart`) to halt ordinary frame scheduling and descendant `Ticker`s while unfocused, minimized, or idle without blocking Dart timers or MES/OTA services, paired with `WindowActivityMonitor` (`lib/modules/services/window_activity_monitor.dart`) to verify native window visibility/minimize/focus snapshots, eliminate false wakeups on workstation unlock, and recover missed focus events.
 - **[2.13.1]** — Fixed SN sidebar queue text selection and `Ctrl+C` copy across rows by isolating each row's primary SN and alternate SN marquee into independent `SelectionArea` scopes with pointer-down row activation, preventing horizontal marquee coordinate collisions and preserving active text selection across asynchronous state notifications (`test/sn_sidebar_selection_test.dart`).
 - **[2.13.0]** — Upgraded all 4 existing data views with extended CloudMES fields and 1-click cross-tab navigation: added `All / FAIL Only` sidebar queue filter & `GOOD/FAIL` badges; `SnMasterInfo` status flow & `KPI Yield` (`Qty · Pass · Fail · Repass · FPY · LPY`) header badges; `Test Start/End`, `Duration`, `Test No`, `Motherboard SN`, `MAC Group`, `Collecting Data`, `Components`, `GIT/ASN`, `Equipment Params`, `Fail Step/Cycle/Major Item`, and 1-click `Log / Zip Path` copy bar in Tab 1; `Landmark Codes` in Tab 2; `Parsed CSN`, `Scan Type`, `Unlink Time`, `Assembled Code`, expandable `Component Params / MAC` (`queryComponentParam`), and 1-click `Trace Component` jump in Tab 3; 1-click `Inspect Product SN` jump and extended fields in Tab 4; pre-seeded Work Order `TestRecord` results to eliminate redundant HTTP requests; and preserved local `Release\config.json` in `build.bat`.

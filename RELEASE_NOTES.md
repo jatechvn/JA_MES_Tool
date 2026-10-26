@@ -1,20 +1,20 @@
-TAG=v2.13.2
-TITLE=JA MES Tool v2.13.2 — Tối ưu hóa đóng băng khung hình cấp Engine (PowerFrameGate & PowerTickerGate) và đối soát trạng thái cửa sổ Native (WindowActivityMonitor)
+TAG=v2.14.0
+TITLE=JA MES Tool v2.14.0 ? C?a s? ??ng nh?p tr?c ti?p CloudMES / SSO, t? ??ng l?u m?t kh?u & Auto-Login, h? tr? Logout ??i t?i kho?n
 BODY=
-## Điểm nhấn chính
-- **Cổng Đóng băng Khung hình & Ticker cấp Engine (`PowerFrameGate` + `PowerTickerGate`) (`power_binding.dart`, `main.dart`)**:
-  - Bổ sung `PowerWidgetsBinding` (`PowerFrameGate`) khóa `framesEnabled` khi cửa sổ không active, bị thu nhỏ hoặc đang ở chế độ ngủ rảnh tay (`Idle Sleep`), giúp ngắt triệt để chu kỳ vẽ khung hình thừa của Flutter Engine mà không ảnh hưởng tới các `Timer` hay tác vụ nền MES/OTA.
-  - Tích hợp `PowerTickerGate` (`TickerMode`) ở cấp ứng dụng để tạm dừng toàn bộ `Ticker` con ngay khi chuyển sang trạng thái nghỉ và tự động đánh thức khung hình (`scheduleFrame()`) khi người dùng thao tác trở lại.
-- **Bộ Giám sát Trạng thái Cửa sổ Native (`WindowActivityMonitor`) (`window_activity_monitor.dart`, `app_power_manager.dart`, `main_window.dart`)**:
-  - Đối soát trực tiếp trạng thái thực của cửa sổ (`isVisible`, `isMinimized`, `isFocused`) kèm cơ chế bảo vệ `_epoch` và hàm `applyNativeWindowState` không làm reset bộ đếm `idleTimer` khi trạng thái giữ nguyên.
-  - Ngăn chặn hiện tượng tự kích hoạt lại animation khi mở khóa máy Windows (`AppLifecycleState.resumed` khi cửa sổ không ở tiền cảnh) và tự động khôi phục các sự kiện focus/visibility bị bỏ lỡ sau khi mở khóa màn hình.
-  - Bổ sung các bộ kiểm thử `test/power_frame_gate_test.dart`, `test/power_ticker_gate_test.dart`, `test/window_activity_monitor_test.dart` và cập nhật `test/app_power_manager_test.dart`.
+## ?i?m nh?n ch?nh
+- **C?a s? ??ng nh?p Tr?c ti?p CloudMES / SSO (`MesLoginDialog`) (`login_dialog.dart`, `api_client.dart`)**:
+  - H? tr? ??ng nh?p tr?c ti?p ngay trong ?ng d?ng v?i 2 tu? ch?n **`SSO`** (`/api/platform-user/platform/sso/login`) v? **`CloudMES`** (`/api/platform-user/platform/login`), k?m h? tr? Captcha t? ??ng v? v?n gi? tu? ch?n ??ng b? t? tr?nh duy?t (Port `9222`).
+  - T? ??ng gi?i m? JWT (`extractAccountFromJwt`) ?? hi?n th? m? th? ?ang ??ng nh?p ngay tr?n `DynamicIslandCapsule` (`LIVE ? <M? NV>`), tr?n Header v? trong Settings.
+- **T? ??ng L?u M?t kh?u & ??ng nh?p Ng?m (`Auto-Login`) (`config_service.dart`, `logic.dart`)**:
+  - L?u m?t kh?u m? h?a c?c b? khi b?t **Ghi nh? m?t kh?u** v? t? ??ng ??ng nh?p l?i ng?m khi m? ?ng d?ng ho?c khi Token h?t h?n n?u m?t kh?u c?n ??ng.
+- **H? tr? ??ng xu?t & ??i T?i kho?n (`Logout / Switch Account`)**:
+  - G?i API ??ng xu?t (`POST /api/platform-user/platform/logout`) v? xo? phi?n hi?n t?i ch? v?i 1 c? nh?p chu?t t? Header, `DynamicIslandCapsule`, Settings ho?c `Ctrl+K` ?? ??i sang t?i kho?n kh?c.
 
-## Kiểm chứng & Đóng gói
-- `dart format .`: Chuẩn hóa 100% định dạng mã nguồn.
-- `flutter analyze`: Đạt 0 issues found.
-- `flutter test`: 146/146 ca kiểm thử vượt qua thành công (100% pass).
-- `flutter build windows --release`: Biên dịch hoàn chỉnh `ja_mes_tool.exe`.
+## Ki?m ch?ng & ??ng g?i
+- `dart format .`: Chu?n h?a 100% ??nh d?ng m? ngu?n.
+- `flutter analyze`: ??t 0 issues found.
+- `flutter test`: 149/149 ca ki?m th? v??t qua th?nh c?ng (100% pass).
+- `flutter build windows --release`: Bi?n d?ch ho?n ch?nh `ja_mes_tool.exe`.
 
-### Cài đặt
-Giải nén toàn bộ gói `JA_MES_Tool_v2.13.2_Windows_x64.zip` và chạy `install.bat` hoặc khởi chạy trực tiếp `ja_mes_tool.exe`.
+### C?i ??t
+Gi?i n?n to?n b? g?i `JA_MES_Tool_v2.14.0_Windows_x64.zip` v? ch?y `install.bat` ho?c kh?i ch?y tr?c ti?p `ja_mes_tool.exe`.

@@ -5,6 +5,23 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.0] - 2026-10-26
+
+### ?? N?ng c?p & T?nh n?ng m?i (Features & Enhancements)
+- **?? C?a s? ??ng nh?p Tr?c ti?p CloudMES / SSO (`MesLoginDialog`) (`login_dialog.dart`, `api_client.dart`)**:
+  - H? tr? ??ng nh?p tr?c ti?p ngay trong ?ng d?ng v?i 2 ph??ng th?c x?c th?c **`SSO`** (`POST /api/platform-user/platform/sso/login`) v? **`CloudMES`** (`POST /api/platform-user/platform/login` k?m `copeCode: "F_VN"` v? h? tr? t?i ?nh Captcha d? ph?ng `GET /api/platform-user/platform/captcha`).
+  - T? ??ng gi?i m? JWT (`extractAccountFromJwt`) ?? tr?ch xu?t v? hi?n th? m? nh?n vi?n (`user_account`, v? d? `V1801179`) ngay tr?n thanh tr?ng th?i `DynamicIslandCapsule` (`LIVE ? V1801179`), trong c?a s? ??ng nh?p v? trong C?i ??t.
+- **?? T? ??ng L?u M?t kh?u M? h?a & ??ng nh?p Ng?m (`Auto-Login`) (`config_service.dart`, `logic.dart`)**:
+  - B? sung tu? ch?n **Ghi nh? m?t kh?u** (`rememberPassword`) v?i c? ch? m? h?a ??o byte + Base64 (`james_v1:`) trong `config.json` v? **T? ??ng ??ng nh?p** (`autoLogin`).
+  - Khi kh?i ??ng ?ng d?ng ho?c khi Token h?t h?n, n?u m?t kh?u ?? l?u c?n h?p l?, ?ng d?ng t? ??ng ??ng nh?p ng?m l?y Token m?i v? t?i l?i d? li?u m? kh?ng l?m gi?n ?o?n ng??i d?ng; n?u m?t kh?u ?? thay ??i, ?ng d?ng t? ??ng m? `MesLoginDialog` ?? nh?p l?i.
+- **?? H? tr? ??ng xu?t & ??i T?i kho?n Nhanh (`Logout / Switch Account`) (`login_dialog.dart`, `main_window.dart`, `settings_dialog.dart`)**:
+  - T?ch h?p API ??ng xu?t (`POST /api/platform-user/platform/logout`), xo? phi?n hi?n t?i v? m? s?n ? nh?p t?i kho?n m?i ?? chuy?n ??i nhanh gi?a c?c t?i kho?n MES.
+  - B? sung n?t T?i kho?n tr?n thanh Header ch?nh, th? qu?n l? t?i kho?n ? ??u Tab 1 trong Settings v? l?nh nhanh trong **Command Palette (`Ctrl+K`)**.
+  - B? sung b? ki?m th? `test/mes_login_dialog_test.dart` (**149/149 tests pass**).
+
+### ?? Ph?t h?nh
+- ??ng b? phi?n b?n `2.14.0+34` xuy?n su?t `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.13.2] - 2026-10-20
 
 ### 🚀 Nâng cấp & Sửa lỗi (Enhancements & Bug Fixes)

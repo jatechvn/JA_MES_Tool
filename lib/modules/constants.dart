@@ -1,7 +1,7 @@
 const String appId = 'com.jatech.mes_tool';
 const String appName = 'JA MES Tool';
-const String appVersion = '2.13.2';
-const int appBuildNumber = 33;
+const String appVersion = '2.14.0';
+const int appBuildNumber = 34;
 const String fullAppVersion = '$appVersion+$appBuildNumber';
 
 const String defaultOrgCode = 'CABG_VN';

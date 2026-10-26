@@ -6,6 +6,29 @@ import 'package:logging/logging.dart';
 final _logger = Logger('ConfigService');
 
 class ConfigService {
+  static const String _pwdPrefix = 'james_v1:';
+
+  static String encodePassword(String plain) {
+    if (plain.isEmpty) return '';
+    final bytes = utf8.encode(plain);
+    final reversed = bytes.reversed.toList();
+    return '$_pwdPrefix${base64Url.encode(reversed)}';
+  }
+
+  static String decodePassword(String raw) {
+    if (raw.isEmpty) return '';
+    try {
+      if (raw.startsWith(_pwdPrefix)) {
+        final payload = raw.substring(_pwdPrefix.length);
+        final decoded = base64Url.decode(base64Url.normalize(payload));
+        return utf8.decode(decoded.reversed.toList());
+      }
+      return raw;
+    } catch (_) {
+      return '';
+    }
+  }
+
   static Future<Map<String, dynamic>> loadConfig() async {
     try {
       final file = File(configFileName);
@@ -24,6 +47,8 @@ class ConfigService {
             data['traceCsns'].map((e) => e.toString()),
           );
         }
+        final rawMethod =
+            data['loginMethod']?.toString().trim().toUpperCase() ?? 'SSO';
         return {
           'token': data['token']?.toString() ?? '',
           'sns': snList,
@@ -33,6 +58,18 @@ class ConfigService {
           'operationId': data['operationId']?.toString() ?? defaultOperationId,
           'uuid': data['uuid']?.toString() ?? defaultUuid,
           'cookie': data['cookie']?.toString() ?? '',
+          'username': data['username']?.toString() ?? '',
+          'savedPassword': decodePassword(
+            data['savedPassword']?.toString() ?? '',
+          ),
+          'loginMethod': rawMethod == 'CLOUDMES' ? 'CLOUDMES' : 'SSO',
+          'copeCode': data['copeCode']?.toString() ?? 'F_VN',
+          'rememberPassword': data['rememberPassword'] is bool
+              ? data['rememberPassword'] as bool
+              : true,
+          'autoLogin': data['autoLogin'] is bool
+              ? data['autoLogin'] as bool
+              : true,
           'bgBlur': data['bgBlur'],
           'bgOpacity': data['bgOpacity'],
           'dialogBlur': data['dialogBlur'],
@@ -60,6 +97,12 @@ class ConfigService {
       'operationId': defaultOperationId,
       'uuid': defaultUuid,
       'cookie': '',
+      'username': '',
+      'savedPassword': '',
+      'loginMethod': 'SSO',
+      'copeCode': 'F_VN',
+      'rememberPassword': true,
+      'autoLogin': true,
       'bgBlur': null,
       'bgOpacity': null,
       'dialogBlur': null,
@@ -74,8 +117,15 @@ class ConfigService {
 
   static Future<void> saveConfig(Map<String, dynamic> config) async {
     try {
+      final toSave = Map<String, dynamic>.from(config);
+      if (toSave.containsKey('savedPassword')) {
+        final rawPwd = toSave['savedPassword']?.toString() ?? '';
+        toSave['savedPassword'] = rawPwd.startsWith(_pwdPrefix)
+            ? rawPwd
+            : encodePassword(rawPwd);
+      }
       final file = File(configFileName);
-      await file.writeAsString(json.encode(config));
+      await file.writeAsString(json.encode(toSave));
     } catch (e) {
       _logger.warning('Failed to save config: $e');
     }

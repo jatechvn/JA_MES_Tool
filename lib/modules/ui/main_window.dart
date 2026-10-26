@@ -15,6 +15,7 @@ import 'styles.dart';
 import 'motion.dart';
 import 'dialogs/settings_dialog.dart';
 import 'dialogs/token_expired_dialog.dart';
+import 'dialogs/login_dialog.dart';
 import 'dialogs/glass_update_dialog.dart';
 import '../services/ota_update_service.dart';
 import '../services/window_activity_monitor.dart';
@@ -539,6 +540,31 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             : logic.downloadTemplateCsv(),
       ),
       CommandPaletteItem(
+        label: Translations.get('cmd_login_account', lang),
+        subtitle: Translations.get('mes_login_subtitle', lang),
+        category: Translations.get('category_actions', lang),
+        icon: Icons.login_rounded,
+        keywords: [
+          'login',
+          'dang nhap',
+          'account',
+          'tai khoan',
+          'sso',
+          'cloudmes',
+          'switch',
+        ],
+        onSelect: () => _showLoginDialog(context, logic, theme),
+      ),
+      if (logic.isConnectionValid == true && logic.token.trim().isNotEmpty)
+        CommandPaletteItem(
+          label: Translations.get('cmd_logout_account', lang),
+          subtitle: Translations.get('logout_success_msg', lang),
+          category: Translations.get('category_actions', lang),
+          icon: Icons.logout_rounded,
+          keywords: ['logout', 'dang xuat', 'sign out', 'doi tai khoan'],
+          onSelect: () => logic.logoutAccount(),
+        ),
+      CommandPaletteItem(
         label: Translations.get('cmd_fetch_cdp', lang),
         subtitle: 'Automatically sync Token & Cookie from Chrome/Edge',
         category: Translations.get('category_actions', lang),
@@ -752,12 +778,14 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
 
           const SizedBox(width: 14),
 
-          // Dynamic Island Status Capsule (Live MES state)
+          // Dynamic Island Status Capsule (Live MES state & Account)
           DynamicIslandCapsule(
             colors: colors,
             isRunning: isConnValid,
             statusText: isConnValid
-                ? 'LIVE • MES OK'
+                ? (logic.activeAccount.isNotEmpty
+                      ? 'LIVE • ${logic.activeAccount}'
+                      : 'LIVE • MES OK')
                 : (isConnError ? 'TOKEN EXPIRED' : 'CONNECTING...'),
             subText: logic.viewMode == ViewMode.componentTrace
                 ? '${logic.traceHistory.length} csn'
@@ -765,7 +793,7 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             customColor: isConnValid
                 ? colors.accentEmerald
                 : (isConnError ? colors.accentRose : colors.accentAmber),
-            onTap: () => _showSettingsDialog(context, logic, theme),
+            onTap: () => _showLoginDialog(context, logic, theme),
           ),
 
           const SizedBox(width: 10),
@@ -863,7 +891,26 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             tooltip: Translations.get('toggle_theme', logic.lang),
           ),
 
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
+
+          // Account / Login / Switch Account Button
+          IconButton(
+            key: const ValueKey('header_account_btn'),
+            icon: Icon(
+              isConnValid ? Icons.account_circle_rounded : Icons.login_rounded,
+              color: isConnValid ? colors.accentEmerald : colors.accentAmber,
+              size: 18,
+            ),
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(),
+            splashRadius: 18,
+            onPressed: () => _showLoginDialog(context, logic, theme),
+            tooltip: isConnValid && logic.activeAccount.isNotEmpty
+                ? '${Translations.get('logged_in_as', logic.lang)} ${logic.activeAccount} (${Translations.get('switch_account_btn', logic.lang)})'
+                : Translations.get('mes_login_title', logic.lang),
+          ),
+
+          const SizedBox(width: 2),
 
           // Settings Button
           IconButton(
@@ -4855,6 +4902,19 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     ThemeProvider theme,
   ) {
     showAppSettingsDialog(context, logic, theme);
+  }
+
+  void _showLoginDialog(
+    BuildContext context,
+    AppLogic logic,
+    ThemeProvider theme,
+  ) {
+    showMesLoginDialog(
+      context,
+      logic: logic,
+      colors: theme.colors,
+      onOpenFullSettings: () => _showSettingsDialog(context, logic, theme),
+    );
   }
 
   void _showTokenExpiredWarningDialog(BuildContext context, AppLogic logic) {

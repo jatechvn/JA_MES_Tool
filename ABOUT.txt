@@ -2,8 +2,8 @@
                        PROJECT INFORMATION CARD
 ========================================================================
 Project Name : JA MES Tool
-Version      : v2.13.2
-Release Date : 2026-10-20
+Version      : v2.14.0
+Release Date : 2026-10-26
 Tech Stack   : Dart 3.12+ / Flutter 3.x (Windows Desktop Application)
 Managed By   : JA Auto Git / JA Tech
 Website      : https://jatechvn.github.io/
@@ -14,6 +14,12 @@ Description  : High-performance desktop application developed in Dart/Flutter
                traceability from the Foxconn CloudMES system.
 
 Key Features:
+- Direct In-App CloudMES / SSO Login, Remember Password & Auto-Login: Added
+  MesLoginDialog supporting both SSO (/api/platform-user/platform/sso/login) and
+  CloudMES (/api/platform-user/platform/login) authentication modes, obfuscated
+  local password persistence, silent background auto-login on startup and token
+  expiry, JWT user_account badge on DynamicIslandCapsule, and 1-click Logout /
+  Switch Account.
 - Engine-Level Power Frame/Ticker Gate & Native Window Activity Monitor: Added
   PowerWidgetsBinding (PowerFrameGate) and PowerTickerGate to halt ordinary Flutter frame
   scheduling and descendant Tickers when the window is unfocused, minimized, or idle while
