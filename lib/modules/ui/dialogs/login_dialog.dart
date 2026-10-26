@@ -8,34 +8,46 @@ import '../../logic.dart';
 import '../../translations.dart';
 import '../styles.dart';
 
+bool _isMesLoginDialogOpen = false;
+bool get isMesLoginDialogOpen => _isMesLoginDialogOpen;
+
 Future<void> showMesLoginDialog(
   BuildContext context, {
   required AppLogic logic,
   required AppColors colors,
   VoidCallback? onOpenFullSettings,
-}) {
-  return showGeneralDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
-    transitionBuilder: (ctx, anim1, anim2, child) {
-      final curved = CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic);
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
-          child: MesLoginDialog(
-            logic: logic,
-            colors: colors,
-            onOpenFullSettings: onOpenFullSettings,
+}) async {
+  if (_isMesLoginDialogOpen) return;
+  _isMesLoginDialogOpen = true;
+  try {
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final curved = CurvedAnimation(
+          parent: anim1,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+            child: MesLoginDialog(
+              logic: logic,
+              colors: colors,
+              onOpenFullSettings: onOpenFullSettings,
+            ),
           ),
-        ),
-      );
-    },
-  );
+        );
+      },
+    );
+  } finally {
+    _isMesLoginDialogOpen = false;
+  }
 }
 
 class MesLoginDialog extends StatefulWidget {

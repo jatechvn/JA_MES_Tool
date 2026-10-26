@@ -8,8 +8,12 @@ import 'build_info.dart';
 class LoggerService {
   static final List<String> recentLogs = [];
   static final ValueNotifier<int> logChangeNotifier = ValueNotifier<int>(0);
+  static Future<void> _writeQueue = Future.value();
+  static bool _initialized = false;
 
   static Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
     Logger.root.level = Level.ALL;
 
     final exeDir = File(Platform.resolvedExecutable).parent.path;
@@ -40,7 +44,7 @@ class LoggerService {
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final logFile = File('${logDir.path}/mes_log_$dateStr.txt');
 
-    Logger.root.onRecord.listen((record) async {
+    Logger.root.onRecord.listen((record) {
       // Full ISO 8601 (date + ms) when running via debug.bat (-debug) or a
       // Flutter debug build; just HH:mm:ss for a normal release run, to keep
       // release logs compact.
@@ -62,21 +66,24 @@ class LoggerService {
       }
       logChangeNotifier.value++;
 
-      try {
-        await logFile.writeAsString('$msg\n', mode: FileMode.append);
-        if (record.error != null) {
+      final buffer = StringBuffer('$msg\n');
+      if (record.error != null) {
+        buffer.writeln(record.error);
+      }
+      if (record.stackTrace != null) {
+        buffer.writeln(record.stackTrace);
+      }
+      final payload = buffer.toString();
+
+      _writeQueue = _writeQueue.then((_) async {
+        try {
           await logFile.writeAsString(
-            '${record.error}\n',
+            payload,
             mode: FileMode.append,
+            flush: false,
           );
-        }
-        if (record.stackTrace != null) {
-          await logFile.writeAsString(
-            '${record.stackTrace}\n',
-            mode: FileMode.append,
-          );
-        }
-      } catch (_) {}
+        } catch (_) {}
+      });
     });
   }
 

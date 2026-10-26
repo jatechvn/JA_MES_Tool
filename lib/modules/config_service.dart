@@ -7,6 +7,7 @@ final _logger = Logger('ConfigService');
 
 class ConfigService {
   static const String _pwdPrefix = 'james_v1:';
+  static Future<void> _saveQueue = Future.value();
 
   static String encodePassword(String plain) {
     if (plain.isEmpty) return '';
@@ -115,19 +116,22 @@ class ConfigService {
     };
   }
 
-  static Future<void> saveConfig(Map<String, dynamic> config) async {
-    try {
-      final toSave = Map<String, dynamic>.from(config);
-      if (toSave.containsKey('savedPassword')) {
-        final rawPwd = toSave['savedPassword']?.toString() ?? '';
-        toSave['savedPassword'] = rawPwd.startsWith(_pwdPrefix)
-            ? rawPwd
-            : encodePassword(rawPwd);
+  static Future<void> saveConfig(Map<String, dynamic> config) {
+    final snapshot = Map<String, dynamic>.from(config);
+    _saveQueue = _saveQueue.then((_) async {
+      try {
+        if (snapshot.containsKey('savedPassword')) {
+          final rawPwd = snapshot['savedPassword']?.toString() ?? '';
+          snapshot['savedPassword'] = rawPwd.startsWith(_pwdPrefix)
+              ? rawPwd
+              : encodePassword(rawPwd);
+        }
+        final file = File(configFileName);
+        await file.writeAsString(json.encode(snapshot), flush: true);
+      } catch (e) {
+        _logger.warning('Failed to save config: $e');
       }
-      final file = File(configFileName);
-      await file.writeAsString(json.encode(toSave));
-    } catch (e) {
-      _logger.warning('Failed to save config: $e');
-    }
+    });
+    return _saveQueue;
   }
 }

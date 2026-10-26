@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ja_mes_tool/modules/api_client.dart';
 import 'package:ja_mes_tool/modules/config_service.dart';
 import 'package:ja_mes_tool/modules/logic.dart';
+import 'package:ja_mes_tool/modules/translations.dart';
 import 'package:ja_mes_tool/modules/ui/dialogs/login_dialog.dart';
 import 'package:ja_mes_tool/theme/theme_provider.dart';
 
@@ -94,6 +95,14 @@ void main() {
       expect(logic.isConnectionValid, isFalse);
       expect(logic.token, isEmpty);
       expect(find.byKey(const ValueKey('mes_logout_btn')), findsNothing);
+      expect(find.textContaining('9222'), findsNothing);
+
+      for (final lang in ['en', 'vn', 'cn']) {
+        expect(
+          Translations.get('or_browser_sync', lang).contains('9222'),
+          isFalse,
+        );
+      }
 
       logic.dispose();
       theme.dispose();

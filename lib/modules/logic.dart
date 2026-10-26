@@ -380,6 +380,7 @@ class AppLogic extends ChangeNotifier {
   bool? isConnectionValid;
   String? connectionError;
   Timer? _validationTimer;
+  bool _isValidating = false;
   final Set<String> _testRecordFallbackEligibleSns = {};
 
   final QueryQueue _queue;
@@ -542,10 +543,26 @@ class AppLogic extends ChangeNotifier {
     }
     _enableTestRecordFallbackFor(_snList);
     notifyListeners();
-    // Auto-fetch all 3 SN data views + the saved Component Trace history, so
-    // switching tabs never has to wait — not just the currently active view.
-    _fetchAllPending();
-    _startValidationTimer();
+    final hasAutoLoginCreds =
+        !_manualLogoutInSession &&
+        _autoLogin &&
+        _rememberPassword &&
+        _username.trim().isNotEmpty &&
+        _savedPassword.isNotEmpty;
+    if (hasAutoLoginCreds) {
+      final initialRevision = _credentialsRevision;
+      await _validateNow();
+      if (_disposed) return;
+      if (_credentialsRevision == initialRevision) {
+        _fetchAllPending();
+      }
+      _startValidationTimer(runImmediately: false);
+    } else {
+      // Auto-fetch all 3 SN data views + the saved Component Trace history, so
+      // switching tabs never has to wait — not just the currently active view.
+      _fetchAllPending();
+      _startValidationTimer();
+    }
   }
 
   /// Kicks off the Test Record, Barcode History, Component List, and
@@ -568,9 +585,11 @@ class AppLogic extends ChangeNotifier {
     ]);
   }
 
-  void _startValidationTimer() {
+  void _startValidationTimer({bool runImmediately = true}) {
     _validationTimer?.cancel();
-    _validateNow();
+    if (runImmediately) {
+      _validateNow();
+    }
     _validationTimer = Timer.periodic(
       const Duration(minutes: 3),
       (_) => _validateNow(),
@@ -578,48 +597,54 @@ class AppLogic extends ChangeNotifier {
   }
 
   Future<void> _validateNow() async {
-    final revision = _credentialsRevision;
-    String? res;
-    if (_token.trim().isEmpty) {
-      res = '401 Unauthorized';
-    } else {
-      res = await verifySettings(_token, _lang, _operationId, _uuid, _cookie);
-    }
-    if (_disposed || revision != _credentialsRevision) return;
-    if (res == null) {
-      final jwtUser = ApiClient.extractAccountFromJwt(_token);
-      if (jwtUser.isNotEmpty && _username.trim().isEmpty) {
-        _username = jwtUser;
-        unawaited(_saveConfig(_exportConfigMap()));
+    if (_isValidating || _isLoggingIn) return;
+    _isValidating = true;
+    try {
+      final revision = _credentialsRevision;
+      String? res;
+      if (_token.trim().isEmpty) {
+        res = '401 Unauthorized';
+      } else {
+        res = await verifySettings(_token, _lang, _operationId, _uuid, _cookie);
       }
-      isConnectionValid = true;
-      connectionError = null;
-      notifyListeners();
-      return;
-    }
-
-    // Attempt silent auto-login if remembered credentials exist and user did not manually log out
-    if (!_manualLogoutInSession &&
-        _autoLogin &&
-        _rememberPassword &&
-        _username.trim().isNotEmpty &&
-        _savedPassword.isNotEmpty) {
-      final autoRes = await loginWithAccount(
-        username: _username,
-        password: _savedPassword,
-        loginMethod: _loginMethod,
-        rememberPassword: _rememberPassword,
-        autoLogin: _autoLogin,
-      );
-      if (_disposed) return;
-      if (autoRes.success) {
+      if (_disposed || revision != _credentialsRevision) return;
+      if (res == null) {
+        final jwtUser = ApiClient.extractAccountFromJwt(_token);
+        if (jwtUser.isNotEmpty && _username.trim().isEmpty) {
+          _username = jwtUser;
+          unawaited(_saveConfig(_exportConfigMap()));
+        }
+        isConnectionValid = true;
+        connectionError = null;
+        notifyListeners();
         return;
       }
-    }
 
-    isConnectionValid = false;
-    connectionError = res;
-    notifyListeners();
+      // Attempt silent auto-login if remembered credentials exist and user did not manually log out
+      if (!_manualLogoutInSession &&
+          _autoLogin &&
+          _rememberPassword &&
+          _username.trim().isNotEmpty &&
+          _savedPassword.isNotEmpty) {
+        final autoRes = await loginWithAccount(
+          username: _username,
+          password: _savedPassword,
+          loginMethod: _loginMethod,
+          rememberPassword: _rememberPassword,
+          autoLogin: _autoLogin,
+        );
+        if (_disposed) return;
+        if (autoRes.success) {
+          return;
+        }
+      }
+
+      isConnectionValid = false;
+      connectionError = res;
+      notifyListeners();
+    } finally {
+      _isValidating = false;
+    }
   }
 
   Map<String, dynamic> _exportConfigMap() {

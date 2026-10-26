@@ -5,22 +5,39 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.1] - 2026-10-26
+
+### 🛠️ Sửa lỗi Crash / Đơ Ứng dụng & Tinh chỉnh Giao diện Login (Stability & UI Polish)
+- **🔒 Tuần tự hóa Ghi File Log & Cấu hình Chống Xung đột File Handle (`logger_service.dart`, `config_service.dart`)**:
+  - Đưa toàn bộ thao tác ghi `mes_log_YYYY-MM-DD.txt` và `config.json` vào hàng đợi tuần tự (`_writeQueue` / `_saveQueue`), chấm dứt hoàn toàn hiện tượng đứt dòng log và lỗi khóa file Windows (`FileSystemException: errno = 32`) khi hàng đợi lớn (~75 SN × 3 truy vấn) trả về đồng thời.
+- **⚡ Chống Kẹt Khung hình Lúc Khởi động & Đánh thức Focus Tức thì (`power_binding.dart`, `main.dart`)**:
+  - Bổ sung ngoại lệ `!firstFrameRasterized` trong `PowerFrameGate.framesEnabled` để tránh deadlock khung hình đầu tiên khi cửa sổ Win32 khởi tạo ẩn, đồng thời tự động kích hoạt `onWindowFocus()` ngay khi nhấn chuột hoặc bàn phím bên trong cửa sổ/hộp thoại đang hiển thị.
+- **🛡️ Chống Mở Chồng `MesLoginDialog`, Điều phối Auto-Login & Bẫy Lỗi Toàn cục (`login_dialog.dart`, `main_window.dart`, `logic.dart`, `main.dart`)**:
+  - Bổ sung cờ khóa `isMesLoginDialogOpen` ngăn mở chồng hộp thoại đăng nhập thứ 2 khi người dùng bấm **Đăng xuất / Đổi tài khoản**, và hoàn tất kiểm tra Token / Auto-Login trước khi bắn hàng đợi `_fetchAllPending()` lúc khởi động.
+  - Đăng ký `FlutterError.onError` và `PlatformDispatcher.instance.onError` ghi nhận mọi ngoại lệ bất đồng bộ vào `LoggerService`.
+- **🎨 Tinh chỉnh Thanh Header & Cửa sổ Đăng nhập (`main_window.dart`, `translations.dart`)**:
+  - Loại bỏ icon User thừa cạnh nút Settings trên Header (nhấn trực tiếp vào cụm `DynamicIslandCapsule` `LIVE • <Mã NV>` để mở cửa sổ Login).
+  - Lược bỏ cụm chữ `(Port 9222)` trong nhãn đồng bộ trình duyệt ở cả 3 ngôn ngữ (`EN` / `VN` / `CN`).
+  - Mở rộng bộ kiểm thử lên **150/150 tests pass**.
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.14.1+35` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.14.0] - 2026-10-26
 
-### ?? N?ng c?p & T?nh n?ng m?i (Features & Enhancements)
-- **?? C?a s? ??ng nh?p Tr?c ti?p CloudMES / SSO (`MesLoginDialog`) (`login_dialog.dart`, `api_client.dart`)**:
-  - H? tr? ??ng nh?p tr?c ti?p ngay trong ?ng d?ng v?i 2 ph??ng th?c x?c th?c **`SSO`** (`POST /api/platform-user/platform/sso/login`) v? **`CloudMES`** (`POST /api/platform-user/platform/login` k?m `copeCode: "F_VN"` v? h? tr? t?i ?nh Captcha d? ph?ng `GET /api/platform-user/platform/captcha`).
-  - T? ??ng gi?i m? JWT (`extractAccountFromJwt`) ?? tr?ch xu?t v? hi?n th? m? nh?n vi?n (`user_account`, v? d? `V1801179`) ngay tr?n thanh tr?ng th?i `DynamicIslandCapsule` (`LIVE ? V1801179`), trong c?a s? ??ng nh?p v? trong C?i ??t.
-- **?? T? ??ng L?u M?t kh?u M? h?a & ??ng nh?p Ng?m (`Auto-Login`) (`config_service.dart`, `logic.dart`)**:
-  - B? sung tu? ch?n **Ghi nh? m?t kh?u** (`rememberPassword`) v?i c? ch? m? h?a ??o byte + Base64 (`james_v1:`) trong `config.json` v? **T? ??ng ??ng nh?p** (`autoLogin`).
-  - Khi kh?i ??ng ?ng d?ng ho?c khi Token h?t h?n, n?u m?t kh?u ?? l?u c?n h?p l?, ?ng d?ng t? ??ng ??ng nh?p ng?m l?y Token m?i v? t?i l?i d? li?u m? kh?ng l?m gi?n ?o?n ng??i d?ng; n?u m?t kh?u ?? thay ??i, ?ng d?ng t? ??ng m? `MesLoginDialog` ?? nh?p l?i.
-- **?? H? tr? ??ng xu?t & ??i T?i kho?n Nhanh (`Logout / Switch Account`) (`login_dialog.dart`, `main_window.dart`, `settings_dialog.dart`)**:
-  - T?ch h?p API ??ng xu?t (`POST /api/platform-user/platform/logout`), xo? phi?n hi?n t?i v? m? s?n ? nh?p t?i kho?n m?i ?? chuy?n ??i nhanh gi?a c?c t?i kho?n MES.
-  - B? sung n?t T?i kho?n tr?n thanh Header ch?nh, th? qu?n l? t?i kho?n ? ??u Tab 1 trong Settings v? l?nh nhanh trong **Command Palette (`Ctrl+K`)**.
-  - B? sung b? ki?m th? `test/mes_login_dialog_test.dart` (**149/149 tests pass**).
+### 🚀 Nâng cấp & Tính năng mới (Features & Enhancements)
+- **🔐 Cửa sổ Đăng nhập Trực tiếp CloudMES / SSO (`MesLoginDialog`) (`login_dialog.dart`, `api_client.dart`)**:
+  - Hỗ trợ đăng nhập trực tiếp ngay trong ứng dụng với 2 phương thức xác thực **`SSO`** (`POST /api/platform-user/platform/sso/login`) và **`CloudMES`** (`POST /api/platform-user/platform/login` kèm `copeCode: "F_VN"` và hỗ trợ tải ảnh Captcha dự phòng `GET /api/platform-user/platform/captcha`).
+  - Tự động giải mã JWT (`extractAccountFromJwt`) để trích xuất và hiển thị mã nhân viên (`user_account`, ví dụ `V1801179`) ngay trên thanh trạng thái `DynamicIslandCapsule` (`LIVE • V1801179`), trong cửa sổ đăng nhập và trong Cài đặt.
+- **💾 Tự động Lưu Mật khẩu Mã hóa & Đăng nhập Ngầm (`Auto-Login`) (`config_service.dart`, `logic.dart`)**:
+  - Bổ sung tuỳ chọn **Ghi nhớ mật khẩu** (`rememberPassword`) với cơ chế mã hóa đảo byte + Base64 (`james_v1:`) trong `config.json` và **Tự động đăng nhập** (`autoLogin`).
+  - Khi khởi động ứng dụng hoặc khi Token hết hạn, nếu mật khẩu đã lưu còn hợp lệ, ứng dụng tự động đăng nhập ngầm lấy Token mới và tải lại dữ liệu mà không làm gián đoạn người dùng; nếu mật khẩu đã thay đổi, ứng dụng tự động mở `MesLoginDialog` để nhập lại.
+- **🔄 Hỗ trợ Đăng xuất & Đổi Tài khoản Nhanh (`Logout / Switch Account`) (`login_dialog.dart`, `main_window.dart`, `settings_dialog.dart`)**:
+  - Tích hợp API đăng xuất (`POST /api/platform-user/platform/logout`), xoá phiên hiện tại và mở sẵn ô nhập tài khoản mới để chuyển đổi nhanh giữa các tài khoản MES.
+  - Bổ sung bộ kiểm thử `test/mes_login_dialog_test.dart` (**149/149 tests pass**).
 
-### ?? Ph?t h?nh
-- ??ng b? phi?n b?n `2.14.0+34` xuy?n su?t `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.14.0+34` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
 
 ## [2.13.2] - 2026-10-20
 

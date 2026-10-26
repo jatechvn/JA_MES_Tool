@@ -261,12 +261,16 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
     _lastSortViewKey = sortViewKey;
 
     if (logic.isConnectionValid == false && !_hasCheckedInitialToken) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_hasCheckedInitialToken && mounted) {
-          _hasCheckedInitialToken = true;
-          _showTokenExpiredWarningDialog(context, logic);
-        }
-      });
+      if (isMesLoginDialogOpen) {
+        _hasCheckedInitialToken = true;
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_hasCheckedInitialToken && mounted && !isMesLoginDialogOpen) {
+            _hasCheckedInitialToken = true;
+            _showTokenExpiredWarningDialog(context, logic);
+          }
+        });
+      }
     } else if (logic.isConnectionValid == true && _hasCheckedInitialToken) {
       _hasCheckedInitialToken = false;
     }
@@ -889,25 +893,6 @@ class _MainWindowState extends State<MainWindow> with WindowListener {
             splashRadius: 18,
             onPressed: () => theme.toggleTheme(),
             tooltip: Translations.get('toggle_theme', logic.lang),
-          ),
-
-          const SizedBox(width: 2),
-
-          // Account / Login / Switch Account Button
-          IconButton(
-            key: const ValueKey('header_account_btn'),
-            icon: Icon(
-              isConnValid ? Icons.account_circle_rounded : Icons.login_rounded,
-              color: isConnValid ? colors.accentEmerald : colors.accentAmber,
-              size: 18,
-            ),
-            padding: const EdgeInsets.all(6),
-            constraints: const BoxConstraints(),
-            splashRadius: 18,
-            onPressed: () => _showLoginDialog(context, logic, theme),
-            tooltip: isConnValid && logic.activeAccount.isNotEmpty
-                ? '${Translations.get('logged_in_as', logic.lang)} ${logic.activeAccount} (${Translations.get('switch_account_btn', logic.lang)})'
-                : Translations.get('mes_login_title', logic.lang),
           ),
 
           const SizedBox(width: 2),

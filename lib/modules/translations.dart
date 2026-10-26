@@ -308,7 +308,7 @@ class Translations {
       'logout_success_msg':
           'Signed out. You can now sign in with another account.',
       'login_empty_error': 'Please enter both account and password.',
-      'or_browser_sync': 'Or sync token via Browser (Port 9222)',
+      'or_browser_sync': 'Or sync token via Browser',
       'cmd_login_account': 'Login / Switch MES Account',
       'cmd_logout_account': 'Logout MES Account',
       'account_section_title': 'MES Account & Auto-Login',
@@ -619,7 +619,7 @@ class Translations {
       'logout_success_msg':
           'Đã đăng xuất. Bạn có thể đăng nhập tài khoản khác.',
       'login_empty_error': 'Vui lòng nhập đầy đủ tài khoản và mật khẩu.',
-      'or_browser_sync': 'Hoặc đồng bộ Token từ Trình duyệt (Port 9222)',
+      'or_browser_sync': 'Hoặc đồng bộ Token từ Trình duyệt',
       'cmd_login_account': 'Đăng nhập / Đổi tài khoản MES',
       'cmd_logout_account': 'Đăng xuất tài khoản MES',
       'account_section_title': 'Tài khoản MES & Tự động đăng nhập',
@@ -916,7 +916,7 @@ class Translations {
       'login_failed_msg': '登录失败：{error}',
       'logout_success_msg': '已退出登录，现在可以切换其他账号。',
       'login_empty_error': '请输入账号和密码。',
-      'or_browser_sync': '或通过浏览器同步凭据 (端口 9222)',
+      'or_browser_sync': '或通过浏览器同步凭据',
       'cmd_login_account': '登录 / 切换 MES 账号',
       'cmd_logout_account': '退出 MES 账号',
       'account_section_title': 'MES 账号与自动登录',

@@ -1,4 +1,6 @@
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
 import 'modules/build_info.dart';
 import 'modules/constants.dart';
@@ -12,6 +14,8 @@ import 'theme/language_provider.dart';
 import 'modules/services/app_power_manager.dart';
 import 'modules/services/power_binding.dart';
 
+final _rootLogger = Logger('GlobalError');
+
 void main(List<String> args) async {
   PowerWidgetsBinding();
 
@@ -21,13 +25,27 @@ void main(List<String> args) async {
     BuildInfo.isCliDebug = true;
   }
 
+  await LoggerService.init();
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    _rootLogger.severe(
+      'FlutterError: ${details.exceptionAsString()}',
+      details.exception,
+      details.stack,
+    );
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    _rootLogger.severe('Uncaught Platform Error: $error', error, stack);
+    return true;
+  };
+
   await initGlassWindow(
     title: appName,
     size: const Size(1280, 840),
     minSize: const Size(840, 560),
   );
-
-  await LoggerService.init();
 
   runApp(
     MultiProvider(
@@ -60,8 +78,13 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return Listener(
           behavior: HitTestBehavior.translucent,
-          onPointerDown: (_) =>
-              AppPowerManager.instance.recordUserInteraction(),
+          onPointerDown: (_) {
+            final power = AppPowerManager.instance;
+            if (power.isWindowVisible && !power.isWindowFocused) {
+              power.onWindowFocus();
+            }
+            power.recordUserInteraction();
+          },
           onPointerMove: (_) =>
               AppPowerManager.instance.recordUserInteraction(),
           onPointerHover: (_) =>
@@ -71,7 +94,11 @@ class MyApp extends StatelessWidget {
           child: Focus(
             autofocus: false,
             onKeyEvent: (_, _) {
-              AppPowerManager.instance.recordUserInteraction();
+              final power = AppPowerManager.instance;
+              if (power.isWindowVisible && !power.isWindowFocused) {
+                power.onWindowFocus();
+              }
+              power.recordUserInteraction();
               return KeyEventResult.ignored;
             },
             child: PowerTickerGate(child: child ?? const SizedBox.shrink()),

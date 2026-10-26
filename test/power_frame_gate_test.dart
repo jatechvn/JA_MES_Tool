@@ -5,13 +5,68 @@ import 'package:ja_mes_tool/modules/services/app_power_manager.dart';
 import 'package:ja_mes_tool/modules/services/power_binding.dart';
 
 class _PowerTestBinding extends AutomatedTestWidgetsFlutterBinding
-    with PowerFrameGate {}
+    with PowerFrameGate {
+  bool rasterized = true;
+
+  // The widget-test engine does not rasterize native Windows surfaces.
+  @override
+  bool get firstFrameRasterized => rasterized;
+}
 
 void main() {
   final binding = _PowerTestBinding();
   final power = AppPowerManager.instance;
-  setUp(() => power.resetForTesting());
-  tearDown(() => power.resetForTesting());
+  setUp(() {
+    binding.rasterized = true;
+    power.resetForTesting();
+  });
+  tearDown(() {
+    binding.rasterized = true;
+    power.resetForTesting();
+  });
+
+  testWidgets(
+    'hidden startup can schedule the first raster without granting focus',
+    (tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      binding.rasterized = false;
+      power.resetForTesting(isFocused: false, isVisible: false);
+      expect(power.shouldAnimateIndicators, isFalse);
+      expect(
+        binding.framesEnabled,
+        isTrue,
+        reason:
+            'Win32 Show waits for the first raster; hidden state cannot block it',
+      );
+      binding.scheduleFrame();
+      expect(binding.hasScheduledFrame, isTrue);
+      await tester.pump();
+
+      binding.rasterized = true;
+      expect(binding.framesEnabled, isFalse);
+      binding.scheduleFrame();
+      expect(
+        binding.hasScheduledFrame,
+        isFalse,
+        reason:
+            'The bootstrap exception must end immediately after first raster',
+      );
+      power.applyNativeWindowState(
+        visible: true,
+        minimized: false,
+        focused: false,
+      );
+      expect(binding.framesEnabled, isFalse);
+      power.applyNativeWindowState(
+        visible: true,
+        minimized: false,
+        focused: true,
+      );
+      expect(binding.hasScheduledFrame, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      power.resetForTesting();
+    },
+  );
 
   testWidgets(
     'inactive frames stop while background timers keep working; native focus paints dirty UI',

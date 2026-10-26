@@ -13,7 +13,12 @@ mixin PowerFrameGate on WidgetsBinding {
 
   @override
   bool get framesEnabled =>
-      super.framesEnabled && AppPowerManager.instance.shouldAnimateIndicators;
+      super.framesEnabled &&
+      // The Windows runner shows its initially hidden window only after the
+      // first raster. Requiring native focus before that creates a startup
+      // deadlock. This exception is one-time, not a synthetic focus grant.
+      (!firstFrameRasterized ||
+          AppPowerManager.instance.shouldAnimateIndicators);
 
   void _wakeFrames() {
     if (AppPowerManager.instance.shouldAnimateIndicators) scheduleFrame();
