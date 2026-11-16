@@ -1016,7 +1016,9 @@ class AppLogic extends ChangeNotifier {
     _operationId = operationId;
     _uuid = uuid;
     _cookie = cookie;
-    _manualLogoutInSession = false;
+    if (token.trim().isNotEmpty) {
+      _manualLogoutInSession = false;
+    }
     final jwtUser = ApiClient.extractAccountFromJwt(token);
     if (jwtUser.isNotEmpty) {
       _username = jwtUser;

@@ -74,41 +74,8 @@ extension _SettingsMesApiTabExt on _AppSettingsDialogState {
                 ),
               ),
               const SizedBox(width: 8),
-              if (logic.isConnectionValid == true &&
-                  logic.token.trim().isNotEmpty) ...[
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.accentRose,
-                    side: BorderSide(
-                      color: colors.accentRose.withValues(alpha: 0.45),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: () async {
-                    await logic.logoutAccount();
-                    _rebuild(() {
-                      _tokenCtrl.text = logic.token;
-                      _cookieCtrl.text = logic.cookie;
-                    });
-                  },
-                  icon: const Icon(Icons.logout_rounded, size: 15),
-                  label: Text(
-                    Translations.get('logout_btn', logic.lang),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
               ElevatedButton.icon(
+                key: const ValueKey('settings_account_action_btn'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.accentColor,
                   foregroundColor: Colors.white,
@@ -129,11 +96,18 @@ extension _SettingsMesApiTabExt on _AppSettingsDialogState {
                   );
                   _rebuild(() {
                     _tokenCtrl.text = logic.token;
+                    _opIdCtrl.text = logic.operationId;
                     _uuidCtrl.text = logic.uuid;
                     _cookieCtrl.text = logic.cookie;
                   });
                 },
-                icon: const Icon(Icons.login_rounded, size: 15),
+                icon: Icon(
+                  logic.isConnectionValid == true &&
+                          logic.token.trim().isNotEmpty
+                      ? Icons.swap_horiz_rounded
+                      : Icons.login_rounded,
+                  size: 15,
+                ),
                 label: Text(
                   Translations.get(
                     logic.isConnectionValid == true &&

@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ja_mes_tool/modules/logic.dart';
 import 'package:ja_mes_tool/modules/services/ota_update_service.dart';
 import 'package:ja_mes_tool/modules/translations.dart';
+import 'package:ja_mes_tool/modules/ui/dialogs/login_dialog.dart';
 import 'package:ja_mes_tool/modules/ui/dialogs/settings_dialog.dart';
 import 'package:ja_mes_tool/modules/services/app_power_manager.dart';
 import 'package:ja_mes_tool/theme/theme_provider.dart';
@@ -498,6 +500,151 @@ void main() {
       expect(logic.operationId, 'SAVED_OP_ID');
       expect(find.text(Translations.get('settings', logic.lang)), findsNothing);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Settings MES Account card renders a single account action button and preserves logout on Save',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(AppPowerManager.instance.resetForTesting);
+
+      final tempDir = Directory.systemTemp.createTempSync(
+        'ja_mes_settings_logout_test',
+      );
+      final tempOtaConfig = File('${tempDir.path}\\update_config.json');
+      OtaUpdateService().setCustomConfigFileForTesting(tempOtaConfig);
+      addTearDown(() async {
+        OtaUpdateService().setCustomConfigFileForTesting(null);
+        for (var i = 0; i < 10; i++) {
+          if (!tempDir.existsSync()) break;
+          try {
+            tempDir.deleteSync(recursive: true);
+            break;
+          } catch (_) {
+            await Future<void>.delayed(const Duration(milliseconds: 30));
+          }
+        }
+      });
+
+      final header = base64Url.encode(
+        utf8.encode(json.encode({'alg': 'HS512'})),
+      );
+      final payload = base64Url.encode(
+        utf8.encode(json.encode({'sub': '2035', 'user_account': 'V1801179'})),
+      );
+      final jwt = '$header.$payload.signature';
+
+      final logic = AppLogic(initialize: false, saveConfig: (_) async {});
+      logic.setLoginPreferences(rememberPassword: true, autoLogin: true);
+      await logic.updateCredentials(
+        token: jwt,
+        uuid: 'test-uuid',
+        operationId: 'op-1',
+        cookie: 'CloudMES-token=$jwt',
+      );
+      logic.isConnectionValid = true;
+      final theme = ThemeProvider(initialMode: 'light');
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AppLogic>.value(value: logic),
+            ChangeNotifierProvider<ThemeProvider>.value(value: theme),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () =>
+                        showAppSettingsDialog(context, logic, theme),
+                    child: const Text('Open Settings'),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open Settings dialog while logged in.
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(Translations.get('logout_btn', logic.lang)),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('settings_account_action_btn')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('switch_account_btn', logic.lang)),
+        findsOneWidget,
+      );
+
+      // Open MesLoginDialog from the unified Settings button and log out.
+      await tester.tap(
+        find.byKey(const ValueKey('settings_account_action_btn')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('mes_logout_btn')));
+      await tester.pumpAndSettle();
+
+      expect(logic.token, isEmpty);
+      expect(logic.isConnectionValid, isFalse);
+      expect(logic.manualLogoutInSession, isTrue);
+
+      // Close MesLoginDialog to return to Settings.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(MesLoginDialog),
+          matching: find.byIcon(Icons.close_rounded),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(Translations.get('login_btn', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('switch_account_btn', logic.lang)),
+        findsNothing,
+      );
+
+      // Save Settings while logged out: manualLogoutInSession must stay true.
+      await tester.tap(find.text(Translations.get('save', logic.lang)));
+      for (var i = 0; i < 40; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+        await tester.pump();
+        if (find
+            .text(Translations.get('settings', logic.lang))
+            .evaluate()
+            .isEmpty) {
+          break;
+        }
+      }
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(find.text(Translations.get('settings', logic.lang)), findsNothing);
+      expect(logic.token, isEmpty);
+      expect(logic.isConnectionValid, isFalse);
+      expect(logic.manualLogoutInSession, isTrue);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      logic.dispose();
+      theme.dispose();
     },
   );
 }
