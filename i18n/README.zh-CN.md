@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.14.2 - 中文说明
+# 🤖 JA MES Tool v2.14.3 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.14.2-blue.svg" alt="版本 2.14.2">
+  <img src="https://img.shields.io/badge/banben-2.14.3-blue.svg" alt="版本 2.14.3">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -228,6 +228,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.14.3]** — **优化设置界面与高级配置智能折叠**：默认折叠手工输入 Token、UUID、Operation ID、Cookie 与 CDP 同步区块至“显示/隐藏高级设置”切换按钮，打造极致清爽的 1-Click 登录体验，保存设置时完整保持注销会话状态，扩展测试套件达到 **152/152 项测试全部通过**。
 - **[2.14.2]** — **模块化架构重构、修复设置弹窗控制器泄漏与清理 3,408 行冗余代码**：将 `main_window.dart` 拆分为 7 个高内聚 Dart `part` 文件；将 `settings_dialog.dart` 重构为基于 `StatefulWidget` 的弹窗（`_AppSettingsDialog` + `ListenableBuilder` + 3 个标签页 `part` 文件），在关闭时完整释放全部 7 个 `TextEditingController`（`test/settings_dialog_tabs_test.dart`，**151/151 项测试全部通过**）；分离模型层至 `lib/modules/models/mes_models.dart` 及 `logic_csv_part.dart` / `logic_trace_part.dart`；清理 11 个废弃无引用源码文件；同步 `translations.dart` 动态 `v$appVersion` 并补充模块导航指南。
 - **[2.14.1]** — **修复应用崩溃与界面卡死问题 & 精简登录界面**：为 `LoggerService` 与 `ConfigService` 增加顺序文件写入队列彻底解决并发写入冲突 (`errno = 32`)，在 `PowerFrameGate` / `MyApp` 中加入首帧渲染豁免与鼠标/键盘点击焦点即时唤醒，防止退出登录时重复弹出双层 `MesLoginDialog`，启动时先完成自动登录再拉取队列，注册全局异常捕获，移除设置按钮旁冗余的用户图标，并精简浏览器同步提示文案。
 - **[2.14.0]** — **内置 CloudMES / SSO 直接登录窗口与自动登录 (`MesLoginDialog`)**：支持 `SSO` 与 `CloudMES` 两种直接登录方式、记住密码本地混淆存储、启动或 Token 过期时静默自动登录 (`Auto-Login`)、状态胶囊实时显示当前工号，以及一键**退出 / 切换账号**。

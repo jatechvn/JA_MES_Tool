@@ -105,10 +105,36 @@ void main() {
         findsOneWidget,
       );
 
-      // Tab 0: MES API & CDP content
+      // Tab 0: MES API & CDP content - verify hidden by default, expandable on tap
+      expect(
+        find.text(Translations.get('show_advanced', logic.lang)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('cdp_sync_title', logic.lang)),
+        findsNothing,
+      );
+      // Tap to expand advanced token settings
+      await tester.tap(
+        find.text(Translations.get('show_advanced', logic.lang)),
+      );
+      await tester.pumpAndSettle();
       expect(
         find.text(Translations.get('cdp_sync_title', logic.lang)),
         findsOneWidget,
+      );
+      expect(
+        find.text(Translations.get('hide_advanced', logic.lang)),
+        findsOneWidget,
+      );
+      // Tap again to collapse back
+      await tester.tap(
+        find.text(Translations.get('hide_advanced', logic.lang)),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(Translations.get('cdp_sync_title', logic.lang)),
+        findsNothing,
       );
 
       // Switch to Tab 1: Display & Glassmorphism
@@ -464,6 +490,10 @@ void main() {
       // Cycle 1: Open, enter text in Tab 0 and Tab 2, then Cancel.
       await tester.tap(find.text('Open Settings'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('toggle_advanced_token_btn')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -200));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).at(1), 'TEMP_OP_ID');
       await tester.tap(
         find.text(Translations.get('tab_about_updates', logic.lang)),
@@ -479,6 +509,10 @@ void main() {
 
       // Cycle 2: Open, edit Operation ID, then Save and settle disk I/O + pop.
       await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('toggle_advanced_token_btn')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -200));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).at(1), 'SAVED_OP_ID');
       await tester.tap(find.text(Translations.get('save', logic.lang)));

@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.14.2
+# 🤖 JA MES Tool v2.14.3
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.2-blue.svg" alt="Version 2.14.2">
+  <img src="https://img.shields.io/badge/version-2.14.3-blue.svg" alt="Version 2.14.3">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">

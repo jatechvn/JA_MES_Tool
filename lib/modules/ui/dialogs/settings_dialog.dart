@@ -142,6 +142,7 @@ class _AppSettingsDialogState extends State<_AppSettingsDialog> {
   bool? _connectionTestResult;
   String? _connectionTestMsg;
   bool _isSyncingCdp = false;
+  bool _showAdvancedToken = false;
 
   @override
   void initState() {

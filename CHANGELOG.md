@@ -5,6 +5,17 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.3] - 2026-11-16
+
+### 🎨 Tinh chỉnh Giao diện Cài đặt & Ẩn Cấu hình Nâng cao (Settings UI Polish)
+- **🎛️ Thu gọn Thẻ Cấu hình Nâng cao & CDP Sync (`settings_mes_api_part.dart`, `settings_dialog.dart`)**:
+  - Tối giản hóa thẻ thiết lập MES API: Mặc định ẩn khối nhập Token thủ công, UUID, Operation ID, Cookie và CDP Sync vào nút thu gọn/mở rộng `Hiện cài đặt nâng cao / Ẩn cài đặt nâng cao` (`_showAdvancedToken`).
+  - Giúp người dùng tập trung vào quy trình đăng nhập 1-Click trực quan, đồng thời vẫn cho phép mở rộng tức thì khi cần chỉnh sửa thủ công hoặc đồng bộ CDP.
+  - Cập nhật bài kiểm thử `test/settings_dialog_tabs_test.dart` kiểm chứng toàn diện trạng thái ẩn/hiện và cuộn trang (**152/152 tests pass**).
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.14.3+37` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`.
+
 ## [2.14.2] - 2026-11-16
 
 ### 🏗️ Tối ưu Kiến trúc Mô-đun, Khắc phục Rò rỉ Settings & Dọn dẹp Mã nguồn (Modularization & Cleanup)

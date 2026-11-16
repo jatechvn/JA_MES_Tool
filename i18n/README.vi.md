@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.14.2 - Tiếng Việt
+# 🤖 JA MES Tool v2.14.3 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.14.2-blue.svg" alt="Phiên bản 2.14.2">
+  <img src="https://img.shields.io/badge/phien_ban-2.14.3-blue.svg" alt="Phiên bản 2.14.3">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -231,6 +231,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.14.3]** — **Tinh chỉnh Giao diện Cài đặt & Khối cấu hình nâng cao thu gọn thông minh**: Mặc định thu gọn khối nhập Token, UUID, Operation ID, Cookie và CDP Sync trong nút chuyển đổi `Hiện / Ẩn cài đặt nâng cao` giúp giao diện đăng nhập tinh giản, bảo toàn trạng thái phiên đăng xuất khi lưu cài đặt và mở rộng bộ kiểm thử đạt **152/152 tests pass**.
 - **[2.14.2]** — **Tối ưu Kiến trúc Mô-đun, Khắc phục Rò rỉ Settings & Dọn dẹp 3,408 dòng mã thừa**: Tách `main_window.dart` thành 7 tệp `part` gắn kết, chuyển `settings_dialog.dart` sang `StatefulWidget` (`_AppSettingsDialog` + 3 tệp tab `part`) giải phóng toàn bộ 7 `TextEditingController` khi đóng (`test/settings_dialog_tabs_test.dart`, **151/151 tests pass**), tách dữ liệu sang `lib/modules/models/mes_models.dart` cùng `logic_csv_part.dart` / `logic_trace_part.dart`, xóa 11 tệp mồ côi không còn sử dụng (`-3,408` dòng), đồng bộ động `v$appVersion` và bổ sung bản đồ/chỉ dẫn thư mục dự án.
 - **[2.14.1]** — **Khắc phục triệt để lỗi Crash / Đơ ứng dụng & Tinh chỉnh giao diện Login**: Tuần tự hóa ghi file trong `LoggerService` và `ConfigService` chống lỗi khóa file Windows (`errno = 32`), bổ sung ngoại lệ `!firstFrameRasterized` và tự động đánh thức focus khi click chuột/gõ phím tránh kẹt khung hình `PowerFrameGate`, khóa chống mở chồng `MesLoginDialog` khi đăng xuất, điều phối kiểm tra Token / Auto-Login trước khi bắn hàng đợi SN lúc khởi động, bổ sung bẫy lỗi toàn cục `FlutterError` / `PlatformDispatcher`, loại bỏ icon User thừa cạnh nút Settings và lược bỏ chữ `(Port 9222)` trong cửa sổ Login.
 - **[2.14.0]** — **Cửa sổ Đăng nhập Trực tiếp CloudMES / SSO, Lưu mật khẩu & Auto-Login**: Bổ sung `MesLoginDialog` hỗ trợ cả 2 chế độ `SSO` và `CloudMES`, tự động lưu mật khẩu mã hóa & tự động đăng nhập ngầm (`Auto-Login`) khi mở app hoặc hết hạn token, hiển thị mã nhân viên trên `DynamicIslandCapsule`, và hỗ trợ **Đăng xuất / Đổi tài khoản** 1-click.

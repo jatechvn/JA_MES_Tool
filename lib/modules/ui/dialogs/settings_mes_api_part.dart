@@ -127,287 +127,339 @@ extension _SettingsMesApiTabExt on _AppSettingsDialogState {
         ),
         const SizedBox(height: 12),
 
-        // CDP Auto Sync Card
-        BentoCard(
-          colors: colors,
-          padding: const EdgeInsets.all(16),
-          borderRadius: 14,
-          isFeatured: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.bolt_rounded, color: colors.accentAmber, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    Translations.get('cdp_sync_title', logic.lang),
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                Translations.get('cdp_sync_desc', logic.lang),
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: 12,
-                  height: 1.4,
+        // Toggle button to expand/collapse advanced token & CDP settings
+        Center(
+          child: TextButton.icon(
+            key: const ValueKey('toggle_advanced_token_btn'),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.textSecondary,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: colors.borderDefault.withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: colors.accentColor,
-                        side: BorderSide(
-                          color: colors.accentColor.withValues(alpha: 0.5),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      icon: const Icon(Icons.open_in_browser_rounded, size: 16),
-                      label: Text(
-                        Translations.get('btn_open_browser', logic.lang),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed: () async {
-                        await BrowserHelper.launchBrowser();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.accentEmerald,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      icon: _isSyncingCdp
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.sync_rounded, size: 16),
-                      label: Text(
-                        _isSyncingCdp
-                            ? Translations.get('status_fetching', logic.lang)
-                            : Translations.get(
-                                'btn_sync_credentials',
-                                logic.lang,
-                              ),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed: _isSyncingCdp
-                          ? null
-                          : () async {
-                              _rebuild(() => _isSyncingCdp = true);
-                              final creds =
-                                  await BrowserHelper.fetchCredentialsFromBrowser();
-                              if (!mounted) return;
-                              _rebuild(() => _isSyncingCdp = false);
-                              if (creds != null &&
-                                  creds.token != null &&
-                                  creds.token!.isNotEmpty) {
-                                _tokenCtrl.text = creds.token!;
-                                _uuidCtrl.text = creds.uuid ?? '';
-                                _opIdCtrl.text = creds.operationId ?? '';
-                                _cookieCtrl.text = creds.cookie ?? '';
-                                if (widget.parentContext.mounted) {
-                                  showAppToast(
-                                    widget.parentContext,
-                                    colors: colors,
-                                    message: Translations.get(
-                                      'fetched_success',
-                                      logic.lang,
-                                    ),
-                                    icon: Icons.check_circle_rounded,
-                                    accentColor: colors.accentEmerald,
-                                  );
-                                }
-                              } else {
-                                if (widget.parentContext.mounted) {
-                                  showAppToast(
-                                    widget.parentContext,
-                                    colors: colors,
-                                    message: Translations.get(
-                                      'fetched_fail',
-                                      logic.lang,
-                                    ),
-                                    icon: Icons.error_outline_rounded,
-                                    accentColor: colors.accentRose,
-                                  );
-                                }
-                              }
-                            },
-                    ),
-                  ),
-                ],
+            ),
+            onPressed: () =>
+                _rebuild(() => _showAdvancedToken = !_showAdvancedToken),
+            icon: Icon(
+              _showAdvancedToken
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.tune_rounded,
+              size: 16,
+              color: _showAdvancedToken
+                  ? colors.accentColor
+                  : colors.textSecondary,
+            ),
+            label: Text(
+              Translations.get(
+                _showAdvancedToken ? 'hide_advanced' : 'show_advanced',
+                logic.lang,
               ),
-            ],
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _showAdvancedToken
+                    ? colors.accentColor
+                    : colors.textSecondary,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 16),
 
-        // Credentials Input fields
-        _buildTextField(
-          label: Translations.get('mes_token', logic.lang),
-          controller: _tokenCtrl,
-          colors: colors,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildTextField(
-                label: Translations.get('operation_id', logic.lang),
-                controller: _opIdCtrl,
-                colors: colors,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildTextField(
-                label: Translations.get('uuid', logic.lang),
-                controller: _uuidCtrl,
-                colors: colors,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _buildTextField(
-          label: Translations.get('cookie', logic.lang),
-          controller: _cookieCtrl,
-          colors: colors,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 16),
+        if (_showAdvancedToken) ...[
+          const SizedBox(height: 12),
 
-        // Test Connection Button
-        Row(
-          children: [
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colors.accentCyan,
-                side: BorderSide(
-                  color: colors.accentCyan.withValues(alpha: 0.5),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: _isTestingConnection
-                  ? SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.accentCyan,
-                      ),
-                    )
-                  : Icon(
-                      Icons.shield_outlined,
-                      size: 16,
-                      color: colors.accentCyan,
-                    ),
-              label: Text(
-                Translations.get('verify_connection', logic.lang),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              onPressed: _isTestingConnection
-                  ? null
-                  : () async {
-                      _rebuild(() {
-                        _isTestingConnection = true;
-                        _connectionTestResult = null;
-                        _connectionTestMsg = null;
-                      });
-                      final ok = await logic.testConnection(
-                        testToken: _tokenCtrl.text.trim(),
-                        testOpId: _opIdCtrl.text.trim(),
-                        testUuid: _uuidCtrl.text.trim(),
-                        testCookie: _cookieCtrl.text.trim(),
-                      );
-                      if (!mounted) return;
-                      _rebuild(() {
-                        _isTestingConnection = false;
-                        _connectionTestResult = ok;
-                        _connectionTestMsg = ok
-                            ? Translations.get('connection_valid', logic.lang)
-                            : logic.connectionError ??
-                                  Translations.get(
-                                    'connection_failed',
-                                    logic.lang,
-                                  );
-                      });
-                    },
-            ),
-            const SizedBox(width: 12),
-            if (_connectionTestResult != null)
-              Expanded(
-                child: Row(
+          // CDP Auto Sync Card
+          BentoCard(
+            colors: colors,
+            padding: const EdgeInsets.all(16),
+            borderRadius: 14,
+            isFeatured: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
                     Icon(
-                      _connectionTestResult == true
-                          ? Icons.check_circle_rounded
-                          : Icons.error_outline_rounded,
-                      color: _connectionTestResult == true
-                          ? colors.accentEmerald
-                          : colors.accentRose,
-                      size: 18,
+                      Icons.bolt_rounded,
+                      color: colors.accentAmber,
+                      size: 20,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _connectionTestMsg ?? '',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _connectionTestResult == true
-                              ? colors.accentEmerald
-                              : colors.accentRose,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 8),
+                    Text(
+                      Translations.get('cdp_sync_title', logic.lang),
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  Translations.get('cdp_sync_desc', logic.lang),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colors.accentColor,
+                          side: BorderSide(
+                            color: colors.accentColor.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.open_in_browser_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          Translations.get('btn_open_browser', logic.lang),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: () async {
+                          await BrowserHelper.launchBrowser();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colors.accentEmerald,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: _isSyncingCdp
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.sync_rounded, size: 16),
+                        label: Text(
+                          _isSyncingCdp
+                              ? Translations.get('status_fetching', logic.lang)
+                              : Translations.get(
+                                  'btn_sync_credentials',
+                                  logic.lang,
+                                ),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onPressed: _isSyncingCdp
+                            ? null
+                            : () async {
+                                _rebuild(() => _isSyncingCdp = true);
+                                final creds =
+                                    await BrowserHelper.fetchCredentialsFromBrowser();
+                                if (!mounted) return;
+                                _rebuild(() => _isSyncingCdp = false);
+                                if (creds != null &&
+                                    creds.token != null &&
+                                    creds.token!.isNotEmpty) {
+                                  _tokenCtrl.text = creds.token!;
+                                  _uuidCtrl.text = creds.uuid ?? '';
+                                  _opIdCtrl.text = creds.operationId ?? '';
+                                  _cookieCtrl.text = creds.cookie ?? '';
+                                  if (widget.parentContext.mounted) {
+                                    showAppToast(
+                                      widget.parentContext,
+                                      colors: colors,
+                                      message: Translations.get(
+                                        'fetched_success',
+                                        logic.lang,
+                                      ),
+                                      icon: Icons.check_circle_rounded,
+                                      accentColor: colors.accentEmerald,
+                                    );
+                                  }
+                                } else {
+                                  if (widget.parentContext.mounted) {
+                                    showAppToast(
+                                      widget.parentContext,
+                                      colors: colors,
+                                      message: Translations.get(
+                                        'fetched_fail',
+                                        logic.lang,
+                                      ),
+                                      icon: Icons.error_outline_rounded,
+                                      accentColor: colors.accentRose,
+                                    );
+                                  }
+                                }
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Credentials Input fields
+          _buildTextField(
+            label: Translations.get('mes_token', logic.lang),
+            controller: _tokenCtrl,
+            colors: colors,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  label: Translations.get('operation_id', logic.lang),
+                  controller: _opIdCtrl,
+                  colors: colors,
+                ),
               ),
-          ],
-        ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildTextField(
+                  label: Translations.get('uuid', logic.lang),
+                  controller: _uuidCtrl,
+                  colors: colors,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildTextField(
+            label: Translations.get('cookie', logic.lang),
+            controller: _cookieCtrl,
+            colors: colors,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+
+          // Test Connection Button
+          Row(
+            children: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.accentCyan,
+                  side: BorderSide(
+                    color: colors.accentCyan.withValues(alpha: 0.5),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: _isTestingConnection
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colors.accentCyan,
+                        ),
+                      )
+                    : Icon(
+                        Icons.shield_outlined,
+                        size: 16,
+                        color: colors.accentCyan,
+                      ),
+                label: Text(
+                  Translations.get('verify_connection', logic.lang),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: _isTestingConnection
+                    ? null
+                    : () async {
+                        _rebuild(() {
+                          _isTestingConnection = true;
+                          _connectionTestResult = null;
+                          _connectionTestMsg = null;
+                        });
+                        final ok = await logic.testConnection(
+                          testToken: _tokenCtrl.text.trim(),
+                          testOpId: _opIdCtrl.text.trim(),
+                          testUuid: _uuidCtrl.text.trim(),
+                          testCookie: _cookieCtrl.text.trim(),
+                        );
+                        if (!mounted) return;
+                        _rebuild(() {
+                          _isTestingConnection = false;
+                          _connectionTestResult = ok;
+                          _connectionTestMsg = ok
+                              ? Translations.get('connection_valid', logic.lang)
+                              : logic.connectionError ??
+                                    Translations.get(
+                                      'connection_failed',
+                                      logic.lang,
+                                    );
+                        });
+                      },
+              ),
+              const SizedBox(width: 12),
+              if (_connectionTestResult != null)
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        _connectionTestResult == true
+                            ? Icons.check_circle_rounded
+                            : Icons.error_outline_rounded,
+                        color: _connectionTestResult == true
+                            ? colors.accentEmerald
+                            : colors.accentRose,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _connectionTestMsg ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _connectionTestResult == true
+                                ? colors.accentEmerald
+                                : colors.accentRose,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }
