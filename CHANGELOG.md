@@ -5,6 +5,21 @@ All notable changes to the **JA MES Test Record Tool** project will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.2] - 2026-11-16
+
+### 🏗️ Tối ưu Kiến trúc Mô-đun, Khắc phục Rò rỉ Settings & Dọn dẹp Mã nguồn (Modularization & Cleanup)
+- **🧩 Tách Mô-đun Giao diện & Nghiệp vụ (`main_window.dart`, `logic.dart`, `api_client.dart`)**:
+  - Tách `main_window.dart` (`5,424` dòng) thành 7 tệp gắn kết (`main_window.dart` + `main_sidebar_part.dart`, `test_record_part.dart`, `barcode_history_part.dart`, `wip_components_part.dart`, `component_trace_part.dart`, `main_records_toolbar_part.dart`), giữ nguyên 100% bố cục, phím tắt và vùng chọn văn bản.
+  - Tách toàn bộ 9 lớp DTO CloudMES từ `api_client.dart` sang `lib/modules/models/mes_models.dart` (re-export tương thích ngược) và tách cụm xử lý CSV/Trace của `AppLogic` sang `logic_csv_part.dart` & `logic_trace_part.dart`.
+- **🛠️ Khắc phục Rò rỉ `TextEditingController` & Tách Tab Cài đặt (`settings_dialog.dart`)**:
+  - Chuyển thân hộp thoại Settings sang `StatefulWidget` (`_AppSettingsDialog` + `ListenableBuilder`) đặt trong `pageBuilder`, đảm bảo gọi `.dispose()` đầy đủ cho cả **7 `TextEditingController`** khi đóng (Hủy hoặc Lưu) và tránh dựng lại nội dung hộp thoại trên từng frame chuyển cảnh.
+  - Tách 3 tab cài đặt sang `settings_mes_api_part.dart`, `settings_display_glass_part.dart`, `settings_about_ota_part.dart` và bổ sung bài kiểm thử vòng đời đóng/mở trong `test/settings_dialog_tabs_test.dart` (**151/151 tests pass**).
+- **🧹 Dọn sạch Mã nguồn Mồ côi & Đồng bộ Tài liệu**:
+  - Xóa 11 tệp giao diện/widget mồ côi cũ không còn được tham chiếu (`-3,408` dòng mã thừa), thay thế chuỗi phiên bản cứng cũ trong `translations.dart` bằng `v$appVersion`, và bổ sung tài liệu hướng dẫn điều hướng mô-đun (`lib/modules/README.md`, `lib/modules/ui/README.md`, `lib/widgets/README.md`, `test/README.md`).
+
+### 📦 Phát hành
+- Đồng bộ phiên bản `2.14.2+36` xuyên suốt `pubspec.yaml`, `constants.dart`, `install.bat`, `ABOUT.txt`, `README.md`, `i18n/README.vi.md`, `i18n/README.zh-CN.md`, `USERGUIDE.md`, `RELEASE_NOTES.md`, cập nhật `stage_release.py` (kèm thư mục `i18n/`) và `sync_lan.py` (bảo vệ cấu hình trên SMB).
+
 ## [2.14.1] - 2026-10-26
 
 ### 🛠️ Sửa lỗi Crash / Đơ Ứng dụng & Tinh chỉnh Giao diện Login (Stability & UI Polish)

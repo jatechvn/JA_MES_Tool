@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.14.1
+# 🤖 JA MES Tool v2.14.2
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.1-blue.svg" alt="Version 2.14.1">
+  <img src="https://img.shields.io/badge/version-2.14.2-blue.svg" alt="Version 2.14.2">
   <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D6.svg" alt="Platform Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
   <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
@@ -42,7 +42,7 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ---
 
 <a id="features"></a>
-## 💡 Key Features (v2.9.6)
+## 💡 Key Features (v2.14.2)
 
 ### 🎨 Bento Glassmorphism Interface
 - ⚡ **Command Palette (Ctrl+K / Cmd+K)**: Spotlight-style search overlay listing every tab, action, and setting — type to filter by name or keyword, navigate with ↑/↓, and run with Enter or a click. Command Palette uses a single backdrop blur and a theme-aware Material card following JA_Mini_Showcase; search focus remains delayed after opening.
@@ -156,58 +156,83 @@ Designed for test engineers and QA teams, this tool provides instant parallel qu
 ```text
 ja_mes_tool/
 ├── lib/
-│   ├── main.dart                  # App entry point, Provider setup & window_manager init
+│   ├── main.dart                          # App entry point, PowerWidgetsBinding, Provider setup & window init
 │   ├── modules/
-│   │   ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
-│   │   ├── browser_helper.dart    # CDP Interception & Edge/Chrome Automation
-│   │   ├── build_info.dart        # Reads real compile timestamp from data/app.so or the executable
-│   │   ├── config_service.dart    # Local config.json load/save (no hardcoded credentials)
-│   │   ├── constants.dart         # Global app constants & defaults (v2.9.6)
-│   │   ├── query_queue.dart       # FIFO bounded scheduler for data-query jobs
-│   │   ├── logger_service.dart    # Daily file logger & 7-day auto cleanup
-│   │   ├── logic.dart             # App state: SN queue, Trace history, 4 record maps, ViewMode, SN Master resolve cache
-│   │   ├── translations.dart      # Multi-language dictionary (EN, VN, CN)
+│   │   ├── models/
+│   │   │   └── mes_models.dart            # CloudMES data models (TestRecord, SnProcessRecord, WipComponentRecord, QueryInfoRecord, login results)
+│   │   ├── services/
+│   │   │   ├── app_power_manager.dart     # GPU/CPU 4-tier power policy & 12s/30s/60s Idle Sleep controller
+│   │   │   ├── ota_update_service.dart    # LAN UNC/SMB OTA update engine, SemVer comparison & Zip Slip validation
+│   │   │   ├── power_binding.dart         # PowerWidgetsBinding frame gate & PowerTickerGate
+│   │   │   └── window_activity_monitor.dart # Native Win32 visibility/minimized/focus state verifier
+│   │   ├── api_client.dart                # CloudMES HTTP API client (re-exports lib/modules/models/mes_models.dart)
+│   │   ├── browser_helper.dart            # Chrome/Edge CDP credential interception & persistent browser profiles
+│   │   ├── build_info.dart                # Reads real compile timestamp from data/app.so or executable
+│   │   ├── config_service.dart            # Serialized config.json load/save & password obfuscation
+│   │   ├── constants.dart                 # Global app constants & version metadata (v2.14.2+36)
+│   │   ├── logger_service.dart            # Serialized daily file logger & 7-day auto cleanup
+│   │   ├── logic.dart                     # Core AppLogic state: SN queue, SN Master cache, WO lookup, auth
+│   │   ├── logic_csv_part.dart            # AppLogic part: CSV file picker, templates, batch import/export
+│   │   ├── logic_trace_part.dart          # AppLogic part: Component Trace reverse lookup & CSN CSV actions
+│   │   ├── query_queue.dart               # Priority-aware FIFO bounded scheduler (6 concurrent jobs)
+│   │   ├── translations.dart              # Trilingual dictionary (EN, VN, CN)
+│   │   ├── window_helper.dart             # Native window manager setup & sizing
 │   │   └── ui/
-│   │       ├── dialogs/            # Settings and token-expired dialogs
-│   │       ├── sidebar/            # SN and Component Trace history sidebars
-│   │       ├── views/              # Four data views plus terminal/log view
-│   │       ├── main_window.dart   # Tabs, filter/sort, dialogs, Command Palette wiring (WindowListener)
-│   │       ├── motion.dart        # Shared iOS-style animation Duration/Curve spec
-│   │       ├── styles.dart        # Re-exports lib/theme/* (kept for backward-compatible imports)
-│   │       ├── styles_win10.dart  # Legacy Win10 theme tokens, superseded by lib/theme/styles_win10.dart
-│   │       └── styles_win11.dart  # Legacy Win11 theme tokens, superseded by lib/theme/styles_win11.dart
-│   ├── theme/                     # Bento Glassmorphism theming system
-│   │   ├── app_colors.dart        # AppColors token set (per-theme color palette)
-│   │   ├── styles_win10.dart      # Windows 10 (Aero) glass color/opacity tuning
-│   │   ├── styles_win11.dart      # Windows 11 (Acrylic/Mica) glass color/opacity tuning
-│   │   └── theme_provider.dart    # ThemeProvider: light/dark/system mode, OS brightness observer
-│   └── widgets/                   # Reusable glass UI components
-│       ├── app_toast.dart         # Transient glass toast notification overlay
-│       ├── command_palette.dart   # Ctrl+K / Cmd+K spotlight command search
-│       ├── filter_search_dock.dart# Search field + filter pills dock (glass-styled)
-│       ├── glass_dialog.dart      # Frosted-glass modal dialog shell
-│       └── glass_widgets.dart     # Compatibility entrypoint for split glass widgets
+│   │       ├── dialogs/                   # Login, Token Expired, LAN OTA Update & modular Settings dialog (+ parts)
+│   │       ├── sidebar/
+│   │       │   └── main_sidebar_part.dart # _MainWindowState part: SN queue & Trace history sidebars
+│   │       ├── views/                     # _MainWindowState parts (Test Record, Barcode History, WIP Components, Component Trace) + Terminal view
+│   │       ├── widgets/
+│   │       │   └── main_records_toolbar_part.dart # _MainWindowState part: records header, Sort overlay, shared list helpers
+│   │       ├── main_window.dart           # Main shell, header bar, OTA scheduler & Command Palette wiring
+│   │       ├── motion.dart                # Shared iOS-style animation Duration/Curve spec
+│   │       └── styles.dart                # Re-exports lib/theme/* (backward-compatible imports)
+│   ├── theme/                             # Bento Glassmorphism theming system
+│   │   ├── app_colors.dart                # AppColors token set (per-theme color palette)
+│   │   ├── language_provider.dart         # Runtime language ChangeNotifier provider
+│   │   ├── styles_win10.dart              # Windows 10 (Aero) glass color/opacity tuning
+│   │   ├── styles_win11.dart              # Windows 11 (Acrylic/Mica) glass color/opacity tuning
+│   │   └── theme_provider.dart            # ThemeProvider: light/dark/system mode, OS brightness observer
+│   └── widgets/                           # Reusable glass UI components
+│       ├── app_toast.dart                 # Transient glass toast notification overlay
+│       ├── command_palette.dart           # Ctrl+K / Cmd+K spotlight command search
+│       ├── glass_actions.dart             # Glowing action buttons & interactive chips
+│       ├── glass_background.dart          # Ambient MeshBackground & drifting MeshOrb
+│       ├── glass_dialog.dart              # Frosted-glass modal dialog & DetailDialog shells
+│       ├── glass_dropdown.dart            # BackdropFilter frosted dropdown control
+│       ├── glass_effects.dart             # BorderBeam & SpotlightGlow wrappers
+│       ├── glass_indicators.dart          # PillBadge, WaveIndicator & DynamicIslandCapsule
+│       ├── glass_marquee.dart             # BounceMarqueeText with Session Epoch Guard
+│       ├── glass_scaffold.dart            # Glass window scaffold helpers
+│       ├── glass_surfaces.dart            # BentoCard glass surface container
+│       ├── glass_terminal.dart            # Glass diagnostic terminal panel
+│       └── glass_widgets.dart             # Barrel re-export for split glass widgets
 │
 ├── windows/
-│   └── runner/                    # Native Win32 runner (mostly Flutter-generated boilerplate)
-│       ├── win32_window.cpp       # Window creation; detects OS dark-mode & routes to theme_win10/win11
-│       ├── theme_win10.cpp        # Acrylic blur-behind via undocumented SetWindowCompositionAttribute
-│       ├── theme_win11.cpp        # Native Mica/Acrylic backdrop via DWMWA_SYSTEMBACKDROP_TYPE
-│       └── resources/app_icon.ico # App icon (taskbar & title bar)
+│   └── runner/                            # Native Win32 runner, single-instance lock & DWM Acrylic/Mica setup
+│       ├── win32_window.cpp               # Window creation; detects OS dark-mode & routes to theme_win10/win11
+│       ├── theme_win10.cpp                # Acrylic blur-behind via SetWindowCompositionAttribute
+│       ├── theme_win11.cpp                # Native Mica/Acrylic backdrop via DWMWA_SYSTEMBACKDROP_TYPE
+│       └── resources/app_icon.ico         # App icon (taskbar & title bar)
 │
 ├── docs/
-│   └── screenshots/                # UI Screenshots (tracked by Git)
-│       ├── 2026-08-11_133916.jpg   # Test Record view — filter/sort/count
-│       ├── 2026-08-11_134048.jpg   # Component List view — BOM traceability
-│       ├── 2026-07-26_231301.png   # Settings with Verified Badge Icon
-│       └── 2026-07-26_231317.png   # Automatic Startup Expired Token Warning Popup
+│   ├── AI_CONTEXT.md                      # Architecture & module navigation map
+│   ├── AI_HANDOFF.md                      # Engineering handoff & verification log
+│   ├── UI_DARK_SPEC.md                    # Dark-mode UI specification
+│   ├── WORK_ORDER_PLAN.md                 # Work Order feature implementation record
+│   └── screenshots/                       # UI Screenshots (tracked by Git)
+│       ├── 2026-08-11_133916.jpg          # Test Record view — filter/sort/count
+│       ├── 2026-08-11_134048.jpg          # Component List view — BOM traceability
+│       ├── 2026-07-26_231301.png          # Settings with Verified Badge Icon
+│       └── 2026-07-26_231317.png          # Automatic Startup Expired Token Warning Popup
 ├── i18n/
-│   ├── README.vi.md               # Vietnamese documentation
-│   └── README.zh-CN.md            # Chinese documentation
-├── pubspec.yaml                   # Flutter package manifest (v2.9.6+20)
-├── ABOUT.txt                      # Project summary card
-├── CHANGELOG.md                   # Cumulative version history
-└── LICENSE                        # License file
+│   ├── README.vi.md                       # Vietnamese documentation
+│   └── README.zh-CN.md                    # Chinese documentation
+├── pubspec.yaml                           # Flutter package manifest (v2.14.2+36)
+├── AGENTS.md                              # Project engineering rules & verification workflow
+├── ABOUT.txt                              # Project summary card
+├── CHANGELOG.md                           # Cumulative version history
+└── LICENSE                                # License file
 ```
 
 ---
@@ -261,6 +286,7 @@ On a first launch without a saved `"lang"` value, the app derives the default la
 <a id="changelog"></a>
 ## 📜 Changelog Recap
 
+- **[2.14.2]** — **Modular Architecture Refactoring, Settings Controller Leak Fix & Codebase Cleanup**: Split `main_window.dart` into 7 cohesive Dart `part` files, refactored `settings_dialog.dart` into a `StatefulWidget` (`_AppSettingsDialog` + `ListenableBuilder` + 3 tab `part` files) that disposes all 7 `TextEditingController`s cleanly (`test/settings_dialog_tabs_test.dart`, **151/151 tests pass**), extracted CloudMES DTOs into `lib/modules/models/mes_models.dart` and `AppLogic` CSV/Trace parts, removed 11 orphaned legacy UI files (`-3,408` lines), normalized dynamic `v$appVersion` strings in `translations.dart`, and added module navigation guides.
 - **[2.14.1]** — Fixed application crash and UI freeze risks under large SN queues by serializing `LoggerService` and `ConfigService` file writes (`errno = 32` prevention), adding `firstFrameRasterized` bootstrap exception and pointer/keyboard focus wakeup in `PowerFrameGate`/`MyApp`, preventing duplicate overlapping `MesLoginDialog` instances on logout, sequencing startup Auto-Login before batch queue fetches, registering global `FlutterError`/`PlatformDispatcher` error handlers, removing the redundant header user icon, and streamlining the browser sync label.
 - **[2.14.0]** — Added native in-app **CloudMES / SSO Login Dialog** (`MesLoginDialog`) supporting both `SSO` and `CloudMES` authentication endpoints, obfuscated Remember Password & silent Auto-Login on startup/token expiry, live `user_account` display on `DynamicIslandCapsule`, and 1-click **Logout / Switch Account** (`POST /api/platform-user/platform/logout`).
 - **[2.13.2]** — Added engine-level `PowerWidgetsBinding` (`PowerFrameGate`) and `PowerTickerGate` (`lib/modules/services/power_binding.dart`) to halt ordinary frame scheduling and descendant `Ticker`s while unfocused, minimized, or idle without blocking Dart timers or MES/OTA services, paired with `WindowActivityMonitor` (`lib/modules/services/window_activity_monitor.dart`) to verify native window visibility/minimize/focus snapshots, eliminate false wakeups on workstation unlock, and recover missed focus events.

@@ -34,6 +34,11 @@ def main():
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(rel_dir, ef))
             
+    # Copy root i18n documentation folder
+    i18n_src = os.path.join(root, 'i18n')
+    if os.path.isdir(i18n_src):
+        shutil.copytree(i18n_src, os.path.join(rel_dir, 'i18n'), dirs_exist_ok=True)
+
     # Copy app_icon.ico
     icon_src = os.path.join(root, r'windows\runner\resources\app_icon.ico')
     if os.path.exists(icon_src):

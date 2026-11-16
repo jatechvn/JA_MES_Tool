@@ -12,7 +12,10 @@ def main():
         return
 
     print(f"[LAN Sync] Mirroring {src_dist} to {target_lan} via robocopy...")
-    cmd = ['robocopy', src_dist, target_lan, '/MIR', '/R:2', '/W:2', '/XD', 'logs']
+    cmd = [
+        'robocopy', src_dist, target_lan, '/MIR', '/R:2', '/W:2',
+        '/XD', 'logs', '/XF', 'config.json', 'config.ini', 'update_config.json'
+    ]
     res = subprocess.run(cmd, capture_output=True, text=True)
     # Robocopy exit codes: 0 = no change, 1 = files copied, 2 = extra files deleted, 3 = files copied and deleted
     print(f"[LAN Sync] Robocopy exit code: {res.returncode}")

@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ja_mes_tool/modules/logic.dart';
+import 'package:ja_mes_tool/modules/services/ota_update_service.dart';
 import 'package:ja_mes_tool/modules/translations.dart';
 import 'package:ja_mes_tool/modules/ui/dialogs/settings_dialog.dart';
 import 'package:ja_mes_tool/modules/services/app_power_manager.dart';
@@ -402,6 +404,100 @@ void main() {
       AppPowerManager.instance.setEnableIdleSleep(true);
       AppPowerManager.instance.setIdleTimeout(const Duration(seconds: 12));
       AppPowerManager.instance.resetForTesting();
+    },
+  );
+
+  testWidgets(
+    'Settings dialog disposes text controllers cleanly on Cancel and Save',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(AppPowerManager.instance.resetForTesting);
+
+      final tempDir = Directory.systemTemp.createTempSync(
+        'ja_mes_settings_test',
+      );
+      final tempOtaConfig = File('${tempDir.path}\\update_config.json');
+      OtaUpdateService().setCustomConfigFileForTesting(tempOtaConfig);
+      addTearDown(() async {
+        OtaUpdateService().setCustomConfigFileForTesting(null);
+        for (var i = 0; i < 10; i++) {
+          if (!tempDir.existsSync()) break;
+          try {
+            tempDir.deleteSync(recursive: true);
+            break;
+          } catch (_) {
+            await Future<void>.delayed(const Duration(milliseconds: 30));
+          }
+        }
+      });
+
+      final logic = AppLogic(initialize: false, saveConfig: (_) async {});
+      final theme = ThemeProvider(initialMode: 'light');
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<AppLogic>.value(value: logic),
+            ChangeNotifierProvider<ThemeProvider>.value(value: theme),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () =>
+                        showAppSettingsDialog(context, logic, theme),
+                    child: const Text('Open Settings'),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Cycle 1: Open, enter text in Tab 0 and Tab 2, then Cancel.
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(1), 'TEMP_OP_ID');
+      await tester.tap(
+        find.text(Translations.get('tab_about_updates', logic.lang)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, r'\\server\ota');
+      await tester.tap(find.text(Translations.get('cancel', logic.lang)));
+      await tester.pumpAndSettle();
+
+      expect(logic.operationId, isNot('TEMP_OP_ID'));
+      expect(find.text(Translations.get('settings', logic.lang)), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      // Cycle 2: Open, edit Operation ID, then Save and settle disk I/O + pop.
+      await tester.tap(find.text('Open Settings'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(1), 'SAVED_OP_ID');
+      await tester.tap(find.text(Translations.get('save', logic.lang)));
+      for (var i = 0; i < 40; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+        await tester.pump();
+        if (find
+            .text(Translations.get('settings', logic.lang))
+            .evaluate()
+            .isEmpty) {
+          break;
+        }
+      }
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(logic.operationId, 'SAVED_OP_ID');
+      expect(find.text(Translations.get('settings', logic.lang)), findsNothing);
+      expect(tester.takeException(), isNull);
     },
   );
 }

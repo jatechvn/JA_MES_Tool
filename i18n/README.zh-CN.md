@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.14.1 - 中文说明
+# 🤖 JA MES Tool v2.14.2 - 中文说明
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/banben-2.14.1-blue.svg" alt="版本 2.14.1">
+  <img src="https://img.shields.io/badge/banben-2.14.2-blue.svg" alt="版本 2.14.2">
   <img src="https://img.shields.io/badge/pingtai-Windows%20x64-0078D6.svg" alt="平台 Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 主要功能 (v2.9.6)
+## 💡 主要功能 (v2.14.2)
 
 ### 🎨 Bento 毛玻璃视觉架构
 - ⚡ **命令面板 (Ctrl+K / Cmd+K)**：聚光灯式搜索覆盖层，列出所有标签、操作与设置 — 输入即按名称/关键词筛选，↑/↓ 导航，回车或点击执行。命令面板采用 JA_Mini_Showcase 的单层背景模糊和主题 Material 卡片，并保留打开后的延迟搜索聚焦。
@@ -140,21 +140,24 @@ ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # 应用入口、Provider 与 window_manager 初始化
 │   ├── modules/
-│   │   ├── api_client.dart        # MES API 客户端：TestRecord、SnProcessRecord、WipComponentRecord 与 QueryInfoRecord
+│   │   ├── models/mes_models.dart # CloudMES 数据模型 (TestRecord, SnProcessRecord, WipComponentRecord, QueryInfoRecord)
+│   │   ├── api_client.dart        # MES API 客户端（转发导出 lib/modules/models/mes_models.dart）
 │   │   ├── browser_helper.dart    # CDP 拦截与 Edge/Chrome 自动化
 │   │   ├── build_info.dart        # 从 data/app.so 或可执行文件读取真实编译时间戳
 │   │   ├── config_service.dart    # 本地 config.json 读写 (不硬编码任何凭据)
-│   │   ├── constants.dart         # 全局常量与默认配置 (v2.9.6)
+│   │   ├── constants.dart         # 全局常量与默认配置 (v2.14.2+36)
 │   │   ├── query_queue.dart       # 数据查询任务的有界 FIFO 调度器
 │   │   ├── logger_service.dart    # 日志服务与 7 天自动清理
-│   │   ├── logic.dart             # 状态管理：SN 队列、追溯历史、四种记录列表、ViewMode、SN 解析缓存
+│   │   ├── logic.dart             # AppLogic 状态管理（含 logic_csv_part.dart、logic_trace_part.dart）
 │   │   ├── translations.dart      # 多语言字典 (EN, VN, CN)
 │   │   └── ui/
-│   │       ├── main_window.dart   # 标签页、搜索/排序、对话框、命令面板接入 (WindowListener)
+│   │       ├── dialogs/           # 设置弹窗（含 3 个标签页 part）、登录弹窗、Token 过期及 OTA 更新弹窗
+│   │       ├── sidebar/           # main_sidebar_part.dart（SN/WO 队列与追溯历史侧边栏）
+│   │       ├── views/             # 四大数据视图 (*_part.dart) 与 TerminalView
+│   │       ├── widgets/           # main_records_toolbar_part.dart（记录标题栏与排序菜单）
+│   │       ├── main_window.dart   # 主窗口框架、顶部栏、OTA 调度与命令面板接入 (WindowListener)
 │   │       ├── motion.dart        # 统一动画时长/曲线配置
-│   │       ├── styles.dart        # 转发导出 lib/theme/*（保留旧版 import 兼容）
-│   │       ├── styles_win10.dart  # 旧版 Win10 主题，已由 lib/theme/styles_win10.dart 取代
-│   │       └── styles_win11.dart  # 旧版 Win11 主题，已由 lib/theme/styles_win11.dart 取代
+│   │       └── styles.dart        # 转发导出 lib/theme/*（保留旧版 import 兼容）
 │   ├── theme/                     # Bento 毛玻璃主题系统
 │   │   ├── app_colors.dart        # AppColors 颜色令牌集（各主题调色板）
 │   │   ├── styles_win10.dart      # Windows 10 (Aero) 毛玻璃颜色/透明度调优
@@ -163,7 +166,6 @@ ja_mes_tool/
 │   └── widgets/                   # 可复用毛玻璃 UI 组件
 │       ├── app_toast.dart         # 短暂显示的毛玻璃 Toast 通知
 │       ├── command_palette.dart   # Ctrl+K / Cmd+K 聚光灯式命令搜索
-│       ├── filter_search_dock.dart# 搜索框 + 筛选胶囊组合（毛玻璃风格）
 │       ├── glass_dialog.dart      # 毛玻璃模态对话框外壳
 │       └── glass_widgets.dart     # BentoCard、MeshBackground、SlidingPillTabBar、KbdTag 等
 │
@@ -183,7 +185,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # 越南语说明文档
 │   └── README.zh-CN.md            # 中文说明文档 (本文件)
-├── pubspec.yaml                   # Flutter 包配置文件 (v2.9.6+20)
+├── pubspec.yaml                   # Flutter 包配置文件 (v2.14.2+36)
 ├── ABOUT.txt                      # 项目卡片
 ├── CHANGELOG.md                   # 完整版本历史
 └── LICENSE                        # 许可证文件
@@ -226,6 +228,7 @@ flutter build windows
 
 ## 📜 更新日志摘要
 
+- **[2.14.2]** — **模块化架构重构、修复设置弹窗控制器泄漏与清理 3,408 行冗余代码**：将 `main_window.dart` 拆分为 7 个高内聚 Dart `part` 文件；将 `settings_dialog.dart` 重构为基于 `StatefulWidget` 的弹窗（`_AppSettingsDialog` + `ListenableBuilder` + 3 个标签页 `part` 文件），在关闭时完整释放全部 7 个 `TextEditingController`（`test/settings_dialog_tabs_test.dart`，**151/151 项测试全部通过**）；分离模型层至 `lib/modules/models/mes_models.dart` 及 `logic_csv_part.dart` / `logic_trace_part.dart`；清理 11 个废弃无引用源码文件；同步 `translations.dart` 动态 `v$appVersion` 并补充模块导航指南。
 - **[2.14.1]** — **修复应用崩溃与界面卡死问题 & 精简登录界面**：为 `LoggerService` 与 `ConfigService` 增加顺序文件写入队列彻底解决并发写入冲突 (`errno = 32`)，在 `PowerFrameGate` / `MyApp` 中加入首帧渲染豁免与鼠标/键盘点击焦点即时唤醒，防止退出登录时重复弹出双层 `MesLoginDialog`，启动时先完成自动登录再拉取队列，注册全局异常捕获，移除设置按钮旁冗余的用户图标，并精简浏览器同步提示文案。
 - **[2.14.0]** — **内置 CloudMES / SSO 直接登录窗口与自动登录 (`MesLoginDialog`)**：支持 `SSO` 与 `CloudMES` 两种直接登录方式、记住密码本地混淆存储、启动或 Token 过期时静默自动登录 (`Auto-Login`)、状态胶囊实时显示当前工号，以及一键**退出 / 切换账号**。
 - **[2.13.2]** — **引擎级帧与 Ticker 冻结门控 (`PowerFrameGate` + `PowerTickerGate`) 及原生窗口活动监控器 (`WindowActivityMonitor`)**：新增 `PowerWidgetsBinding` 与 `PowerTickerGate`，在窗口失焦、最小化或空闲休眠时彻底阻断 Flutter 引擎常规帧调度 (`framesEnabled`) 并暂停所有子级 `Ticker`，同时保持 Dart 定时器与后台 MES/OTA 服务正常运行；配合 `WindowActivityMonitor` 校验原生窗口可见性/最小化/焦点快照，彻底消除系统解锁 (`AppLifecycleState.resumed`) 时的误唤醒并自动恢复遗漏的焦点事件。

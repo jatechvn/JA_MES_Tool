@@ -1,4 +1,4 @@
-# 🤖 JA MES Tool v2.14.1 - Tiếng Việt
+# 🤖 JA MES Tool v2.14.2 - Tiếng Việt
 
 <p align="center">
   <br>
@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/phien_ban-2.14.1-blue.svg" alt="Phiên bản 2.14.1">
+  <img src="https://img.shields.io/badge/phien_ban-2.14.2-blue.svg" alt="Phiên bản 2.14.2">
   <img src="https://img.shields.io/badge/nen_tang-Windows%20x64-0078D6.svg" alt="Nền tảng Windows">
   <img src="https://img.shields.io/badge/flutter-3.x-02569B.svg" alt="Flutter 3.x">
 </p>
@@ -27,7 +27,7 @@
 
 ---
 
-## 💡 Tính năng nổi bật (v2.9.6)
+## 💡 Tính năng nổi bật (v2.14.2)
 
 ### 🎨 Giao diện Bento Glassmorphism
 - ⚡ **Bảng Lệnh Nhanh (Ctrl+K / Cmd+K)**: Ô tìm kiếm kiểu spotlight liệt kê mọi tab, tác vụ và cài đặt — gõ để lọc theo tên/từ khoá, dùng ↑/↓ để chọn, Enter hoặc click để chạy. Bảng lệnh dùng một lớp blur nền và card Material theo theme từ JA_Mini_Showcase; giữ focus tìm kiếm sau hiệu ứng mở.
@@ -140,21 +140,24 @@ ja_mes_tool/
 ├── lib/
 │   ├── main.dart                  # Điểm khởi chạy ứng dụng, Provider & khởi tạo window_manager
 │   ├── modules/
-│   │   ├── api_client.dart        # MES API Client: TestRecord, SnProcessRecord, WipComponentRecord & QueryInfoRecord
+│   │   ├── models/mes_models.dart # Lớp dữ liệu CloudMES DTOs (TestRecord, SnProcessRecord, WipComponentRecord, QueryInfoRecord)
+│   │   ├── api_client.dart        # MES API Client (re-export lib/modules/models/mes_models.dart)
 │   │   ├── browser_helper.dart    # Xử lý Chrome/Edge CDP & Anti-Freeze Flags
 │   │   ├── build_info.dart        # Đọc thời gian biên dịch thật từ data/app.so hoặc file thực thi
 │   │   ├── config_service.dart    # Đọc/ghi config.json cục bộ (không hardcode thông tin đăng nhập)
-│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.9.6)
+│   │   ├── constants.dart         # Hằng số toàn cục & Cấu hình mặc định (v2.14.2+36)
 │   │   ├── query_queue.dart       # Bộ lập lịch FIFO giới hạn cho data-query
 │   │   ├── logger_service.dart    # Ghi log file & Tự động dọn dẹp sau 7 ngày
-│   │   ├── logic.dart             # Quản lý trạng thái: hàng đợi SN, lịch sử Trace, 4 danh sách dữ liệu, ViewMode, cache phân giải SN
+│   │   ├── logic.dart             # AppLogic (+ logic_csv_part.dart, logic_trace_part.dart): hàng đợi SN, Trace, Auth
 │   │   ├── translations.dart      # Từ điển đa ngôn ngữ (EN, VN, CN)
 │   │   └── ui/
-│   │       ├── main_window.dart   # Tab, tìm kiếm/sắp xếp, hộp thoại, kết nối Command Palette (WindowListener)
+│   │       ├── dialogs/           # Settings dialog (+ 3 tab parts), Login dialog, Token expired & OTA update dialog
+│   │       ├── sidebar/           # main_sidebar_part.dart (hàng đợi SN/WO & Trace history)
+│   │       ├── views/             # 4 chế độ xem dữ liệu (*_part.dart) & TerminalView
+│   │       ├── widgets/           # main_records_toolbar_part.dart (Records header, Sort Overlay)
+│   │       ├── main_window.dart   # Khung chính, Header, OTA scheduler & Command Palette (WindowListener)
 │   │       ├── motion.dart        # Cấu hình Duration/Curve animation dùng chung
-│   │       ├── styles.dart        # Re-export lib/theme/* (giữ tương thích ngược cho import cũ)
-│   │       ├── styles_win10.dart  # Theme Win10 cũ, đã thay thế bởi lib/theme/styles_win10.dart
-│   │       └── styles_win11.dart  # Theme Win11 cũ, đã thay thế bởi lib/theme/styles_win11.dart
+│   │       └── styles.dart        # Re-export lib/theme/* (giữ tương thích ngược cho import cũ)
 │   ├── theme/                     # Hệ thống theme Bento Glassmorphism
 │   │   ├── app_colors.dart        # Bộ token màu AppColors theo từng theme
 │   │   ├── styles_win10.dart      # Tinh chỉnh màu/độ mờ kính cho Windows 10 (Aero)
@@ -163,7 +166,6 @@ ja_mes_tool/
 │   └── widgets/                   # Component giao diện kính mờ tái sử dụng
 │       ├── app_toast.dart         # Toast thông báo kính mờ, tự biến mất
 │       ├── command_palette.dart   # Bảng Lệnh Nhanh Ctrl+K / Cmd+K
-│       ├── filter_search_dock.dart# Ô tìm kiếm + pill lọc (giao diện kính)
 │       ├── glass_dialog.dart      # Khung hộp thoại kính mờ
 │       └── glass_widgets.dart     # BentoCard, MeshBackground, SlidingPillTabBar, KbdTag,...
 │
@@ -183,7 +185,7 @@ ja_mes_tool/
 ├── i18n/
 │   ├── README.vi.md               # Tài liệu Tiếng Việt (file này)
 │   └── README.zh-CN.md            # Tài liệu Tiếng Trung
-├── pubspec.yaml                   # File cấu hình Flutter (v2.9.6+20)
+├── pubspec.yaml                   # File cấu hình Flutter (v2.14.2+36)
 ├── ABOUT.txt                      # Thẻ thông tin dự án
 ├── CHANGELOG.md                   # Lịch sử phiên bản đầy đủ
 └── LICENSE                        # Giấy phép bản quyền
@@ -229,6 +231,7 @@ Nếu lần đầu mở app chưa có `"lang"` trong `config.json`, app sẽ l�
 
 ## 📜 Tóm tắt Changelog
 
+- **[2.14.2]** — **Tối ưu Kiến trúc Mô-đun, Khắc phục Rò rỉ Settings & Dọn dẹp 3,408 dòng mã thừa**: Tách `main_window.dart` thành 7 tệp `part` gắn kết, chuyển `settings_dialog.dart` sang `StatefulWidget` (`_AppSettingsDialog` + 3 tệp tab `part`) giải phóng toàn bộ 7 `TextEditingController` khi đóng (`test/settings_dialog_tabs_test.dart`, **151/151 tests pass**), tách dữ liệu sang `lib/modules/models/mes_models.dart` cùng `logic_csv_part.dart` / `logic_trace_part.dart`, xóa 11 tệp mồ côi không còn sử dụng (`-3,408` dòng), đồng bộ động `v$appVersion` và bổ sung bản đồ/chỉ dẫn thư mục dự án.
 - **[2.14.1]** — **Khắc phục triệt để lỗi Crash / Đơ ứng dụng & Tinh chỉnh giao diện Login**: Tuần tự hóa ghi file trong `LoggerService` và `ConfigService` chống lỗi khóa file Windows (`errno = 32`), bổ sung ngoại lệ `!firstFrameRasterized` và tự động đánh thức focus khi click chuột/gõ phím tránh kẹt khung hình `PowerFrameGate`, khóa chống mở chồng `MesLoginDialog` khi đăng xuất, điều phối kiểm tra Token / Auto-Login trước khi bắn hàng đợi SN lúc khởi động, bổ sung bẫy lỗi toàn cục `FlutterError` / `PlatformDispatcher`, loại bỏ icon User thừa cạnh nút Settings và lược bỏ chữ `(Port 9222)` trong cửa sổ Login.
 - **[2.14.0]** — **Cửa sổ Đăng nhập Trực tiếp CloudMES / SSO, Lưu mật khẩu & Auto-Login**: Bổ sung `MesLoginDialog` hỗ trợ cả 2 chế độ `SSO` và `CloudMES`, tự động lưu mật khẩu mã hóa & tự động đăng nhập ngầm (`Auto-Login`) khi mở app hoặc hết hạn token, hiển thị mã nhân viên trên `DynamicIslandCapsule`, và hỗ trợ **Đăng xuất / Đổi tài khoản** 1-click.
 - **[2.13.2]** — **Cổng đóng băng khung hình & Ticker cấp Engine (`PowerFrameGate` + `PowerTickerGate`) & Bộ giám sát cửa sổ Native (`WindowActivityMonitor`)**: Ngắt hoàn toàn việc lập lịch vẽ khung hình (`framesEnabled`) và tạm dừng toàn bộ `Ticker` con khi cửa sổ mất tiêu điểm, thu nhỏ hoặc nghỉ rảnh tay mà không ảnh hưởng tới `Timer` và dịch vụ nền MES/OTA; kết hợp `WindowActivityMonitor` đối soát trực tiếp trạng thái `isVisible` / `isMinimized` / `isFocused` từ native window giúp ngăn chặn tự bật lại animation khi mở khóa màn hình Windows và tự khôi phục sự kiện focus bị bỏ sót.
